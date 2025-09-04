@@ -1,0 +1,13 @@
+{
+  "name": "manpower-platform-backend-microservices",
+  "version": "1.0.0",
+  "description": "Manpower Platform Backend - Microservices Architecture",
+  "scripts": {
+    "build": "echo 'Building all microservices...' && cd services/auth-service && npm run build",
+    "clean": "cd services/auth-service && npm run clean",
+    "install:all": "cd services/auth-service && npm ci"
+  },
+  "keywords": ["microservices", "aws", "lambda", "typescript", "manpower"],
+  "author": "Manpower Platform Team",
+  "license": "MIT"
+}

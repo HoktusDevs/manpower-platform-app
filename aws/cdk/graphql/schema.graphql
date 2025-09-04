@@ -1,0 +1,152 @@
+# Manpower Platform GraphQL Schema
+# AWS AppSync Direct DynamoDB Access
+
+# TYPES
+type Application {
+  userId: String!
+  applicationId: String!
+  companyName: String!
+  position: String!
+  status: ApplicationStatus!
+  description: String
+  salary: String
+  location: String
+  createdAt: String!
+  updatedAt: String!
+  companyId: String
+}
+
+type Document {
+  userId: String!
+  documentId: String!
+  fileName: String!
+  documentType: DocumentType!
+  s3Key: String!
+  uploadedAt: String!
+  fileSize: Int
+  mimeType: String
+}
+
+# ENUMS
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  IN_REVIEW
+  INTERVIEW_SCHEDULED
+  HIRED
+}
+
+enum DocumentType {
+  RESUME
+  COVER_LETTER
+  PORTFOLIO
+  CERTIFICATE
+  ID_DOCUMENT
+  OTHER
+}
+
+# INPUT TYPES
+input CreateApplicationInput {
+  companyName: String!
+  position: String!
+  description: String
+  salary: String
+  location: String
+  companyId: String
+}
+
+input UpdateApplicationInput {
+  applicationId: String!
+  status: ApplicationStatus
+  description: String
+  salary: String
+  location: String
+}
+
+input UploadDocumentInput {
+  fileName: String!
+  documentType: DocumentType!
+  fileSize: Int
+  mimeType: String
+}
+
+# QUERIES
+type Query {
+  # POSTULANTE: Get my applications only
+  getMyApplications: [Application!]!
+  
+  # POSTULANTE: Get specific application (only mine)
+  getMyApplication(applicationId: String!): Application
+  
+  # POSTULANTE: Get my documents
+  getMyDocuments: [Document!]!
+  
+  # ADMIN ONLY: Get all applications
+  getAllApplications(status: ApplicationStatus, limit: Int, nextToken: String): [Application!]!
+  
+  # ADMIN ONLY: Get applications by company
+  getApplicationsByCompany(companyId: String!): [Application!]!
+  
+  # ADMIN ONLY: Get application statistics
+  getApplicationStats: ApplicationStats
+}
+
+# MUTATIONS  
+type Mutation {
+  # POSTULANTE: Create new application
+  createApplication(input: CreateApplicationInput!): Application!
+  
+  # POSTULANTE: Update my application (limited fields)
+  updateMyApplication(input: UpdateApplicationInput!): Application!
+  
+  # POSTULANTE: Delete my application
+  deleteMyApplication(applicationId: String!): Boolean!
+  
+  # POSTULANTE: Upload document
+  uploadDocument(input: UploadDocumentInput!): Document!
+  
+  # ADMIN ONLY: Update any application
+  updateApplicationStatus(applicationId: String!, userId: String!, status: ApplicationStatus!): Application!
+  
+  # ADMIN ONLY: Delete any application  
+  deleteApplication(applicationId: String!, userId: String!): Boolean!
+}
+
+# SUBSCRIPTIONS (Real-time updates)
+type Subscription {
+  # POSTULANTE: Subscribe to my application updates
+  onMyApplicationUpdated(userId: String!): Application
+    @aws_subscribe(mutations: ["updateApplicationStatus", "updateMyApplication"])
+  
+  # ADMIN ONLY: Subscribe to all application updates
+  onApplicationCreated: Application  
+    @aws_subscribe(mutations: ["createApplication"])
+    
+  # ADMIN ONLY: Subscribe to status changes
+  onApplicationStatusChanged: Application
+    @aws_subscribe(mutations: ["updateApplicationStatus"])
+}
+
+# ADMIN ONLY TYPES
+type ApplicationStats {
+  totalApplications: Int!
+  pendingCount: Int!
+  approvedCount: Int!
+  rejectedCount: Int!
+  inReviewCount: Int!
+  averageProcessingTime: Float
+  topCompanies: [CompanyStats!]!
+}
+
+type CompanyStats {
+  companyId: String!
+  companyName: String!
+  applicationCount: Int!
+  approvedCount: Int!
+  rejectedCount: Int!
+}
+
+# DIRECTIVES
+directive @aws_auth(cognito_groups: [String!]) on FIELD_DEFINITION
+directive @aws_subscribe(mutations: [String!]) on FIELD_DEFINITION
