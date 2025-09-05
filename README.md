@@ -1,3 +1,45 @@
+# 🚀 Enterprise Manpower Platform
+
+## 📋 Quick Start
+
+```bash
+# Install dependencies
+cd frontend && npm install
+
+# Start development
+npm run dev
+
+# Quality checks (REQUIRED before commit)
+npm run validate
+```
+
+## 🎯 Code Quality Standards
+
+**⚠️ OBLIGATORIO**: Todo código debe pasar estrictos controles de calidad antes de commit.
+
+### Pre-Commit Requirements
+```bash
+# ✅ MUST PASS
+npm run validate
+
+# Individual checks
+npm run type-check    # TypeScript strict checking
+npm run lint         # ESLint validation  
+npm run build        # Production build test
+```
+
+### Quick Commands
+```bash
+# From project root:
+npm run pre-commit   # Run all quality checks
+npm run fix-all      # Auto-fix linting issues
+npm run quality-check # Check without build
+```
+
+📚 **Ver [CODING_STANDARDS.md](./CODING_STANDARDS.md) para estándares completos**
+
+---
+
 # 🚀 Manpower Platform
 
 Una plataforma moderna de gestión de recursos humanos construida con React, AWS CDK, y Amazon Cognito.

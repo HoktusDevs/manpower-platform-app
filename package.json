@@ -1,5 +1,26 @@
 {
+  "name": "manpower-platform-app",
+  "version": "1.0.0",
+  "description": "Enterprise Manpower Platform with AWS-Native Architecture",
+  "scripts": {
+    "pre-commit": "./scripts/pre-commit-check.sh",
+    "quality-check": "cd frontend && npm run check-quality",
+    "fix-all": "cd frontend && npm run fix-all",
+    "validate": "cd frontend && npm run validate",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "deploy": "./deploy.sh",
+    "deploy:frontend": "./scripts/deploy-frontend.sh"
+  },
   "dependencies": {
     "buffer": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoktusDevs/manpower-platform-app.git"
   }
 }

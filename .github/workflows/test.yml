@@ -55,12 +55,17 @@ jobs:
       - name: Run type checking
         run: |
           cd frontend
-          echo "Skipping strict TypeScript checking for now"
+          npm run type-check
 
       - name: Run linting
         run: |
           cd frontend
-          npm run lint || echo "Linting completed with warnings"
+          npm run lint
+
+      - name: Run quality checks
+        run: |
+          cd frontend
+          npm run check-quality
 
       - name: Run tests (if available)
         run: |
@@ -71,10 +76,10 @@ jobs:
             echo "No tests found or tests failed"
           fi
 
-      - name: Build application
+      - name: Full validation
         run: |
           cd frontend
-          npx vite build
+          npm run validate
 
   test-backend:
     needs: detect-changes
