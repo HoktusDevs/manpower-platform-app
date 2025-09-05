@@ -12,6 +12,7 @@ import { RoleGuard } from './components/RoleGuard';
 import { SecurityBoundary } from './components/SecurityBoundary';
 import { useRouteProtection } from './hooks/useRouteProtection';
 import { useAuth } from './hooks/useAuth';
+import { ToastProvider } from './core-ui';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
@@ -30,8 +31,9 @@ function AppContent() {
   };
 
   return (
-    <SecurityBoundary>
-      <Routes>
+    <ToastProvider>
+      <SecurityBoundary>
+        <Routes>
         <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
         <Route path="/login" element={<LoginPage />} />
         
@@ -59,8 +61,9 @@ function AppContent() {
         <Route path="*" element={
           <Navigate to={getDefaultRedirect()} replace />
         } />
-      </Routes>
-    </SecurityBoundary>
+        </Routes>
+      </SecurityBoundary>
+    </ToastProvider>
   );
 }
 

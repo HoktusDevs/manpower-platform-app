@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
+import { Input, FormField, Button, Container, Typography, useToast } from '../../core-ui';
 
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
+  const { showSuccess, showError, showLoading, hideToast } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -18,14 +20,18 @@ export const LoginPage = () => {
     if (error) clearError();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     
+    const loadingId = showLoading('Iniciando sesión', 'Verificando credenciales...');
+    
     const success = await login(formData);
+    hideToast(loadingId);
     
     if (success) {
+      showSuccess('¡Bienvenido!', 'Has iniciado sesión correctamente');
+      
       // Forzar navegación después del login exitoso
-      // Obtener usuario del hook directamente
       const userData = cognitoAuthService.getCurrentUser();
       
       if (userData) {
@@ -35,52 +41,47 @@ export const LoginPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (error) {
+      showError('Error de autenticación', error);
+    }
+  }, [error, showError]);
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+      <Container variant="elevated" className="w-full max-w-md mx-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Iniciar Sesión</h1>
-          <p className="text-gray-600 mt-2">Manpower Platform</p>
+          <Typography variant="h1">Iniciar Sesión</Typography>
+          <Typography variant="caption" color="muted" className="mt-2">
+            Manpower Platform
+          </Typography>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
+          <FormField label="Email" required>
+            <Input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="tu@email.com"
               disabled={isLoading}
+              fullWidth
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contraseña
-            </label>
-            <input
+          <FormField label="Contraseña" required>
+            <Input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="••••••••"
               disabled={isLoading}
+              fullWidth
             />
-          </div>
+          </FormField>
 
           <div className="flex items-center">
             <input
@@ -93,13 +94,15 @@ export const LoginPage = () => {
             </label>
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            fullWidth
+            size="lg"
           >
             {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center space-y-3">
@@ -124,7 +127,7 @@ export const LoginPage = () => {
             </Link>
           </p>
         </div>
-      </div>
+      </Container>
     </div>
   );
 };
