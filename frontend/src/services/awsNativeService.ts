@@ -102,7 +102,7 @@ class AWSNativeService {
         TableName: this.config.applicationsTable,
         KeyConditionExpression: 'userId = :userId',
         ExpressionAttributeValues: {
-          ':userId': user.id
+          ':userId': user.userId
         },
         ScanIndexForward: false // Latest first
       }));
@@ -136,7 +136,7 @@ class AWSNativeService {
     const now = new Date().toISOString();
 
     const application: Application = {
-      userId: user.id,
+      userId: user.userId,
       applicationId,
       companyName: input.companyName,
       position: input.position,

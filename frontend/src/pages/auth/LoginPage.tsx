@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { cognitoAuthService } from '../../services/cognitoAuthService';
+import { authService } from '../../services/authService';
+
+const USE_COGNITO = import.meta.env.VITE_USE_COGNITO === 'true';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -22,12 +26,15 @@ export const LoginPage = () => {
     const success = await login(formData);
     
     if (success) {
-      // Redirigir según el rol del usuario
-      const user = JSON.parse(localStorage.getItem('user_data') || '{}');
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/postulante');
+      // Forzar navegación después del login exitoso
+      // Obtener usuario del hook directamente
+      const userData = USE_COGNITO 
+        ? cognitoAuthService.getCurrentUser()
+        : authService.getCurrentUser();
+      
+      if (userData) {
+        const route = userData.role === 'admin' ? '/admin' : '/postulante';
+        navigate(route);
       }
     }
   };

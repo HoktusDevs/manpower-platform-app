@@ -38,8 +38,7 @@ export const RegisterPage = () => {
       // Redirigir según el rol del usuario
       if (formData.role === 'admin') {
         navigate('/admin');
-      } else if (formData.role === 'employee') {
-        navigate('/admin'); // Los empleados también van al dashboard de admin
+      // Solo admin y postulante son roles válidos
       } else {
         navigate('/postulante');
       }

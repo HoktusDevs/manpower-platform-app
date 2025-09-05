@@ -94,7 +94,10 @@ export class CognitoAuthStack extends cdk.Stack {
         preSignUp: this.createPreSignUpTrigger(environment),
         // Set custom attributes after registration
         postConfirmation: this.createPostConfirmationTrigger(environment),
-      } : {},
+      } : {
+        // Auto-confirm users in development
+        preSignUp: this.createAutoConfirmTrigger(environment),
+      },
 
       // Deletion protection for production
       removalPolicy: environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
@@ -322,6 +325,35 @@ export class CognitoAuthStack extends cdk.Stack {
       `),
       environment: {
         AWS_REGION: this.region,
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+  }
+
+  private createAutoConfirmTrigger(environment: string): lambda.Function {
+    return new lambda.Function(this, 'AutoConfirmTrigger', {
+      functionName: `manpower-auto-confirm-${environment}`,
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          console.log('AutoConfirm trigger:', JSON.stringify(event, null, 2));
+          
+          // Validate role attribute
+          const role = event.request.userAttributes['custom:role'];
+          if (!role || !['admin', 'postulante'].includes(role)) {
+            throw new Error('Invalid role. Must be admin or postulante');
+          }
+          
+          // Auto-confirm user in development
+          event.response.autoConfirmUser = true;
+          event.response.autoVerifyEmail = true;
+          
+          return event;
+        };
+      `),
+      environment: {
+        ENVIRONMENT: environment,
       },
       timeout: cdk.Duration.seconds(30),
     });

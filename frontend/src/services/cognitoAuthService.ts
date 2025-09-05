@@ -212,7 +212,8 @@ class CognitoAuthService {
       }
 
       // Verify token belongs to current user
-      if (tokenPayload.username && tokenPayload.username !== user.email) {
+      // In Cognito, username is the UUID, not the email
+      if (tokenPayload.username && tokenPayload.username !== user.userId) {
         console.error('🚨 SECURITY: Token username mismatch');
         return false;
       }
