@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
-import { authService } from '../../services/authService';
 
-const USE_COGNITO = import.meta.env.VITE_USE_COGNITO === 'true';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,9 +26,7 @@ export const LoginPage = () => {
     if (success) {
       // Forzar navegación después del login exitoso
       // Obtener usuario del hook directamente
-      const userData = USE_COGNITO 
-        ? cognitoAuthService.getCurrentUser()
-        : authService.getCurrentUser();
+      const userData = cognitoAuthService.getCurrentUser();
       
       if (userData) {
         const route = userData.role === 'admin' ? '/admin' : '/postulante';
@@ -86,22 +82,15 @@ export const LoginPage = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-700">
-                Recordarme
-              </label>
-            </div>
-            <Link
-              to="/forgot-password"
-              className="text-sm text-blue-600 hover:text-blue-500"
-            >
-              ¿Olvidaste tu contraseña?
-            </Link>
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+              Recordarme
+            </label>
           </div>
 
           <button
@@ -116,19 +105,12 @@ export const LoginPage = () => {
         <div className="mt-6 text-center space-y-3">
           <p className="text-sm text-gray-600">¿No tienes cuenta?</p>
           
-          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <div className="flex justify-center">
             <Link
               to="/register/postulante"
-              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 py-2 px-4 rounded-md font-medium transition duration-200 text-sm"
+              className="text-blue-600 hover:text-blue-500 py-2 px-4 font-medium transition duration-200 text-sm"
             >
-              👤 Registro Postulante
-            </Link>
-            
-            <Link
-              to="/admin/register"
-              className="bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 py-2 px-4 rounded-md font-medium transition duration-200 text-sm"
-            >
-              🔐 Acceso Admin
+              Registrarse
             </Link>
           </div>
           

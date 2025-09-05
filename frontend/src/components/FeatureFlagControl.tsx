@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { migrationService } from '../services/migrationService';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 
 interface FeatureFlagControlProps {
   feature: 'authentication' | 'applications' | 'documents' | 'realtime' | 'analytics';
@@ -14,7 +14,7 @@ export const FeatureFlagControl: React.FC<FeatureFlagControlProps> = ({
   className = ''
 }) => {
   const [config, setConfig] = useState(migrationService.getConfig());
-  const user = authService.getCurrentUser();
+  const user = cognitoAuthService.getCurrentUser();
   
   // Only admins can modify feature flags
   const canModify = user?.role === 'admin';

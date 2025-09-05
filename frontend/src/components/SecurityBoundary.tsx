@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import { validateSessionIntegrity, forceSecureLogout, logSecurityViolation } from '../utils/securityUtils';
 
 interface SecurityBoundaryProps {
@@ -22,7 +22,7 @@ export const SecurityBoundary: React.FC<SecurityBoundaryProps> = ({ children }) 
           return;
         }
 
-        const user = authService.getCurrentUser();
+        const user = cognitoAuthService.getCurrentUser();
         if (!user) {
           return; // Not logged in, that's ok for public routes
         }
@@ -95,7 +95,7 @@ export const SecurityBoundary: React.FC<SecurityBoundaryProps> = ({ children }) 
     const handleStorageChange = (event: StorageEvent) => {
       // Check for unauthorized modifications to auth data
       if (event.key?.includes('cognito') || event.key?.includes('auth')) {
-        const user = authService.getCurrentUser();
+        const user = cognitoAuthService.getCurrentUser();
         if (user) {
           logSecurityViolation({
             action: 'AUTH_DATA_MODIFICATION_DETECTED',
@@ -130,7 +130,7 @@ export const SecurityBoundary: React.FC<SecurityBoundaryProps> = ({ children }) 
 
     // SECURITY: Monitor for developer tools opening
     const handleDevToolsOpen = () => {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (user?.role === 'postulante') {
         logSecurityViolation({
           action: 'DEV_TOOLS_OPENED_BY_POSTULANTE',

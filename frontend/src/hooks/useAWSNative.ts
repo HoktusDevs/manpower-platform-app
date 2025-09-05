@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { awsNativeService } from '../services/awsNativeService';
 import { legacyApiService } from '../services/legacyApiService';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import { migrationService } from '../services/migrationService';
 import type { MigrationConfigUpdate } from '../types/config';
 
@@ -40,7 +40,7 @@ export const useAWSNative = () => {
   // Initialize AWS-Native service when user is authenticated
   useEffect(() => {
     const initializeService = async () => {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (user && !awsNativeService.isInitialized()) {
         try {
           // Get AWS config from environment
@@ -74,7 +74,7 @@ export const useAWSNative = () => {
     setError(null);
 
     try {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -89,7 +89,7 @@ export const useAWSNative = () => {
         console.log(`✅ Fetched ${data.length} applications directly from DynamoDB`);
       } else {
         // Legacy API fallback
-        const token = authService.getToken();
+        const token = cognitoAuthService.getToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -109,7 +109,7 @@ export const useAWSNative = () => {
 
       setApplications(data);
     } catch (err) {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch applications';
       
       // Track error metrics
@@ -140,7 +140,7 @@ export const useAWSNative = () => {
     setError(null);
 
     try {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (!user || user.role !== 'postulante') {
         throw new Error('Only postulantes can create applications');
       }
@@ -155,7 +155,7 @@ export const useAWSNative = () => {
         console.log('✅ Application created successfully via AWS-Native');
       } else {
         // Legacy API fallback
-        const token = authService.getToken();
+        const token = cognitoAuthService.getToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -178,7 +178,7 @@ export const useAWSNative = () => {
       
       return newApplication;
     } catch (err) {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       const errorMessage = err instanceof Error ? err.message : 'Failed to create application';
       
       // Track error metrics
@@ -213,7 +213,7 @@ export const useAWSNative = () => {
     setError(null);
 
     try {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (!user || user.role !== 'postulante') {
         throw new Error('Unauthorized to update applications');
       }
@@ -247,7 +247,7 @@ export const useAWSNative = () => {
     setError(null);
 
     try {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (!user || user.role !== 'admin') {
         throw new Error('Admin access required');
       }
@@ -277,7 +277,7 @@ export const useAWSNative = () => {
     setError(null);
 
     try {
-      const user = authService.getCurrentUser();
+      const user = cognitoAuthService.getCurrentUser();
       if (!user || user.role !== 'admin') {
         throw new Error('Admin access required');
       }
@@ -328,7 +328,7 @@ export const useAWSNative = () => {
    * Check if AWS-Native service is available
    */
   const isAWSNativeAvailable = () => {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user) return false;
     
     const systemUsed = migrationService.getSystemForFeature('applications', user.userId);
@@ -353,7 +353,7 @@ export const useAWSNative = () => {
    * Update migration configuration (admin only)
    */
   const updateMigrationConfig = (newConfig: MigrationConfigUpdate) => {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (user?.role === 'admin') {
       migrationService.updateConfig(newConfig);
     }

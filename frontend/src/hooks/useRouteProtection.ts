@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 
 // SECURITY: Admin-only routes that should be completely hidden from postulantes
 const ADMIN_RESTRICTED_PATHS = [
@@ -27,7 +27,7 @@ const ADMIN_API_PATTERNS = [
 export const useRouteProtection = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = authService.getCurrentUser();
+  const user = cognitoAuthService.getCurrentUser();
 
   useEffect(() => {
     // SECURITY LAYER 1: Route-level protection

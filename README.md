@@ -40,9 +40,9 @@ npm run quality-check # Check without build
 
 ---
 
-# 🚀 Manpower Platform
+# 🚀 Manpower Platform - AWS-Native
 
-Una plataforma moderna de gestión de recursos humanos construida con React, AWS CDK, y Amazon Cognito.
+Una plataforma moderna de gestión de recursos humanos construida con **arquitectura AWS-Native**: React + Cognito + DynamoDB + AppSync.
 
 ## ⚡ Instalación en Nueva Cuenta AWS
 
@@ -66,7 +66,9 @@ Una plataforma moderna de gestión de recursos humanos construida con React, AWS
 
 **Resultado:** Stack 100% funcional desplegado en menos de 10 minutos, incluyendo:
 - Cognito User Pool + Identity Pool + Grupos
+- DynamoDB Tables + AppSync GraphQL API
 - S3 Bucket + CloudFront Distribution + OAC
+- Lambda Triggers (Pre-signup, Post-confirmation)
 - Usuarios de prueba creados automáticamente
 - Frontend funcionando en desarrollo y producción
 
@@ -86,54 +88,68 @@ Una plataforma moderna de gestión de recursos humanos construida con React, AWS
 ```bash
 # Opcional - valores por defecto
 export ENVIRONMENT=dev          # dev | prod
-export USE_COGNITO=true        # true | false  
 export AWS_REGION=us-east-1    # región AWS
 ```
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura AWS-Native
 
 ### Servicios AWS Desplegados
 
-- **Amazon Cognito**: Autenticación y autorización
-- **S3**: Hosting del frontend y almacenamiento
+- **Amazon Cognito**: Autenticación y autorización (único sistema)
+- **DynamoDB**: Base de datos NoSQL para applications y documentos
+- **AppSync**: API GraphQL para queries en tiempo real
+- **S3**: Hosting del frontend y almacenamiento de documentos
 - **CloudFront**: CDN global
-- **DynamoDB**: Base de datos (Auth Service legacy)
-- **Lambda**: Funciones serverless
-- **API Gateway**: APIs REST
-- **IAM**: Roles y políticas
+- **Lambda**: Triggers de Cognito (pre-signup, post-confirmation)
+- **IAM**: Roles y políticas de acceso
 
 ### Stacks CDK
 
 1. **ManpowerCognitoAuth**: Sistema de autenticación con Cognito
-2. **ManpowerPlatformFrontend**: Frontend React en S3/CloudFront
-3. **ManpowerAuthService**: Servicio de auth legacy (opcional)
+2. **ManpowerDataStack**: DynamoDB + AppSync GraphQL API
+3. **ManpowerPlatformFrontend**: Frontend React en S3/CloudFront
 
-## 🔐 Autenticación
+## 🔐 Autenticación - Solo Cognito
 
-### Sistema Híbrido
+### Sistema Único
 
-La plataforma soporta dos sistemas de autenticación:
+La plataforma utiliza **únicamente Amazon Cognito** para autenticación:
 
-- **Amazon Cognito** (recomendado): Seguro, escalable, compliance automático
-- **Custom Auth Service** (legacy): Para retrocompatibilidad
+- ✅ **Seguro**: MFA, password policies, account recovery
+- ✅ **Escalable**: Millones de usuarios sin gestión de infraestructura
+- ✅ **Compliance**: GDPR, HIPAA, SOC2 automático
+- ✅ **JWT Tokens**: Estándar de la industria
+- ✅ **Social Login**: Google, Facebook, Apple (configurable)
 
-**Cambiar entre sistemas:**
-```bash
-# Usar Cognito
-export USE_COGNITO=true
-./deploy.sh
-
-# Usar sistema custom
-export USE_COGNITO=false  
-./deploy.sh
-```
-
-### Usuarios de Prueba (Cognito)
+### Usuarios de Prueba
 
 | Usuario | Email | Password | Role |
 |---------|-------|----------|------|
 | Admin | admin@test.com | TempPass123! | admin |
 | Postulante | postulante@test.com | TempPass123! | postulante |
+
+> 🔄 **Cambio automático de password**: Los usuarios deben cambiar la contraseña temporal en el primer login.
+
+## 📊 Data Layer - AWS-Native
+
+### DynamoDB Tables
+
+- **manpower-applications-dev**: Aplicaciones de trabajo
+- **manpower-documents-dev**: Metadatos de documentos
+
+### AppSync GraphQL API
+
+Endpoint: `https://u65zxvenhvb4bcm43g7ex5pnnu.appsync-api.us-east-1.amazonaws.com/graphql`
+
+**Queries disponibles:**
+- `getMyApplications`: Obtener mis aplicaciones (postulante)
+- `getAllApplications`: Obtener todas las aplicaciones (admin)
+- `getApplicationById`: Obtener aplicación específica
+
+**Mutations disponibles:**
+- `createApplication`: Crear nueva aplicación
+- `updateApplication`: Actualizar aplicación
+- `updateApplicationStatus`: Cambiar estado (admin)
 
 ## 🚀 Desarrollo
 
@@ -149,173 +165,152 @@ npm run dev
 ./scripts/deploy-frontend.sh
 ```
 
-### Comandos útiles
+### Ver logs de Lambda
 ```bash
-# Ver diferencias antes de deploy
-cd aws/cdk && npm run diff
+aws logs describe-log-groups --log-group-name-prefix /aws/lambda/manpower
+```
 
-# Destruir todo el stack
-cd aws/cdk && npm run destroy
+## 🔧 Comandos Útiles
 
-# Ver logs de CloudFormation
-aws cloudformation describe-stack-events --stack-name ManpowerCognitoAuth
+### Backend (CDK)
+```bash
+cd aws/cdk
+
+# Lista stacks disponibles
+npx cdk list
+
+# Deploy específico
+npx cdk deploy ManpowerCognitoAuth
+
+# Destroy todo
+npx cdk destroy --all
+```
+
+### Frontend
+```bash
+cd frontend
+
+# Desarrollo
+npm run dev
+
+# Build producción
+npm run build
+
+# Preview build
+npm run preview
+
+# Lint
+npm run lint
+
+# Type check
+npm run type-check
+```
+
+### AWS Utilidades
+```bash
+# Ver usuarios en Cognito
+aws cognito-idp list-users --user-pool-id us-east-1_uRCDemTcQ
+
+# Ver tablas DynamoDB
+aws dynamodb list-tables --query "TableNames[?contains(@, 'manpower')]"
+
+# Ver distributions CloudFront
+aws cloudfront list-distributions --query "DistributionList.Items[].{Id:Id,DomainName:DomainName}"
 ```
 
 ## 📁 Estructura del Proyecto
 
 ```
 manpower-platform-app/
-├── deploy.sh                 # 🚀 Script de despliegue completo
-├── aws/cdk/                  # Infraestructura AWS CDK
-│   ├── lib/
-│   │   ├── cognito-auth-stack.ts      # Stack Cognito
-│   │   ├── auth-service-stack.ts      # Stack Auth legacy
-│   │   └── frontend-stack.ts          # Stack Frontend S3/CloudFront
-│   └── bin/app.ts            # Punto de entrada CDK
-├── frontend/                 # Aplicación React
+├── frontend/                 # React + TypeScript app
 │   ├── src/
 │   │   ├── services/
-│   │   │   ├── cognitoAuthService.ts  # Cliente Cognito
-│   │   │   └── customAuthService.ts   # Auth service custom
-│   │   ├── hooks/useAuth.ts           # Hook auth unificado
-│   │   └── types/auth.ts              # Tipos TypeScript
-│   ├── .env                  # Config desarrollo
-│   ├── .env.production       # Config producción
-│   └── .env.cognito          # Config Cognito
-└── scripts/
-    └── deploy-frontend.sh    # Deploy frontend a S3/CloudFront
+│   │   │   └── cognitoAuthService.ts    # Cognito integration
+│   │   ├── hooks/
+│   │   │   └── useAuth.ts               # Auth hook
+│   │   └── components/
+│   └── .env                 # Environment variables
+├── aws/cdk/                 # AWS CDK infrastructure
+│   ├── lib/
+│   │   ├── cognito-auth-stack.ts       # Cognito setup
+│   │   ├── data-stack.ts               # DynamoDB + AppSync
+│   │   └── frontend-stack.ts           # S3 + CloudFront
+│   └── bin/app.ts           # CDK app entry point
+└── backend/                 # AWS-Native (no microservices)
+    └── package.json         # Info sobre arquitectura
 ```
 
-## 🌐 URLs Post-Deployment
+## 🚦 Estados de la Aplicación
 
-Después del deployment, el script mostrará:
+| Estado | Descripción | Acciones Disponibles |
+|---------|-------------|---------------------|
+| PENDING | Aplicación enviada | Ver detalles |
+| IN_REVIEW | En revisión por RRHH | Seguimiento |
+| INTERVIEW_SCHEDULED | Entrevista programada | Confirmar/Reagendar |
+| APPROVED | Aprobada para siguiente fase | Preparar documentos |
+| REJECTED | Rechazada | Ver feedback |
+| HIRED | Contratado | Onboarding |
 
-- **Website URL**: `https://xxxx.cloudfront.net`
-- **S3 Bucket**: `manpower-frontend-{account}-{region}`
-- **Cognito User Pool**: `us-east-1_xxxxxxx`
+## 🔒 Seguridad
 
-## 🔄 Migración entre Cuentas
+### Políticas Implementadas
 
-### Proceso Completo
+- **MFA**: Multi-factor authentication opcional
+- **Password Policy**: Mínimo 8 caracteres, mayúsculas, números
+- **JWT Tokens**: Tokens seguros con expiración configurable
+- **Role-based Access**: Admin vs Postulante permissions
+- **Route Guards**: Protección de rutas por rol
+- **CORS**: Configurado solo para dominios permitidos
+- **HTTPS**: Forzado en producción via CloudFront
 
-1. **Configurar nueva cuenta AWS:**
-   ```bash
-   aws configure --profile nueva-cuenta
-   export AWS_PROFILE=nueva-cuenta
-   ```
+### Logging & Monitoring
 
-2. **Desplegar todo:**
-   ```bash
-   ./deploy.sh
-   ```
+- **CloudWatch**: Logs de Lambda functions
+- **Cognito Events**: Login attempts, password changes
+- **Application Logs**: User actions tracking
+- **Error Monitoring**: Automatic error capture
 
-3. **Verificar deployment:**
-   ```bash
-   # Test de salud de los servicios
-   curl https://xxxx.cloudfront.net
-   ```
+## 🚀 Production Deployment
 
-### Personalización por Entorno
-
-**Desarrollo:**
+### DNS Setup (Opcional)
 ```bash
-ENVIRONMENT=dev ./deploy.sh
+# Configurar dominio custom
+export DOMAIN_NAME=app.yourcompany.com
+npx cdk deploy --parameters domainName=$DOMAIN_NAME
 ```
 
-**Producción:**
+### SSL Certificate
 ```bash
-ENVIRONMENT=prod USE_COGNITO=true ./deploy.sh
+# ACM certificate (manual)
+aws acm request-certificate \
+  --domain-name app.yourcompany.com \
+  --validation-method DNS \
+  --region us-east-1
 ```
 
-## 📊 Costos Estimados
-
-| Servicio | Costo/Mes (15K usuarios) |
-|----------|--------------------------|
-| Cognito | $15-25 |
-| CloudFront | $10-20 |  
-| S3 | $5-10 |
-| Lambda | $5-15 |
-| **Total** | **~$50-100** |
-
-## 🛡️ Seguridad
-
-### Características de Seguridad
-
-- **Cognito**: OAuth 2.0, MFA, compliance GDPR/HIPAA
-- **CloudFront**: HTTPS obligatorio, OAC para S3
-- **S3**: Bucket policies restrictivas, no acceso público
-- **IAM**: Principio de menor privilegio
-
-### Configuraciones de Seguridad
-
-```typescript
-// Password policy
-passwordPolicy: {
-  minLength: 8,
-  requireLowercase: true,
-  requireUppercase: true,
-  requireDigits: true,
-  requireSymbols: true
-}
-
-// MFA opcional
-mfa: cognito.Mfa.OPTIONAL
-```
-
-## 🚨 Troubleshooting
-
-### Errores Comunes
-
-**Error: Stack already exists**
+### Environment Variables
 ```bash
-cd aws/cdk && npm run destroy
+# Production
+export ENVIRONMENT=prod
+export VITE_ENABLE_DEBUG=false
 ./deploy.sh
 ```
 
-**Error: AWS credentials not configured**
-```bash
-aws configure
-export AWS_PROFILE=your-profile
-```
+## 📚 Recursos
 
-**Error: CDK bootstrap needed**
-```bash
-cd aws/cdk
-npx cdk bootstrap aws://ACCOUNT/REGION
-```
+- [AWS Cognito Documentation](https://docs.aws.amazon.com/cognito/)
+- [AWS CDK Documentation](https://docs.aws.amazon.com/cdk/)
+- [React Documentation](https://react.dev/)
+- [TypeScript Documentation](https://www.typescriptlang.org/)
 
-### Logs y Monitoreo
+## 🆘 Soporte
 
-```bash
-# CloudWatch logs para Lambda
-aws logs tail /aws/lambda/manpower-pre-signup-dev --follow
+Para problemas o preguntas:
 
-# Eventos CloudFormation
-aws cloudformation describe-stack-events --stack-name ManpowerCognitoAuth
-```
-
-## 📈 Próximos Pasos
-
-1. **Configurar dominio custom** en CloudFront
-2. **Implementar CI/CD** con GitHub Actions
-3. **Monitoreo avanzado** con CloudWatch Dashboards
-4. **Backup y disaster recovery**
-5. **Optimización de performance**
-
-## 🤝 Contribución
-
-1. Fork del proyecto
-2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push branch (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-## 📝 Licencia
-
-Distribuido bajo licencia MIT. Ver `LICENSE` para más información.
+1. **Issues**: Crear issue en el repositorio
+2. **AWS Support**: Para problemas de infraestructura
+3. **Logs**: Revisar CloudWatch logs primero
 
 ---
 
-**¿Necesitas ayuda?** Abre un issue o contacta al equipo de desarrollo.
-
-🎉 **¡Listo para usar en producción!**
+**🎯 Objetivo**: Plataforma de RRHH moderna, escalable y segura con AWS-Native architecture.

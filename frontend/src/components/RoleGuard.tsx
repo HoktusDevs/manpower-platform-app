@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -13,8 +13,8 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   requiredRole, 
   allowedRoles 
 }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  const user = authService.getCurrentUser();
+  const isAuthenticated = cognitoAuthService.isAuthenticated();
+  const user = cognitoAuthService.getCurrentUser();
   const location = useLocation();
 
   // SECURITY: Clear any cached admin data if postulante tries to access
@@ -40,7 +40,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // NO USER DATA (security breach attempt)
   if (!user || !user.role) {
     console.error('🚨 SECURITY: No user role found, forcing logout');
-    authService.logout();
+    cognitoAuthService.logout();
     return <Navigate to="/login" replace />;
   }
 
@@ -63,9 +63,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   }
 
   // ADDITIONAL SECURITY: Verify token is still valid
-  if (!authService.isTokenValid()) {
+  if (!cognitoAuthService.isTokenValid()) {
     console.error('🚨 SECURITY: Invalid token detected, forcing logout');
-    authService.logout();
+    cognitoAuthService.logout();
     return <Navigate to="/login" replace />;
   }
 

@@ -1,7 +1,7 @@
 // Analytics Service - Migration-aware analytics tracking
 // Handles both Legacy analytics API and AWS-Native (Kinesis/CloudWatch)
 
-import { authService } from './authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import { migrationService } from './migrationService';
 import type { AnalyticsProperties, EventMetadata } from '../types/analytics';
 
@@ -45,7 +45,7 @@ class AnalyticsService {
    * Track page view with migration-aware system
    */
   async trackPageView(pageView: Omit<PageView, 'timestamp'>): Promise<void> {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     const event: AnalyticsEvent = {
       eventName: 'page_view',
       userId: user?.userId,
@@ -74,7 +74,7 @@ class AnalyticsService {
    * Track user action with migration-aware system
    */
   async trackUserAction(userAction: Omit<UserAction, 'timestamp' | 'userId'>): Promise<void> {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     const event: AnalyticsEvent = {
       eventName: 'user_action',
       userId: user?.userId,
@@ -98,7 +98,7 @@ class AnalyticsService {
       return;
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     const systemUsed = migrationService.getSystemForFeature('analytics', user?.userId);
     const startTime = Date.now();
 
@@ -169,7 +169,7 @@ class AnalyticsService {
     // Simulate legacy analytics API call
     await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
     
-    // const token = authService.getToken();
+    // const token = cognitoAuthService.getToken();
     // const payload = {
     //   events: events.map(event => ({
     //     ...event,
@@ -199,7 +199,7 @@ class AnalyticsService {
   private async flushQueue(): Promise<void> {
     if (this.queue.length === 0) return;
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     const systemUsed = migrationService.getSystemForFeature('analytics', user?.userId);
     const eventsToFlush = [...this.queue];
 

@@ -1,7 +1,7 @@
 // Documents Service - Migration-aware document management
 // Handles both Legacy API and AWS-Native S3 direct upload
 
-import { authService } from './authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import { migrationService } from './migrationService';
 import { legacyApiService } from './legacyApiService';
 
@@ -28,7 +28,7 @@ class DocumentsService {
    * Upload document using migration-aware system
    */
   async uploadDocument(input: UploadDocumentInput): Promise<Document> {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -45,7 +45,7 @@ class DocumentsService {
         console.log('✅ Document uploaded via AWS-Native S3');
       } else {
         // Legacy: Upload via REST API
-        const token = authService.getToken();
+        const token = cognitoAuthService.getToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -116,7 +116,7 @@ class DocumentsService {
     
     return {
       documentId,
-      userId: authService.getCurrentUser()?.userId || '',
+      userId: cognitoAuthService.getCurrentUser()?.userId || '',
       fileName: input.file.name,
       fileType: input.file.type,
       fileSize: input.file.size,
@@ -129,7 +129,7 @@ class DocumentsService {
    * Get user documents
    */
   async getMyDocuments(): Promise<Document[]> {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
     }

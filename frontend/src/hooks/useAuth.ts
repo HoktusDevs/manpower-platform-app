@@ -1,10 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { authService } from '../services/authService';
 import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { User, RegisterRequest, LoginRequest, AuthSystem } from '../types/auth';
-
-// Environment configuration
-const USE_COGNITO = import.meta.env.VITE_USE_COGNITO === 'true';
 
 interface UseAuthReturn {
   // Estado
@@ -32,30 +28,25 @@ export const useAuth = (): UseAuthReturn => {
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize the appropriate auth service
+  // Initialize Cognito auth service
   useEffect(() => {
     const initializeAuth = async () => {
-      if (USE_COGNITO) {
-        // Initialize Cognito with environment variables
-        const cognitoConfig = {
-          userPoolId: import.meta.env.VITE_USER_POOL_ID,
-          userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID,
-          region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-        };
+      // Initialize Cognito with environment variables
+      const cognitoConfig = {
+        userPoolId: import.meta.env.VITE_USER_POOL_ID,
+        userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
+        identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID,
+        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+      };
 
-        if (!cognitoConfig.userPoolId || !cognitoConfig.userPoolClientId) {
-          console.error('Cognito configuration missing. Please check environment variables.');
-          setError('Authentication configuration error');
-          return;
-        }
-
-        cognitoAuthService.initialize(cognitoConfig);
-        setUser(cognitoAuthService.getCurrentUser());
-      } else {
-        // Use existing custom auth service
-        setUser(authService.getCurrentUser());
+      if (!cognitoConfig.userPoolId || !cognitoConfig.userPoolClientId) {
+        console.error('Cognito configuration missing. Please check environment variables.');
+        setError('Authentication configuration error');
+        return;
       }
+
+      cognitoAuthService.initialize(cognitoConfig);
+      setUser(cognitoAuthService.getCurrentUser());
       
       setIsInitialized(true);
     };
@@ -77,17 +68,11 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const result = USE_COGNITO 
-        ? await cognitoAuthService.login(credentials)
-        : await authService.login(credentials);
+      const result = await cognitoAuthService.login(credentials);
       
       if (result.success && result.data?.user) {
         setUser(result.data.user);
-        if (USE_COGNITO) {
-          cognitoAuthService.setUserData(result.data.user);
-        } else {
-          authService.setUserData(result.data.user);
-        }
+        cognitoAuthService.setUserData(result.data.user);
         return true;
       } else {
         setError(result.message || 'Login failed');
@@ -112,23 +97,17 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const result = USE_COGNITO 
-        ? await cognitoAuthService.register(userData)
-        : await authService.register(userData);
+      const result = await cognitoAuthService.register(userData);
       
       if (result.success) {
         if (result.data?.user) {
           setUser(result.data.user);
-          if (USE_COGNITO) {
-            cognitoAuthService.setUserData(result.data.user);
-          } else {
-            authService.setUserData(result.data.user);
-          }
+          cognitoAuthService.setUserData(result.data.user);
         }
         
         // For Cognito, registration might succeed but user needs email verification
-        if (USE_COGNITO && !result.data?.user) {
-          setError(result.message || 'Please check your email to verify your account');
+        if (!result.data?.user) {
+          setError('Registration successful. Please check your email for verification.');
         }
         
         return true;
@@ -146,21 +125,14 @@ export const useAuth = (): UseAuthReturn => {
   }, [isInitialized]);
 
   const logout = useCallback(() => {
-    if (USE_COGNITO) {
-      cognitoAuthService.logout();
-    } else {
-      authService.logout();
-    }
+    cognitoAuthService.logout();
     setUser(null);
     setError(null);
   }, []);
 
   // Cognito-specific functions
   const confirmRegistration = useCallback(async (email: string, code: string): Promise<boolean> => {
-    if (!USE_COGNITO) {
-      setError('Email verification only available with Cognito');
-      return false;
-    }
+    if (!isInitialized) return false;
 
     setIsLoading(true);
     setError(null);
@@ -168,29 +140,47 @@ export const useAuth = (): UseAuthReturn => {
     try {
       const result = await cognitoAuthService.confirmRegistration(email, code);
       if (!result.success) {
-        setError(result.message || 'Verification failed');
+        setError(result.message || 'Email verification failed');
       }
       return result.success;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Verification failed';
+      const errorMessage = err instanceof Error ? err.message : 'Email verification failed';
       setError(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isInitialized]);
 
   const forgotPassword = useCallback(async (email: string): Promise<boolean> => {
-    if (!USE_COGNITO) {
-      setError('Password reset only available with Cognito');
-      return false;
-    }
+    if (!isInitialized) return false;
 
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await cognitoAuthService.forgotPassword(email);
+      if (!result.success) {
+        setError(result.message || 'Password reset request failed');
+      }
+      return result.success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Password reset request failed';
+      setError(errorMessage);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isInitialized]);
+
+  const confirmPassword = useCallback(async (email: string, code: string, newPassword: string): Promise<boolean> => {
+    if (!isInitialized) return false;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await cognitoAuthService.confirmPassword(email, code, newPassword);
       if (!result.success) {
         setError(result.message || 'Password reset failed');
       }
@@ -202,50 +192,20 @@ export const useAuth = (): UseAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const confirmPassword = useCallback(async (email: string, code: string, newPassword: string): Promise<boolean> => {
-    if (!USE_COGNITO) {
-      setError('Password confirmation only available with Cognito');
-      return false;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await cognitoAuthService.confirmPassword(email, code, newPassword);
-      if (!result.success) {
-        setError(result.message || 'Password confirmation failed');
-      }
-      return result.success;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Password confirmation failed';
-      setError(errorMessage);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const isAuthenticated = USE_COGNITO 
-    ? cognitoAuthService.isAuthenticated()
-    : authService.isAuthenticated();
+  }, [isInitialized]);
 
   return {
     user,
     isLoading,
     error,
-    isAuthenticated,
-    authSystem: USE_COGNITO ? 'cognito' : 'custom',
+    isAuthenticated: cognitoAuthService.isAuthenticated(),
+    authSystem: 'cognito',
     login,
     register,
     logout,
     clearError,
-    ...(USE_COGNITO && {
-      confirmRegistration,
-      forgotPassword,
-      confirmPassword,
-    }),
+    confirmRegistration,
+    forgotPassword,
+    confirmPassword,
   };
 };

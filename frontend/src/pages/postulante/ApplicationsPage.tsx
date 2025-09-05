@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAWSNative } from '../../hooks/useAWSNative';
-import { authService } from '../../services/authService';
+import { cognitoAuthService } from '../../services/cognitoAuthService';
 import { FeatureFlagControl } from '../../components/FeatureFlagControl';
 
 interface Application {
@@ -63,7 +63,7 @@ export const ApplicationsPage: React.FC = () => {
     location: ''
   });
 
-  const user = authService.getCurrentUser();
+  const user = cognitoAuthService.getCurrentUser();
   const isAWSNative = isAWSNativeAvailable();
 
   useEffect(() => {

@@ -1,13 +1,13 @@
 {
-  "name": "manpower-platform-backend-microservices",
+  "name": "manpower-platform-backend-aws-native",
   "version": "1.0.0",
-  "description": "Manpower Platform Backend - Microservices Architecture",
+  "description": "Manpower Platform Backend - AWS-Native Architecture (Cognito + DynamoDB + AppSync)",
   "scripts": {
-    "build": "echo 'Building all microservices...' && cd services/auth-service && npm run build",
-    "clean": "cd services/auth-service && npm run clean",
-    "install:all": "cd services/auth-service && npm ci"
+    "info": "echo 'Backend is AWS-Native (no microservices): Cognito + DynamoDB + AppSync + Lambda Triggers'",
+    "deploy": "echo 'Use CDK: cd ../aws/cdk && npx cdk deploy'",
+    "clean": "echo 'No services to clean - AWS-Native backend'"
   },
-  "keywords": ["microservices", "aws", "lambda", "typescript", "manpower"],
+  "keywords": ["aws-native", "cognito", "dynamodb", "appsync", "typescript", "manpower"],
   "author": "Manpower Platform Team",
   "license": "MIT"
 }

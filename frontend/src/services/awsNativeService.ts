@@ -1,13 +1,13 @@
-// AWS-Native Service - Direct DynamoDB + AppSync GraphQL Access
-// No API Gateway needed - Direct AWS SDK usage
+// AWS-Native Service - Direct DynamoDB Access
+// No API Gateway or GraphQL needed - Pure AWS SDK usage
 
-import { generateClient } from 'aws-amplify/api';
+// GraphQL via AppSync removed - using direct DynamoDB access only
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand /*, DeleteCommand*/ } from "@aws-sdk/lib-dynamodb";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
-import { authService } from './authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { User } from '../types/auth';
-import type { GraphQLClient, DynamoDBExpressionAttributeValues } from '../types/aws';
+import type { DynamoDBExpressionAttributeValues } from '../types/aws';
 
 interface AWSNativeConfig {
   userPoolId: string;
@@ -46,7 +46,7 @@ interface CreateApplicationInput {
 class AWSNativeService {
   private config: AWSNativeConfig | null = null;
   private dynamoClient: DynamoDBDocumentClient | null = null;
-  private graphqlClient: GraphQLClient | null = null;
+  // GraphQL client removed - using DynamoDB directly
 
   /**
    * Initialize AWS-Native service with configuration
@@ -68,10 +68,9 @@ class AWSNativeService {
 
     this.dynamoClient = DynamoDBDocumentClient.from(dynamoBaseClient);
 
-    // Initialize AppSync GraphQL Client
-    this.graphqlClient = generateClient();
+    // Direct DynamoDB access only - no GraphQL needed
 
-    console.log('🚀 AWS-Native Service initialized - Direct DynamoDB + GraphQL access');
+    console.log('🚀 AWS-Native Service initialized - Direct DynamoDB access');
   }
 
   /**
@@ -93,7 +92,7 @@ class AWSNativeService {
       throw new Error('AWS-Native service not initialized');
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -123,7 +122,7 @@ class AWSNativeService {
       throw new Error('AWS-Native service not initialized');
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -174,7 +173,7 @@ class AWSNativeService {
       throw new Error('AWS-Native service not initialized');
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user || user.role !== 'postulante') {
       throw new Error('Unauthorized: Only postulantes can update their own applications');
     }
@@ -230,7 +229,7 @@ class AWSNativeService {
       throw new Error('AWS-Native service not initialized');
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user || user.role !== 'admin') {
       console.error('🚨 SECURITY: Non-admin attempted to access all applications');
       throw new Error('Unauthorized: Admin access required');
@@ -269,7 +268,7 @@ class AWSNativeService {
       throw new Error('AWS-Native service not initialized');
     }
 
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     if (!user || user.role !== 'admin') {
       console.error('🚨 SECURITY: Non-admin attempted to update application status');
       throw new Error('Unauthorized: Admin access required');
@@ -306,7 +305,7 @@ class AWSNativeService {
    * SECURITY: Validate user has access to perform operation
    */
   private validateUserAccess(requiredRole?: 'admin' | 'postulante'): User {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     
     if (!user) {
       throw new Error('User not authenticated');

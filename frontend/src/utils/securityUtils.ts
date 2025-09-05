@@ -1,4 +1,4 @@
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 
 // SECURITY: Admin-only routes that should be completely invisible to postulantes
 export const ADMIN_RESTRICTED_ROUTES = [
@@ -37,7 +37,7 @@ export const ADMIN_RESTRICTED_APIS = [
  * SECURITY: Check if a route should be accessible to current user
  */
 export const isRouteAuthorized = (path: string): boolean => {
-  const user = authService.getCurrentUser();
+  const user = cognitoAuthService.getCurrentUser();
   
   if (!user || !user.role) {
     return false;
@@ -63,7 +63,7 @@ export const isRouteAuthorized = (path: string): boolean => {
  * SECURITY: Check if an API endpoint should be accessible to current user
  */
 export const isAPIAuthorized = (url: string): boolean => {
-  const user = authService.getCurrentUser();
+  const user = cognitoAuthService.getCurrentUser();
   
   if (!user || !user.role) {
     return false;
@@ -182,7 +182,7 @@ export const forceSecureLogout = (reason: string): void => {
   clearSensitiveData();
   
   // Force logout through auth service
-  authService.logout();
+  cognitoAuthService.logout();
   
   // Force redirect to login
   window.location.href = '/login';
@@ -193,8 +193,8 @@ export const forceSecureLogout = (reason: string): void => {
  */
 export const validateSessionIntegrity = (): boolean => {
   try {
-    const user = authService.getCurrentUser();
-    const isAuthenticated = authService.isAuthenticated();
+    const user = cognitoAuthService.getCurrentUser();
+    const isAuthenticated = cognitoAuthService.isAuthenticated();
     
     // Check for session inconsistencies
     if (isAuthenticated && !user) {

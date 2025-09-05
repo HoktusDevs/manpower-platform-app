@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { analyticsService, type UserAction } from '../services/analyticsService';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { AnalyticsProperties, AnalyticsContext } from '../types/analytics';
 
 export const useAnalytics = () => {
@@ -24,7 +24,7 @@ export const useAnalytics = () => {
 
   // Track custom event
   const trackEvent = (eventName: string, properties: AnalyticsProperties = {}) => {
-    const user = authService.getCurrentUser();
+    const user = cognitoAuthService.getCurrentUser();
     analyticsService.trackEvent({
       eventName,
       userId: user?.userId,

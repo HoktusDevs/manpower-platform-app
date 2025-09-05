@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,8 +10,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredRole 
 }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  const user = authService.getCurrentUser();
+  const isAuthenticated = cognitoAuthService.isAuthenticated();
+  const user = cognitoAuthService.getCurrentUser();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

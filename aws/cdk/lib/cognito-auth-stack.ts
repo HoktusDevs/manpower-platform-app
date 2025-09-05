@@ -267,11 +267,9 @@ export class CognitoAuthStack extends cdk.Stack {
             throw new Error('Invalid role. Must be admin or postulante');
           }
           
-          // Auto-confirm user in dev environment
-          if (process.env.ENVIRONMENT === 'dev') {
-            event.response.autoConfirmUser = true;
-            event.response.autoVerifyEmail = true;
-          }
+          // Auto-confirm all users for simplified UX
+          event.response.autoConfirmUser = true;
+          event.response.autoVerifyEmail = true;
           
           return event;
         };
