@@ -151,7 +151,7 @@ export const AdminDashboard = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Total Postulantes</p>
-                <p className="text-2xl font-semibold text-gray-900">1,234</p>
+                <p className="text-2xl font-semibold text-gray-900">-</p>
               </div>
             </div>
           </div>
@@ -164,8 +164,8 @@ export const AdminDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Aplicaciones Aprobadas</p>
-                <p className="text-2xl font-semibold text-gray-900">567</p>
+                <p className="text-sm font-medium text-gray-500">Postulaciones aprobadas</p>
+                <p className="text-2xl font-semibold text-gray-900">-</p>
               </div>
             </div>
           </div>
@@ -179,7 +179,7 @@ export const AdminDashboard = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Pendientes</p>
-                <p className="text-2xl font-semibold text-gray-900">89</p>
+                <p className="text-2xl font-semibold text-gray-900">-</p>
               </div>
             </div>
           </div>
@@ -192,8 +192,8 @@ export const AdminDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Formularios Activos</p>
-                <p className="text-2xl font-semibold text-gray-900">12</p>
+                <p className="text-sm font-medium text-gray-500">Postulaciones activas</p>
+                <p className="text-2xl font-semibold text-gray-900">-</p>
               </div>
             </div>
           </div>
