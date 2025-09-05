@@ -6,7 +6,7 @@ import { AccessDenied } from '../../core-ui';
 import { 
   DashboardHeader, 
   DashboardMetrics, 
-  QuickActions, 
+  Sidebar,
   RecentActivity 
 } from '../../components/AdminDashboard';
 
@@ -36,17 +36,28 @@ export const AdminDashboard = () => {
     );
   }
 
+  const handleSidebarNavigation = (path: string) => {
+    // TODO: Implement navigation logic based on path
+    console.log('Navigating to:', path);
+    // navigate(path);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader />
       
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <DashboardMetrics />
+      <div className="flex">
+        <Sidebar onNavigate={handleSidebarNavigation} />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <QuickActions />
-          <RecentActivity />
-        </div>
+        <main className="flex-1">
+          <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <DashboardMetrics />
+            
+            <div className="mt-6">
+              <RecentActivity />
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
