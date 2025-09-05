@@ -1,0 +1,208 @@
+name: Automated Deployment
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  USE_COGNITO: true
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
+      aws: ${{ steps.changes.outputs.aws }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - 'package.json'
+            backend:
+              - 'backend/**'
+            aws:
+              - 'aws/**'
+              - 'deploy.sh'
+
+  deploy-infrastructure:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.aws == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'aws/cdk/package-lock.json'
+
+      - name: Install CDK dependencies
+        run: |
+          cd aws/cdk
+          npm ci
+
+      - name: Bootstrap CDK (if needed)
+        run: |
+          cd aws/cdk
+          npx cdk bootstrap --require-approval never
+
+      - name: Deploy infrastructure
+        run: |
+          cd aws/cdk
+          export ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          npm run deploy -- --require-approval never
+
+  deploy-frontend:
+    needs: [detect-changes, deploy-infrastructure]
+    if: always() && (needs.detect-changes.outputs.frontend == 'true' || needs.deploy-infrastructure.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Get stack outputs
+        id: stack-outputs
+        run: |
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          
+          # Get Cognito outputs
+          USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name ManpowerCognitoAuth --query 'Stacks[0].Outputs[?OutputKey==`UserPoolId`].OutputValue' --output text)
+          USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks --stack-name ManpowerCognitoAuth --query 'Stacks[0].Outputs[?OutputKey==`UserPoolClientId`].OutputValue' --output text)
+          IDENTITY_POOL_ID=$(aws cloudformation describe-stacks --stack-name ManpowerCognitoAuth --query 'Stacks[0].Outputs[?OutputKey==`IdentityPoolId`].OutputValue' --output text)
+          
+          # Get Frontend outputs
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name ManpowerPlatformFrontend --query 'Stacks[0].Outputs[?OutputKey==`WebsiteBucketName`].OutputValue' --output text)
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name ManpowerPlatformFrontend --query 'Stacks[0].Outputs[?OutputKey==`DistributionId`].OutputValue' --output text)
+          
+          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "user_pool_client_id=$USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "identity_pool_id=$IDENTITY_POOL_ID" >> $GITHUB_OUTPUT
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
+      - name: Create environment file
+        run: |
+          cd frontend
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          API_URL=${{ github.ref == 'refs/heads/main' && 'https://api.manpower.com/api' || 'http://localhost:3000/api' }}
+          
+          cat > .env << EOF
+          VITE_USE_COGNITO=${{ env.USE_COGNITO }}
+          VITE_AWS_REGION=${{ env.AWS_REGION }}
+          VITE_API_URL=$API_URL
+          VITE_APP_NAME=Manpower Platform
+          VITE_APP_VERSION=1.0.0
+          VITE_ENVIRONMENT=$ENVIRONMENT
+          VITE_USER_POOL_ID=${{ steps.stack-outputs.outputs.user_pool_id }}
+          VITE_USER_POOL_CLIENT_ID=${{ steps.stack-outputs.outputs.user_pool_client_id }}
+          VITE_IDENTITY_POOL_ID=${{ steps.stack-outputs.outputs.identity_pool_id }}
+          VITE_MAX_FILE_SIZE=10485760
+          VITE_ALLOWED_FILE_TYPES=jpg,jpeg,png,pdf,doc,docx,txt
+          VITE_ENABLE_ANALYTICS=${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          VITE_ENABLE_DEBUG=${{ github.ref == 'refs/heads/main' && 'false' || 'true' }}
+          EOF
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Deploy to S3
+        run: |
+          cd frontend
+          aws s3 sync dist/ s3://${{ steps.stack-outputs.outputs.bucket_name }} --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" --exclude "service-worker.js" --exclude "manifest.json"
+          
+          aws s3 sync dist/ s3://${{ steps.stack-outputs.outputs.bucket_name }} --delete \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --include "*.html" --include "service-worker.js" --include "manifest.json"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.stack-outputs.outputs.distribution_id }} \
+            --paths "/*"
+
+  deploy-backend:
+    needs: [detect-changes, deploy-infrastructure]
+    if: always() && (needs.detect-changes.outputs.backend == 'true' || needs.deploy-infrastructure.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Deploy backend services
+        run: |
+          echo "🚀 Backend deployment placeholder"
+          echo "Backend changes detected, would deploy Lambda functions here"
+          # Add your backend deployment logic here
+          # For Lambda functions, you might use SAM, CDK, or direct AWS CLI commands
+
+  notify-success:
+    needs: [deploy-infrastructure, deploy-frontend, deploy-backend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Deployment Summary"
+          echo "===================="
+          echo "Environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Development' }}"
+          echo "Infrastructure: ${{ needs.deploy-infrastructure.result }}"
+          echo "Frontend: ${{ needs.deploy-frontend.result }}"
+          echo "Backend: ${{ needs.deploy-backend.result }}"
