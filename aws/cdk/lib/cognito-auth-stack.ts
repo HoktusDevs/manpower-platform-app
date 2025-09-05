@@ -292,7 +292,7 @@ export class CognitoAuthStack extends cdk.Stack {
         const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
         
         const cognitoClient = new CognitoIdentityProviderClient({
-          region: process.env.AWS_REGION
+          region: process.env.COGNITO_REGION
         });
         
         exports.handler = async (event) => {
@@ -324,7 +324,7 @@ export class CognitoAuthStack extends cdk.Stack {
         };
       `),
       environment: {
-        AWS_REGION: this.region,
+        COGNITO_REGION: this.region,
       },
       timeout: cdk.Duration.seconds(30),
     });
