@@ -38,6 +38,22 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   role: 'admin' | 'postulante';
+  
+  // Campos específicos de postulante
+  phone?: string;
+  rut?: string;
+  dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  educationLevel?: string;
+  workExperience?: string;
+  skills?: string;
+  
+  // Campos específicos de administrador
+  employeeId?: string;
+  department?: string;
+  adminLevel?: string;
+  authorizedBy?: string;
 }
 
 export interface LoginRequest {

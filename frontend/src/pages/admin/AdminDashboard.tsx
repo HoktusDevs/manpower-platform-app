@@ -1,94 +1,95 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAWSNative } from '../../hooks/useAWSNative';
 import { FeatureFlagControl } from '../../components/FeatureFlagControl';
 
-interface Application {
-  userId: string;
-  applicationId: string;
-  companyName: string;
-  position: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'INTERVIEW_SCHEDULED' | 'HIRED';
-  description?: string;
-  salary?: string;
-  location?: string;
-  createdAt: string;
-  updatedAt: string;
-  companyId?: string;
-}
+// interface Application {
+//   userId: string;
+//   applicationId: string;
+//   companyName: string;
+//   position: string;
+//   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'INTERVIEW_SCHEDULED' | 'HIRED';
+//   description?: string;
+//   salary?: string;
+//   location?: string;
+//   createdAt: string;
+//   updatedAt: string;
+//   companyId?: string;
+// }
 
-const getStatusColor = (status: Application['status']) => {
-  switch (status) {
-    case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-    case 'APPROVED': return 'bg-green-100 text-green-800';
-    case 'REJECTED': return 'bg-red-100 text-red-800';
-    case 'IN_REVIEW': return 'bg-blue-100 text-blue-800';
-    case 'INTERVIEW_SCHEDULED': return 'bg-purple-100 text-purple-800';
-    case 'HIRED': return 'bg-emerald-100 text-emerald-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
+// Utility functions for future implementation
+// const getStatusColor = (status: Application['status']) => {
+//   switch (status) {
+//     case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+//     case 'APPROVED': return 'bg-green-100 text-green-800';
+//     case 'REJECTED': return 'bg-red-100 text-red-800';
+//     case 'IN_REVIEW': return 'bg-blue-100 text-blue-800';
+//     case 'INTERVIEW_SCHEDULED': return 'bg-purple-100 text-purple-800';
+//     case 'HIRED': return 'bg-emerald-100 text-emerald-800';
+//     default: return 'bg-gray-100 text-gray-800';
+//   }
+// };
 
-const getStatusText = (status: Application['status']) => {
-  switch (status) {
-    case 'PENDING': return 'Pendiente';
-    case 'APPROVED': return 'Aprobado';
-    case 'REJECTED': return 'Rechazado';
-    case 'IN_REVIEW': return 'En Revisión';
-    case 'INTERVIEW_SCHEDULED': return 'Entrevista Programada';
-    case 'HIRED': return 'Contratado';
-    default: return status;
-  }
-};
+// const getStatusText = (status: Application['status']) => {
+//   switch (status) {
+//     case 'PENDING': return 'Pendiente';
+//     case 'APPROVED': return 'Aprobado';
+//     case 'REJECTED': return 'Rechazado';
+//     case 'IN_REVIEW': return 'En Revisión';
+//     case 'INTERVIEW_SCHEDULED': return 'Entrevista Programada';
+//     case 'HIRED': return 'Contratado';
+//     default: return status;
+//   }
+// };
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const {
-    applications,
-    loading,
-    error,
+    // applications,
+    // loading,
+    // error,
     fetchAllApplications,
-    updateApplicationStatus,
-    getApplicationStats,
+    // updateApplicationStatus,
+    // getApplicationStats,
     isAWSNativeAvailable,
-    clearError
+    // clearError
   } = useAWSNative();
 
-  const [selectedStatus, setSelectedStatus] = useState<Application['status'] | 'ALL'>('ALL');
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  // const [selectedStatus, setSelectedStatus] = useState<Application['status'] | 'ALL'>('ALL');
+  // const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const isAWSNative = isAWSNativeAvailable();
-  const stats = getApplicationStats();
+  // const stats = getApplicationStats();
 
   useEffect(() => {
     if (user?.role === 'admin' && isAWSNative) {
       fetchAllApplications();
     }
-  }, [user, isAWSNative]);
+  }, [user, isAWSNative, fetchAllApplications]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleStatusUpdate = async (userId: string, applicationId: string, newStatus: Application['status']) => {
-    setUpdatingStatus(`${userId}-${applicationId}`);
-    
-    const success = await updateApplicationStatus(userId, applicationId, newStatus);
-    
-    if (success) {
-      // Optionally refresh the list
-      await fetchAllApplications();
-    }
-    
-    setUpdatingStatus(null);
-  };
+  // const handleStatusUpdate = async (userId: string, applicationId: string, newStatus: Application['status']) => {
+  //   setUpdatingStatus(`${userId}-${applicationId}`);
+  //   
+  //   const success = await updateApplicationStatus(userId, applicationId, newStatus);
+  //   
+  //   if (success) {
+  //     // Optionally refresh the list
+  //     await fetchAllApplications();
+  //   }
+  //   
+  //   setUpdatingStatus(null);
+  // };
 
-  const filteredApplications = selectedStatus === 'ALL' 
-    ? applications 
-    : applications.filter(app => app.status === selectedStatus);
+  // const filteredApplications = selectedStatus === 'ALL' 
+  //   ? applications 
+  //   : applications.filter(app => app.status === selectedStatus);
 
   if (user?.role !== 'admin') {
     return (

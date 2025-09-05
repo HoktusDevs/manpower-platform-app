@@ -351,7 +351,7 @@ export const useAWSNative = () => {
   /**
    * Update migration configuration (admin only)
    */
-  const updateMigrationConfig = (newConfig: any) => {
+  const updateMigrationConfig = (newConfig: unknown) => {
     const user = authService.getCurrentUser();
     if (user?.role === 'admin') {
       migrationService.updateConfig(newConfig);

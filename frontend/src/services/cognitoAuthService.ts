@@ -143,7 +143,7 @@ class CognitoAuthService {
           });
         },
 
-        newPasswordRequired: (userAttributes) => {
+        newPasswordRequired: (/* _userAttributes */) => {
           // Handle new password required (for admin-created users)
           resolve({
             success: false,
@@ -151,7 +151,7 @@ class CognitoAuthService {
           });
         },
 
-        mfaRequired: (challengeName, challengeParameters) => {
+        mfaRequired: (/* _challengeName, _challengeParameters */) => {
           // Handle MFA challenge
           resolve({
             success: false,
@@ -228,7 +228,7 @@ class CognitoAuthService {
   /**
    * SECURITY: Parse JWT token (basic validation)
    */
-  private parseJWT(token: string): any {
+  private parseJWT(token: string): unknown {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -302,7 +302,7 @@ class CognitoAuthService {
         return;
       }
 
-      cognitoUser.getSession((err: any, session: CognitoUserSession) => {
+      cognitoUser.getSession((err: unknown, session: CognitoUserSession) => {
         if (err) {
           console.error('Error refreshing token:', err);
           resolve(null);
@@ -342,7 +342,7 @@ class CognitoAuthService {
     const cognitoUser = new CognitoUser(userData);
 
     return new Promise((resolve) => {
-      cognitoUser.confirmRegistration(code, true, (err, result) => {
+      cognitoUser.confirmRegistration(code, true, (err, /* _result */) => {
         if (err) {
           resolve({
             success: false,

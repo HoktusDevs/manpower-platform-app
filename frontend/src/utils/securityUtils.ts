@@ -224,7 +224,7 @@ export const validateSessionIntegrity = (): boolean => {
     }
     
     return true;
-  } catch (error) {
+  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
     logSecurityViolation({
       action: 'SESSION_VALIDATION_ERROR',
       severity: 'HIGH'

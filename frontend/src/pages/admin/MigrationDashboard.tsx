@@ -5,16 +5,16 @@ import { useAWSNative } from '../../hooks/useAWSNative';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { migrationService } from '../../services/migrationService';
 
-interface PerformanceMetric {
-  system: 'legacy' | 'aws_native';
-  feature: string;
-  operation: string;
-  latency: number;
-  success: boolean;
-  error?: string;
-  timestamp: number;
-  userId?: string;
-}
+// interface PerformanceMetric {
+//   system: 'legacy' | 'aws_native';
+//   feature: string;
+//   operation: string;
+//   latency: number;
+//   success: boolean;
+//   error?: string;
+//   timestamp: number;
+//   userId?: string;
+// }
 
 export const MigrationDashboard = () => {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export const MigrationDashboard = () => {
   const [config, setConfig] = useState(getMigrationConfig());
   const [comparison, setComparison] = useState(getPerformanceComparison(60));
   const [timeWindow, setTimeWindow] = useState(60);
-  const [selectedFeature, setSelectedFeature] = useState<string>('all');
+  // const [selectedFeature, setSelectedFeature] = useState<string>('all');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,7 +32,7 @@ export const MigrationDashboard = () => {
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
-  }, [timeWindow]);
+  }, [timeWindow, getPerformanceComparison]);
 
   const handleLogout = () => {
     logout();

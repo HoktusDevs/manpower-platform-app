@@ -4,9 +4,9 @@ import type {
   RegisterRequest, 
   LoginRequest, 
   AuthResponse,
-  CustomUser 
+  // CustomUser 
 } from '../types/auth';
-import { migrationService } from './migrationService';
+// import { migrationService } from './migrationService';
 
 // Legacy interface for internal service usage (supports legacy employee role)
 interface InternalUser {
@@ -136,7 +136,7 @@ class AuthService {
   }
 
   // Health check del servicio
-  async healthCheck(): Promise<{ success: boolean; data: any }> {
+  async healthCheck(): Promise<{ success: boolean; data: unknown }> {
     try {
       const response = await fetch(`${this.baseUrl}/auth/health`, {
         method: 'GET',

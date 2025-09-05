@@ -1,7 +1,9 @@
 // import React from 'react'; // Not needed in modern React
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
+// import { RegisterPage } from './pages/auth/RegisterPage'; // Legacy - now using specific routes
+import { PostulanteRegisterPage } from './pages/auth/PostulanteRegisterPage';
+import { AdminRegisterPage } from './pages/auth/AdminRegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
@@ -32,7 +34,14 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        
+        {/* LEGACY: Keep old register for backwards compatibility - redirect to specific */}
+        <Route path="/register" element={<Navigate to="/register/postulante" replace />} />
+        
+        {/* NEW: Specific registration routes */}
+        <Route path="/register/postulante" element={<PostulanteRegisterPage />} />
+        <Route path="/admin/register" element={<AdminRegisterPage />} />
+        
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         
         {/* SECURITY: Admin routes with MILITARY-GRADE protection */}
@@ -60,7 +69,7 @@ function App() {
     <Router>
       <AppContent />
     </Router>
-  )
+  );
 }
 
 export default App

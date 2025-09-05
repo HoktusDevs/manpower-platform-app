@@ -22,7 +22,7 @@ export const useAnalytics = () => {
   };
 
   // Track custom event
-  const trackEvent = (eventName: string, properties: Record<string, any> = {}) => {
+  const trackEvent = (eventName: string, properties: Record<string, unknown> = {}) => {
     const user = authService.getCurrentUser();
     analyticsService.trackEvent({
       eventName,
@@ -34,7 +34,7 @@ export const useAnalytics = () => {
   };
 
   // Track button clicks
-  const trackButtonClick = (buttonName: string, context?: Record<string, any>) => {
+  const trackButtonClick = (buttonName: string, context?: Record<string, unknown>) => {
     trackAction({
       action: 'click',
       target: buttonName,
@@ -43,7 +43,7 @@ export const useAnalytics = () => {
   };
 
   // Track form submissions
-  const trackFormSubmit = (formName: string, context?: Record<string, any>) => {
+  const trackFormSubmit = (formName: string, context?: Record<string, unknown>) => {
     trackAction({
       action: 'form_submit',
       target: formName,

@@ -9,7 +9,7 @@ interface AnalyticsEvent {
   userId?: string;
   sessionId?: string;
   timestamp: number;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   metadata?: {
     userAgent?: string;
     url?: string;
@@ -31,7 +31,7 @@ interface UserAction {
   target: string;
   userId?: string;
   timestamp: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 class AnalyticsService {
@@ -173,14 +173,14 @@ class AnalyticsService {
     // Simulate legacy analytics API call
     await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
     
-    const token = authService.getToken();
-    const payload = {
-      events: events.map(event => ({
-        ...event,
-        source: 'manpower-frontend',
-        version: '1.0.0'
-      }))
-    };
+    // const token = authService.getToken();
+    // const payload = {
+    //   events: events.map(event => ({
+    //     ...event,
+    //     source: 'manpower-frontend',
+    //     version: '1.0.0'
+    //   }))
+    // };
 
     // In production, this would POST to legacy analytics endpoint
     console.log('📊 Events sent to Legacy Analytics API:', events.length);

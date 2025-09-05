@@ -260,7 +260,7 @@ class MigrationService {
    * Force a feature to use a specific system (admin override)
    */
   forceFeatureSystem(feature: keyof MigrationConfig['features'], system: 'legacy' | 'aws_native' | 'ab_test'): void {
-    this.config.features[feature] = system as any;
+    this.config.features[feature] = system as typeof this.config.features[typeof feature];
     this.saveConfigToStorage();
     
     console.log(`🔀 Feature '${feature}' forced to '${system}' system`);

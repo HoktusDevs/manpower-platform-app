@@ -173,7 +173,7 @@ class DocumentsService {
     }
   }
 
-  private async getFromS3(userId: string): Promise<Document[]> {
+  private async getFromS3(/* userId: string */): Promise<Document[]> {
     // Simulate S3 document listing
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
     return []; // Would query DynamoDB for user documents

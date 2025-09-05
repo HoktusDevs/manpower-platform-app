@@ -61,7 +61,7 @@ class LegacyApiService {
 
     try {
       return JSON.parse(text) as T;
-    } catch (e) {
+    } catch (_e) { // eslint-disable-line @typescript-eslint/no-unused-vars
       throw new Error(`Invalid JSON response: ${text}`);
     }
   }

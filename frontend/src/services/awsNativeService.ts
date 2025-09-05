@@ -3,7 +3,7 @@
 
 import { generateClient } from 'aws-amplify/api';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand /*, DeleteCommand*/ } from "@aws-sdk/lib-dynamodb";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 import { authService } from './authService';
 import type { User } from '../types/auth';
@@ -45,7 +45,7 @@ interface CreateApplicationInput {
 class AWSNativeService {
   private config: AWSNativeConfig | null = null;
   private dynamoClient: DynamoDBDocumentClient | null = null;
-  private graphqlClient: any = null;
+  private graphqlClient: unknown = null;
 
   /**
    * Initialize AWS-Native service with configuration
@@ -182,7 +182,7 @@ class AWSNativeService {
       // Build update expression
       const updateExpressions: string[] = [];
       const expressionAttributeNames: Record<string, string> = {};
-      const expressionAttributeValues: Record<string, any> = {};
+      const expressionAttributeValues: Record<string, unknown> = {};
 
       Object.entries(updates).forEach(([key, value]) => {
         if (value !== undefined) {

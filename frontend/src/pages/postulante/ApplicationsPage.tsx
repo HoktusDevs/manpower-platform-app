@@ -70,7 +70,7 @@ export const ApplicationsPage: React.FC = () => {
     if (user?.role === 'postulante' && isAWSNative) {
       fetchMyApplications();
     }
-  }, [user, isAWSNative]);
+  }, [user, isAWSNative, fetchMyApplications]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
