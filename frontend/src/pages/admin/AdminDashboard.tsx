@@ -36,20 +36,14 @@ export const AdminDashboard = () => {
     );
   }
 
-  const handleSidebarNavigation = (path: string) => {
-    // TODO: Implement navigation logic based on path
-    console.log('Navigating to:', path);
-    // navigate(path);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen bg-gray-100 overflow-hidden">
       <DashboardHeader />
       
-      <div className="flex">
-        <Sidebar onNavigate={handleSidebarNavigation} />
+      <div className="flex h-[calc(100vh-4rem)]">
+        <Sidebar onNavigate={navigate} />
         
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <DashboardMetrics />
             

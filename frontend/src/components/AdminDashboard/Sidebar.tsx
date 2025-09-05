@@ -66,7 +66,7 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
       className={`
         bg-white shadow-lg transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-64'}
-        min-h-[calc(100vh-4rem)] relative
+        h-full relative overflow-hidden
       `}
     >
       {/* Toggle Button */}
@@ -124,14 +124,6 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
         ))}
       </nav>
 
-      {/* Footer Info */}
-      {!isCollapsed && (
-        <div className="absolute bottom-4 left-4 right-4 pt-4 border-t">
-          <p className="text-xs text-gray-500 text-center">
-            Panel de Administración
-          </p>
-        </div>
-      )}
     </aside>
   );
 }
