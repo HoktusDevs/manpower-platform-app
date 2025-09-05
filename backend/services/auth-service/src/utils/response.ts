@@ -1,4 +1,9 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
+import type { 
+  AuthResponse, 
+  User, 
+  HealthCheckData 
+} from '../types/auth';
 
 /**
  * Response utilities for Auth Service

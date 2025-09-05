@@ -136,7 +136,7 @@ export const logSecurityViolation = (violation: {
     timestamp,
     userAgent: navigator.userAgent,
     ip: 'client-side', // Would need server-side to get real IP
-    sessionId: sessionStorage.getItem('sessionId') || 'unknown'
+    sessionId: sessionStorage.getItem('sessionId') || 'no-session'
   };
 
   // Log to console with appropriate level

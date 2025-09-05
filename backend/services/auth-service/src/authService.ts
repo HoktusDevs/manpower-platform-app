@@ -55,7 +55,7 @@ function verifyPassword(password: string, hash: string, salt: string): boolean {
 }
 
 // Simple JWT implementation
-function generateJWT(payload: any, secret: string, expiresIn: number = 86400): string {
+function generateJWT(payload: JWTPayload, secret: string, expiresIn: number = 86400): string {
   const header = {
     alg: 'HS256',
     typ: 'JWT'

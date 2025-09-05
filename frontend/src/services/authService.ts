@@ -6,6 +6,7 @@ import type {
   AuthResponse,
   // CustomUser 
 } from '../types/auth';
+import type { HealthCheckResponse } from '../types/config';
 // import { migrationService } from './migrationService';
 
 // Legacy interface for internal service usage (supports legacy employee role)
@@ -136,7 +137,7 @@ class AuthService {
   }
 
   // Health check del servicio
-  async healthCheck(): Promise<{ success: boolean; data: unknown }> {
+  async healthCheck(): Promise<HealthCheckResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/auth/health`, {
         method: 'GET',

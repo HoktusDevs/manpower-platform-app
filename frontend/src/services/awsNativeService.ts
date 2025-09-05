@@ -7,6 +7,7 @@ import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand /*, Del
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 import { authService } from './authService';
 import type { User } from '../types/auth';
+import type { GraphQLClient, DynamoDBExpressionAttributeValues } from '../types/aws';
 
 interface AWSNativeConfig {
   userPoolId: string;
@@ -45,7 +46,7 @@ interface CreateApplicationInput {
 class AWSNativeService {
   private config: AWSNativeConfig | null = null;
   private dynamoClient: DynamoDBDocumentClient | null = null;
-  private graphqlClient: unknown = null;
+  private graphqlClient: GraphQLClient | null = null;
 
   /**
    * Initialize AWS-Native service with configuration
@@ -182,7 +183,7 @@ class AWSNativeService {
       // Build update expression
       const updateExpressions: string[] = [];
       const expressionAttributeNames: Record<string, string> = {};
-      const expressionAttributeValues: Record<string, unknown> = {};
+      const expressionAttributeValues: DynamoDBExpressionAttributeValues = {};
 
       Object.entries(updates).forEach(([key, value]) => {
         if (value !== undefined) {

@@ -6,6 +6,7 @@ import type {
   AuthResponse, 
   CognitoConfig 
 } from '../types/auth';
+import type { JWTPayload } from '../types/config';
 
 class CognitoAuthService {
   private userPool: CognitoUserPool | null = null;
@@ -228,7 +229,7 @@ class CognitoAuthService {
   /**
    * SECURITY: Parse JWT token (basic validation)
    */
-  private parseJWT(token: string): unknown {
+  private parseJWT(token: string): JWTPayload {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -236,9 +237,9 @@ class CognitoAuthService {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
 
-      return JSON.parse(jsonPayload);
+      return JSON.parse(jsonPayload) as JWTPayload;
     } catch {
-      return {};
+      return {} as JWTPayload;
     }
   }
 
@@ -302,7 +303,7 @@ class CognitoAuthService {
         return;
       }
 
-      cognitoUser.getSession((err: unknown, session: CognitoUserSession) => {
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession) => {
         if (err) {
           console.error('Error refreshing token:', err);
           resolve(null);

@@ -3,19 +3,15 @@
 
 import { authService } from './authService';
 import { migrationService } from './migrationService';
+import type { AnalyticsProperties, EventMetadata } from '../types/analytics';
 
 interface AnalyticsEvent {
   eventName: string;
   userId?: string;
   sessionId?: string;
   timestamp: number;
-  properties: Record<string, unknown>;
-  metadata?: {
-    userAgent?: string;
-    url?: string;
-    referrer?: string;
-    screen?: { width: number; height: number };
-  };
+  properties: AnalyticsProperties;
+  metadata?: EventMetadata;
 }
 
 interface PageView {
@@ -31,7 +27,7 @@ interface UserAction {
   target: string;
   userId?: string;
   timestamp: number;
-  context?: Record<string, unknown>;
+  context?: AnalyticsProperties;
 }
 
 class AnalyticsService {

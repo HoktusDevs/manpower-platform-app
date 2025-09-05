@@ -72,3 +72,58 @@ export class ConflictError extends AuthError {
     this.name = 'ConflictError';
   }
 }
+
+// API Response Types - Precise typing for all API responses
+export interface APIResponse {
+  success: boolean;
+  message: string;
+  data?: AuthResponse | User[] | string;
+  timestamp?: number;
+  requestId?: string;
+}
+
+export interface ErrorResponse {
+  success: false;
+  message: string;
+  error: string;
+  details?: ValidationError[] | string[];
+  statusCode?: number;
+  timestamp?: number;
+  requestId?: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+// Health check types
+export interface HealthCheckData {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: number;
+  version: string;
+  environment: 'development' | 'staging' | 'production';
+  database: DatabaseStatus;
+  memory: MemoryStatus;
+}
+
+export interface DatabaseStatus {
+  connected: boolean;
+  latency?: number;
+}
+
+export interface MemoryStatus {
+  used: number;
+  total: number;
+  percentage: number;
+}
+
+// Lambda event types
+export interface LambdaEventBody {
+  action: 'register' | 'login' | 'refresh' | 'validate' | 'health';
+  email?: string;
+  password?: string;
+  fullName?: string;
+  role?: 'admin' | 'postulante';
+  token?: string;
+}

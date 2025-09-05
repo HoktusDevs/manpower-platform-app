@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { analyticsService, type UserAction } from '../services/analyticsService';
 import { authService } from '../services/authService';
+import type { AnalyticsProperties, AnalyticsContext } from '../types/analytics';
 
 export const useAnalytics = () => {
   const location = useLocation();
@@ -22,7 +23,7 @@ export const useAnalytics = () => {
   };
 
   // Track custom event
-  const trackEvent = (eventName: string, properties: Record<string, unknown> = {}) => {
+  const trackEvent = (eventName: string, properties: AnalyticsProperties = {}) => {
     const user = authService.getCurrentUser();
     analyticsService.trackEvent({
       eventName,
@@ -34,7 +35,7 @@ export const useAnalytics = () => {
   };
 
   // Track button clicks
-  const trackButtonClick = (buttonName: string, context?: Record<string, unknown>) => {
+  const trackButtonClick = (buttonName: string, context?: AnalyticsContext) => {
     trackAction({
       action: 'click',
       target: buttonName,
@@ -43,7 +44,7 @@ export const useAnalytics = () => {
   };
 
   // Track form submissions
-  const trackFormSubmit = (formName: string, context?: Record<string, unknown>) => {
+  const trackFormSubmit = (formName: string, context?: AnalyticsContext) => {
     trackAction({
       action: 'form_submit',
       target: formName,

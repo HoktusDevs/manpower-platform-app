@@ -3,6 +3,7 @@ import { awsNativeService } from '../services/awsNativeService';
 import { legacyApiService } from '../services/legacyApiService';
 import { authService } from '../services/authService';
 import { migrationService } from '../services/migrationService';
+import type { MigrationConfigUpdate } from '../types/config';
 
 interface Application {
   userId: string;
@@ -351,7 +352,7 @@ export const useAWSNative = () => {
   /**
    * Update migration configuration (admin only)
    */
-  const updateMigrationConfig = (newConfig: unknown) => {
+  const updateMigrationConfig = (newConfig: MigrationConfigUpdate) => {
     const user = authService.getCurrentUser();
     if (user?.role === 'admin') {
       migrationService.updateConfig(newConfig);
