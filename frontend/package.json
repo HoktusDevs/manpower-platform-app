@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "vite build",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "check-quality": "npm run type-check && npm run lint",
+    "fix-all": "npm run lint:fix",
+    "validate": "npm run type-check && npm run lint && npm run build:prod",
     "preview": "vite preview"
   },
   "dependencies": {
