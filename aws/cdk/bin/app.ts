@@ -16,13 +16,13 @@ const environment = (process.env.ENVIRONMENT as 'dev' | 'prod') || 'dev';
 console.log(`🚀 Deploying Manpower Platform - ${environment} environment`);
 console.log(`🔐 Auth System: Cognito (AWS-Native)`);
 
-// Cognito-based auth (only system)
+// Cognito-based auth (first)
 const cognitoStack = new CognitoAuthStack(app, 'ManpowerCognitoAuth', { 
   env,
   environment
 });
 
-// AWS-Native Data Layer
+// AWS-Native Data Layer (second, uses cognito)
 const dataStack = new DataStack(app, 'ManpowerDataStack', {
   env,
   environment,

@@ -14,6 +14,9 @@ export interface DataStackProps extends cdk.StackProps {
 export class DataStack extends cdk.Stack {
   public readonly applicationsTable: dynamodb.Table;
   public readonly documentsTable: dynamodb.Table;
+  public readonly formsTable: dynamodb.Table;
+  public readonly formSubmissionsTable: dynamodb.Table;
+  public readonly jobPostingsTable: dynamodb.Table;
   public readonly graphqlApi: appsync.GraphqlApi;
   public readonly graphqlUrl: string;
 
@@ -88,6 +91,80 @@ export class DataStack extends cdk.Stack {
       indexName: 'TypeIndex',
       partitionKey: { name: 'documentType', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'uploadedAt', type: dynamodb.AttributeType.STRING },
+    });
+
+    // JOB POSTINGS TABLE - For job listings
+    this.jobPostingsTable = new dynamodb.Table(this, 'JobPostingsTable', {
+      tableName: `manpower-job-postings-${environment}`,
+      partitionKey: { 
+        name: 'jobId', 
+        type: dynamodb.AttributeType.STRING 
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: environment === 'prod',
+      removalPolicy: environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Add GSI for active job postings
+    this.jobPostingsTable.addGlobalSecondaryIndex({
+      indexName: 'StatusIndex',
+      partitionKey: { name: 'status', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
+    });
+
+    // FORMS TABLE - Dynamic form definitions
+    this.formsTable = new dynamodb.Table(this, 'FormsTable', {
+      tableName: `manpower-forms-${environment}`,
+      partitionKey: { 
+        name: 'formId', 
+        type: dynamodb.AttributeType.STRING 
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: environment === 'prod',
+      removalPolicy: environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Add GSI for job-based form queries
+    this.formsTable.addGlobalSecondaryIndex({
+      indexName: 'JobFormsIndex',
+      partitionKey: { name: 'jobId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
+    });
+
+    // FORM SUBMISSIONS TABLE - Postulante responses
+    this.formSubmissionsTable = new dynamodb.Table(this, 'FormSubmissionsTable', {
+      tableName: `manpower-form-submissions-${environment}`,
+      partitionKey: { 
+        name: 'submissionId', 
+        type: dynamodb.AttributeType.STRING 
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: environment === 'prod',
+      removalPolicy: environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES, // For notifications
+    });
+
+    // Add GSI for form submissions
+    this.formSubmissionsTable.addGlobalSecondaryIndex({
+      indexName: 'FormSubmissionsIndex',
+      partitionKey: { name: 'formId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'submittedAt', type: dynamodb.AttributeType.STRING },
+    });
+
+    // Add GSI for user submissions
+    this.formSubmissionsTable.addGlobalSecondaryIndex({
+      indexName: 'UserSubmissionsIndex',
+      partitionKey: { name: 'applicantId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'submittedAt', type: dynamodb.AttributeType.STRING },
     });
 
     // APPSYNC GRAPHQL API - AWS Native data access
@@ -227,7 +304,13 @@ export class DataStack extends cdk.Stack {
         this.applicationsTable.tableArn,
         `${this.applicationsTable.tableArn}/*`,
         this.documentsTable.tableArn,
-        `${this.documentsTable.tableArn}/*`
+        `${this.documentsTable.tableArn}/*`,
+        this.formsTable.tableArn, // Read-only forms
+        `${this.formsTable.tableArn}/*`,
+        this.jobPostingsTable.tableArn, // Read-only job postings
+        `${this.jobPostingsTable.tableArn}/*`,
+        this.formSubmissionsTable.tableArn, // Own submissions only
+        `${this.formSubmissionsTable.tableArn}/*`
       ],
       conditions: {
         'ForAllValues:StringEquals': {
@@ -246,7 +329,13 @@ export class DataStack extends cdk.Stack {
         this.applicationsTable.tableArn,
         `${this.applicationsTable.tableArn}/*`, 
         this.documentsTable.tableArn,
-        `${this.documentsTable.tableArn}/*`
+        `${this.documentsTable.tableArn}/*`,
+        this.formsTable.tableArn,
+        `${this.formsTable.tableArn}/*`,
+        this.jobPostingsTable.tableArn,
+        `${this.jobPostingsTable.tableArn}/*`,
+        this.formSubmissionsTable.tableArn,
+        `${this.formSubmissionsTable.tableArn}/*`
       ]
     });
 
@@ -283,6 +372,24 @@ export class DataStack extends cdk.Stack {
       value: this.documentsTable.tableName,
       description: 'Documents DynamoDB Table Name', 
       exportName: `ManpowerDocumentsTable-${environment}`
+    });
+
+    new cdk.CfnOutput(this, 'FormsTableName', {
+      value: this.formsTable.tableName,
+      description: 'Forms DynamoDB Table Name',
+      exportName: `ManpowerFormsTable-${environment}`
+    });
+
+    new cdk.CfnOutput(this, 'FormSubmissionsTableName', {
+      value: this.formSubmissionsTable.tableName,
+      description: 'Form Submissions DynamoDB Table Name',
+      exportName: `ManpowerFormSubmissionsTable-${environment}`
+    });
+
+    new cdk.CfnOutput(this, 'JobPostingsTableName', {
+      value: this.jobPostingsTable.tableName,
+      description: 'Job Postings DynamoDB Table Name',
+      exportName: `ManpowerJobPostingsTable-${environment}`
     });
   }
 }
