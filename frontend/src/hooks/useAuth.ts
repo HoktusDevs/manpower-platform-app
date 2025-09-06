@@ -9,6 +9,7 @@ interface UseAuthReturn {
   error: string | null;
   isAuthenticated: boolean;
   authSystem: AuthSystem;
+  idToken: string | null;
   
   // Acciones
   login: (credentials: LoginRequest) => Promise<boolean>;
@@ -27,6 +28,7 @@ export const useAuth = (): UseAuthReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [idToken, setIdToken] = useState<string | null>(null);
 
   // Initialize Cognito auth service
   useEffect(() => {
@@ -47,6 +49,7 @@ export const useAuth = (): UseAuthReturn => {
 
       cognitoAuthService.initialize(cognitoConfig);
       setUser(cognitoAuthService.getCurrentUser());
+      setIdToken(localStorage.getItem('cognito_id_token'));
       
       setIsInitialized(true);
     };
@@ -73,6 +76,7 @@ export const useAuth = (): UseAuthReturn => {
       if (result.success && result.data?.user) {
         setUser(result.data.user);
         cognitoAuthService.setUserData(result.data.user);
+        setIdToken(result.data.idToken || null);
         return true;
       } else {
         setError(result.message || 'Login failed');
@@ -128,6 +132,7 @@ export const useAuth = (): UseAuthReturn => {
     cognitoAuthService.logout();
     setUser(null);
     setError(null);
+    setIdToken(null);
   }, []);
 
   // Cognito-specific functions
@@ -200,6 +205,7 @@ export const useAuth = (): UseAuthReturn => {
     error,
     isAuthenticated: cognitoAuthService.isAuthenticated(),
     authSystem: 'cognito',
+    idToken,
     login,
     register,
     logout,

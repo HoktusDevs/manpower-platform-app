@@ -291,35 +291,31 @@ export class DataStack extends cdk.Stack {
       description: 'Role for authenticated users with direct DynamoDB access',
     });
 
-    // POSTULANTE PERMISSIONS - Restrictive
+    // POSTULANTE PERMISSIONS - Restrictive access to forms and submissions
     const postulantePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         'dynamodb:GetItem',
         'dynamodb:Query',
         'dynamodb:PutItem',
-        'dynamodb:UpdateItem'
+        'dynamodb:UpdateItem',
+        'dynamodb:Scan' // Needed for active forms/jobs
       ],
       resources: [
         this.applicationsTable.tableArn,
         `${this.applicationsTable.tableArn}/*`,
         this.documentsTable.tableArn,
         `${this.documentsTable.tableArn}/*`,
-        this.formsTable.tableArn, // Read-only forms
+        this.formsTable.tableArn, // Read active forms
         `${this.formsTable.tableArn}/*`,
-        this.jobPostingsTable.tableArn, // Read-only job postings
+        this.jobPostingsTable.tableArn, // Read active job postings
         `${this.jobPostingsTable.tableArn}/*`,
-        this.formSubmissionsTable.tableArn, // Own submissions only
+        this.formSubmissionsTable.tableArn, // Submit forms
         `${this.formSubmissionsTable.tableArn}/*`
-      ],
-      conditions: {
-        'ForAllValues:StringEquals': {
-          'dynamodb:LeadingKeys': ['${cognito-identity.amazonaws.com:sub}']
-        }
-      }
+      ]
     });
 
-    // ADMIN PERMISSIONS - Full access
+    // ADMIN PERMISSIONS - Full access to all tables
     const adminPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
@@ -339,12 +335,22 @@ export class DataStack extends cdk.Stack {
       ]
     });
 
-    // Apply policies based on role
+    // Apply all necessary permissions to authenticated role
+    authenticatedRole.addToPolicy(postulantePolicy);
+    authenticatedRole.addToPolicy(adminPolicy);
     authenticatedRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ['appsync:GraphQL'],
       resources: [`${this.graphqlApi.arn}/*`]
     }));
+
+    // Connect the authenticated role to the Identity Pool
+    new cognito.CfnIdentityPoolRoleAttachment(this, 'IdentityPoolRoleAttachment', {
+      identityPoolId: props.identityPool.ref,
+      roles: {
+        'authenticated': authenticatedRole.roleArn,
+      },
+    });
 
     // Store GraphQL URL for frontend
     this.graphqlUrl = this.graphqlApi.graphqlUrl;

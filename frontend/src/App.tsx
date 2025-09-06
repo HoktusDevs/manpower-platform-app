@@ -8,6 +8,7 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
+import FormsManager from './components/AdminDashboard/FormsManager';
 import { RoleGuard } from './components/RoleGuard';
 import { SecurityBoundary } from './components/SecurityBoundary';
 import { useRouteProtection } from './hooks/useRouteProtection';
@@ -51,6 +52,35 @@ function AppContent() {
         <Route path="/admin/migration" element={
           <RoleGuard requiredRole="admin">
             <MigrationDashboard />
+          </RoleGuard>
+        } />
+        <Route path="/admin/forms/*" element={
+          <RoleGuard requiredRole="admin">
+            <FormsManager />
+          </RoleGuard>
+        } />
+        <Route path="/admin/applications" element={
+          <RoleGuard requiredRole="admin">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-6">Gestión de Postulaciones</h1>
+              <p className="text-gray-600">Panel de gestión de postulaciones próximamente disponible.</p>
+            </div>
+          </RoleGuard>
+        } />
+        <Route path="/admin/reports" element={
+          <RoleGuard requiredRole="admin">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-6">Reportes y Analíticas</h1>
+              <p className="text-gray-600">Panel de reportes próximamente disponible.</p>
+            </div>
+          </RoleGuard>
+        } />
+        <Route path="/admin/users" element={
+          <RoleGuard requiredRole="admin">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-6">Administrar Usuarios</h1>
+              <p className="text-gray-600">Panel de administración de usuarios próximamente disponible.</p>
+            </div>
           </RoleGuard>
         } />
         
