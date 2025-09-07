@@ -956,7 +956,7 @@ const REVIEW_SUBMISSION = `
 `;
 
 class GraphQLService {
-  private client: any = null;
+  private client: unknown = null;
   private config: GraphQLConfig | null = null;
 
   /**
@@ -982,26 +982,11 @@ class GraphQLService {
     console.log('🚀 GraphQL Service initialized with AppSync');
   }
 
-  /**
-   * SECURITY: Check if user is authenticated and get auth token
-   */
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    const user = cognitoAuthService.getCurrentUser();
-    const idToken = localStorage.getItem('cognito_id_token');
-    
-    if (!user || !idToken) {
-      throw new Error('User not authenticated');
-    }
-
-    return {
-      Authorization: `Bearer ${idToken}`
-    };
-  }
 
   /**
    * Execute GraphQL query
    */
-  private async executeQuery<T>(query: string, variables?: any): Promise<T> {
+  private async executeQuery<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     if (!this.client) {
       throw new Error('GraphQL service not initialized');
     }
@@ -1023,7 +1008,7 @@ class GraphQLService {
   /**
    * Execute GraphQL mutation
    */
-  private async executeMutation<T>(mutation: string, variables?: any): Promise<T> {
+  private async executeMutation<T>(mutation: string, variables?: Record<string, unknown>): Promise<T> {
     if (!this.client) {
       throw new Error('GraphQL service not initialized');
     }
@@ -1045,7 +1030,7 @@ class GraphQLService {
   /**
    * Subscribe to GraphQL subscription
    */
-  private async subscribe<T>(subscription: string, variables?: any): Promise<any> {
+  private async subscribe(subscription: string, variables?: Record<string, unknown>): Promise<unknown> {
     if (!this.client) {
       throw new Error('GraphQL service not initialized');
     }
@@ -1555,7 +1540,7 @@ class GraphQLService {
   /**
    * POSTULANTE: Subscribe to my application updates
    */
-  async subscribeToMyApplicationUpdates(userId: string): Promise<any> {
+  async subscribeToMyApplicationUpdates(userId: string): Promise<unknown> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'postulante' || user.userId !== userId) {
       throw new Error('Can only subscribe to own application updates');
@@ -1567,7 +1552,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Subscribe to all application creation events
    */
-  async subscribeToApplicationCreated(): Promise<any> {
+  async subscribeToApplicationCreated(): Promise<unknown> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
       throw new Error('Admin access required');
@@ -1609,10 +1594,8 @@ export type {
   FormSubmission,
   FieldResponse,
   FormsStats,
-  FormPerformance,
   CreateFormInput,
   CreateFormFieldInput,
-  CreateFieldValidationInput,
   UpdateFormInput,
   UpdateFormFieldInput,
   SubmitFormInput,

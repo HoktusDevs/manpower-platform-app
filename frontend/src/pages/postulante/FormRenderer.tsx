@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGraphQL } from '../../hooks/useGraphQL';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
@@ -26,14 +26,7 @@ export const FormRenderer: React.FC = () => {
 
   const user = cognitoAuthService.getCurrentUser();
 
-  // Load form on mount
-  useEffect(() => {
-    if (formId) {
-      loadForm();
-    }
-  }, [formId]);
-
-  const loadForm = async () => {
+  const loadForm = useCallback(async () => {
     if (!formId) return;
     
     try {
@@ -53,7 +46,14 @@ export const FormRenderer: React.FC = () => {
       console.error('Error loading form:', err);
       setSubmitError('Error al cargar el formulario');
     }
-  };
+  }, [formId, fetchForm]);
+
+  // Load form on mount
+  useEffect(() => {
+    if (formId) {
+      loadForm();
+    }
+  }, [formId, loadForm]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -257,7 +257,7 @@ export const FormRenderer: React.FC = () => {
           </div>
         );
 
-      case 'CHECKBOX':
+      case 'CHECKBOX': {
         const checkedOptions = fieldValue.split(',').filter(v => v);
         return (
           <div className="space-y-2">
@@ -285,6 +285,7 @@ export const FormRenderer: React.FC = () => {
             ))}
           </div>
         );
+      }
 
       case 'FILE_UPLOAD':
         return (

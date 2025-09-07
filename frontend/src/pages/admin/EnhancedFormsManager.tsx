@@ -586,7 +586,7 @@ export const EnhancedFormsManager: React.FC = () => {
                     </label>
                     <select
                       value={fieldData.type || 'TEXT'}
-                      onChange={(e) => setFieldData(prev => ({ ...prev, type: e.target.value as any }))}
+                      onChange={(e) => setFieldData(prev => ({ ...prev, type: e.target.value as CreateFormFieldInput['type'] }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {fieldTypeOptions.map(option => (

@@ -65,7 +65,6 @@ export const JobPostingsPage: React.FC = () => {
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState<JobPosting['employmentType'] | 'ALL'>('ALL');
   const [experienceLevelFilter, setExperienceLevelFilter] = useState<JobPosting['experienceLevel'] | 'ALL'>('ALL');
   const [selectedJob, setSelectedJob] = useState<JobPosting | null>(null);
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const user = cognitoAuthService.getCurrentUser();
 
@@ -113,7 +112,6 @@ export const JobPostingsPage: React.FC = () => {
     if (success) {
       alert('¡Aplicación enviada exitosamente!');
       setSelectedJob(null);
-      setShowApplicationForm(false);
     }
   };
 
