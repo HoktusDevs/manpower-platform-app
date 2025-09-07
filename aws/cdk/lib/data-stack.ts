@@ -278,78 +278,52 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
-    // COGNITO IDENTITY POOL ROLES - Direct DynamoDB access
-    const authenticatedRole = new iam.Role(this, 'AuthenticatedRole', {
-      assumedBy: new iam.FederatedPrincipal('cognito-identity.amazonaws.com', {
-        'StringEquals': {
-          'cognito-identity.amazonaws.com:aud': props.identityPool.ref,
-        },
-        'ForAnyValue:StringLike': {
-          'cognito-identity.amazonaws.com:amr': 'authenticated',
-        },
-      }),
-      description: 'Role for authenticated users with direct DynamoDB access',
-    });
-
-    // POSTULANTE PERMISSIONS - Restrictive access to forms and submissions
-    const postulantePolicy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'dynamodb:GetItem',
-        'dynamodb:Query',
-        'dynamodb:PutItem',
-        'dynamodb:UpdateItem',
-        'dynamodb:Scan' // Needed for active forms/jobs
-      ],
-      resources: [
-        this.applicationsTable.tableArn,
-        `${this.applicationsTable.tableArn}/*`,
-        this.documentsTable.tableArn,
-        `${this.documentsTable.tableArn}/*`,
-        this.formsTable.tableArn, // Read active forms
-        `${this.formsTable.tableArn}/*`,
-        this.jobPostingsTable.tableArn, // Read active job postings
-        `${this.jobPostingsTable.tableArn}/*`,
-        this.formSubmissionsTable.tableArn, // Submit forms
-        `${this.formSubmissionsTable.tableArn}/*`
+    // IMPORTANT: The Identity Pool Role Attachment is handled in CognitoAuthStack
+    // We DO NOT create another one here to avoid the "already exists" error
+    // Instead, we create a managed policy that can be attached manually to the role
+    
+    // Grant DynamoDB permissions to authenticated Cognito users
+    const dynamoDbDataAccessPolicy = new iam.ManagedPolicy(this, 'DynamoDbDataAccessPolicy', {
+      managedPolicyName: `ManpowerDynamoDbAccess-${environment}`,
+      description: 'Policy for DynamoDB access from Cognito authenticated users',
+      statements: [
+        // POSTULANTE PERMISSIONS - Restrictive access
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'dynamodb:GetItem',
+            'dynamodb:Query',
+            'dynamodb:PutItem',
+            'dynamodb:UpdateItem',
+            'dynamodb:Scan' // Needed for active forms/jobs
+          ],
+          resources: [
+            this.applicationsTable.tableArn,
+            `${this.applicationsTable.tableArn}/*`,
+            this.documentsTable.tableArn,
+            `${this.documentsTable.tableArn}/*`,
+            this.formsTable.tableArn,
+            `${this.formsTable.tableArn}/*`,
+            this.jobPostingsTable.tableArn,
+            `${this.jobPostingsTable.tableArn}/*`,
+            this.formSubmissionsTable.tableArn,
+            `${this.formSubmissionsTable.tableArn}/*`
+          ]
+        }),
+        // GraphQL permissions
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['appsync:GraphQL'],
+          resources: [`${this.graphqlApi.arn}/*`]
+        })
       ]
     });
 
-    // ADMIN PERMISSIONS - Full access to all tables
-    const adminPolicy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'dynamodb:*',
-      ],
-      resources: [
-        this.applicationsTable.tableArn,
-        `${this.applicationsTable.tableArn}/*`, 
-        this.documentsTable.tableArn,
-        `${this.documentsTable.tableArn}/*`,
-        this.formsTable.tableArn,
-        `${this.formsTable.tableArn}/*`,
-        this.jobPostingsTable.tableArn,
-        `${this.jobPostingsTable.tableArn}/*`,
-        this.formSubmissionsTable.tableArn,
-        `${this.formSubmissionsTable.tableArn}/*`
-      ]
-    });
-
-    // Apply all necessary permissions to authenticated role
-    authenticatedRole.addToPolicy(postulantePolicy);
-    authenticatedRole.addToPolicy(adminPolicy);
-    authenticatedRole.addToPolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: ['appsync:GraphQL'],
-      resources: [`${this.graphqlApi.arn}/*`]
-    }));
-
-    // Connect the authenticated role to the Identity Pool
-    new cognito.CfnIdentityPoolRoleAttachment(this, 'IdentityPoolRoleAttachment', {
-      identityPoolId: props.identityPool.ref,
-      roles: {
-        'authenticated': authenticatedRole.roleArn,
-      },
+    // Output the policy ARN so it can be attached to the Cognito role externally
+    new cdk.CfnOutput(this, 'DataAccessPolicyArn', {
+      value: dynamoDbDataAccessPolicy.managedPolicyArn,
+      description: 'Managed Policy ARN for DynamoDB and GraphQL access',
+      exportName: `ManpowerDataAccessPolicy-${environment}`
     });
 
     // Store GraphQL URL for frontend
