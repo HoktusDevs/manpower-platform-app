@@ -10,7 +10,8 @@ import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
-import FormsManager from './components/AdminDashboard/FormsManager';
+import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
+import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
 import { SecurityBoundary } from './components/SecurityBoundary';
 import { useRouteProtection } from './hooks/useRouteProtection';
@@ -58,7 +59,7 @@ function AppContent() {
         } />
         <Route path="/admin/forms/*" element={
           <RoleGuard requiredRole="admin">
-            <FormsManager />
+            <EnhancedFormsManager />
           </RoleGuard>
         } />
         <Route path="/admin/applications" element={
@@ -89,6 +90,11 @@ function AppContent() {
         } />
         
         {/* SECURITY: Postulante routes with STRICT limitations */}
+        <Route path="/postulante/forms/:formId" element={
+          <RoleGuard requiredRole="postulante">
+            <FormRenderer />
+          </RoleGuard>
+        } />
         <Route path="/postulante/*" element={<PostulanteDashboard />} />
         
         {/* SECURITY: Catch-all route - redirect based on role */}

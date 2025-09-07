@@ -135,6 +135,141 @@ interface JobPostingStats {
   }>;
 }
 
+// DYNAMIC FORMS INTERFACES
+interface Form {
+  formId: string;
+  title: string;
+  description?: string;
+  jobId?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'EXPIRED' | 'CLOSED';
+  fields: FormField[];
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+  isRequired: boolean;
+  maxSubmissions?: number;
+  currentSubmissions?: number;
+}
+
+interface FormField {
+  fieldId: string;
+  type: 'TEXT' | 'TEXTAREA' | 'EMAIL' | 'PHONE' | 'NUMBER' | 'DATE' | 'SELECT' | 'RADIO' | 'CHECKBOX' | 'FILE_UPLOAD' | 'RATING' | 'URL';
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[];
+  validation?: FieldValidation;
+  order: number;
+  description?: string;
+  defaultValue?: string;
+}
+
+interface FieldValidation {
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  minValue?: number;
+  maxValue?: number;
+  customMessage?: string;
+}
+
+interface FormSubmission {
+  submissionId: string;
+  formId: string;
+  applicantId: string;
+  responses: FieldResponse[];
+  submittedAt: string;
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'PENDING_INFO';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  score?: number;
+}
+
+interface FieldResponse {
+  fieldId: string;
+  value: string;
+  fieldType: FormField['type'];
+}
+
+interface CreateFormInput {
+  title: string;
+  description?: string;
+  jobId?: string;
+  fields: CreateFormFieldInput[];
+  expiresAt?: string;
+  isRequired: boolean;
+  maxSubmissions?: number;
+}
+
+interface CreateFormFieldInput {
+  type: FormField['type'];
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[];
+  validation?: FieldValidation;
+  order: number;
+  description?: string;
+  defaultValue?: string;
+}
+
+interface UpdateFormInput {
+  formId: string;
+  title?: string;
+  description?: string;
+  jobId?: string;
+  status?: Form['status'];
+  fields?: UpdateFormFieldInput[];
+  expiresAt?: string;
+  isRequired?: boolean;
+  maxSubmissions?: number;
+}
+
+interface UpdateFormFieldInput {
+  fieldId?: string;
+  type?: FormField['type'];
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: string[];
+  validation?: FieldValidation;
+  order?: number;
+  description?: string;
+  defaultValue?: string;
+}
+
+interface SubmitFormInput {
+  formId: string;
+  responses: SubmitFieldResponseInput[];
+}
+
+interface SubmitFieldResponseInput {
+  fieldId: string;
+  value: string;
+}
+
+interface ReviewSubmissionInput {
+  submissionId: string;
+  status: FormSubmission['status'];
+  reviewNotes?: string;
+  score?: number;
+}
+
+interface FormsStats {
+  totalForms: number;
+  activeForms: number;
+  totalSubmissions: number;
+  averageCompletionRate?: number;
+  topPerformingForms: Array<{
+    formId: string;
+    title: string;
+    submissionCount: number;
+    completionRate: number;
+    averageScore?: number;
+  }>;
+}
+
 // GraphQL Queries and Mutations
 const GET_MY_APPLICATIONS = `
   query GetMyApplications {
@@ -507,6 +642,315 @@ const PAUSE_JOB_POSTING = `
       updatedAt
       expiresAt
       applicationCount
+    }
+  }
+`;
+
+// ========== DYNAMIC FORMS GRAPHQL OPERATIONS ==========
+
+// Dynamic Forms GraphQL Queries
+const GET_ACTIVE_FORMS = `
+  query GetActiveForms($jobId: String, $limit: Int) {
+    getActiveForms(jobId: $jobId, limit: $limit) {
+      formId
+      title
+      description
+      jobId
+      status
+      fields {
+        fieldId
+        type
+        label
+        placeholder
+        required
+        options
+        validation {
+          minLength
+          maxLength
+          pattern
+          minValue
+          maxValue
+          customMessage
+        }
+        order
+        description
+        defaultValue
+      }
+      createdAt
+      updatedAt
+      expiresAt
+      isRequired
+      maxSubmissions
+      currentSubmissions
+    }
+  }
+`;
+
+const GET_FORM = `
+  query GetForm($formId: String!) {
+    getForm(formId: $formId) {
+      formId
+      title
+      description
+      jobId
+      status
+      fields {
+        fieldId
+        type
+        label
+        placeholder
+        required
+        options
+        validation {
+          minLength
+          maxLength
+          pattern
+          minValue
+          maxValue
+          customMessage
+        }
+        order
+        description
+        defaultValue
+      }
+      createdAt
+      updatedAt
+      expiresAt
+      isRequired
+      maxSubmissions
+      currentSubmissions
+    }
+  }
+`;
+
+const GET_ALL_FORMS = `
+  query GetAllForms($status: FormStatus, $jobId: String, $limit: Int) {
+    getAllForms(status: $status, jobId: $jobId, limit: $limit) {
+      formId
+      title
+      description
+      jobId
+      status
+      fields {
+        fieldId
+        type
+        label
+        placeholder
+        required
+        options
+        validation {
+          minLength
+          maxLength
+          pattern
+          minValue
+          maxValue
+          customMessage
+        }
+        order
+        description
+        defaultValue
+      }
+      createdAt
+      updatedAt
+      expiresAt
+      isRequired
+      maxSubmissions
+      currentSubmissions
+    }
+  }
+`;
+
+const GET_FORM_SUBMISSIONS = `
+  query GetFormSubmissions($formId: String!, $status: SubmissionStatus, $limit: Int) {
+    getFormSubmissions(formId: $formId, status: $status, limit: $limit) {
+      submissionId
+      formId
+      applicantId
+      responses {
+        fieldId
+        value
+        fieldType
+      }
+      submittedAt
+      status
+      reviewedBy
+      reviewedAt
+      reviewNotes
+      score
+    }
+  }
+`;
+
+const GET_MY_FORM_SUBMISSIONS = `
+  query GetMyFormSubmissions($formId: String) {
+    getMyFormSubmissions(formId: $formId) {
+      submissionId
+      formId
+      applicantId
+      responses {
+        fieldId
+        value
+        fieldType
+      }
+      submittedAt
+      status
+      reviewedBy
+      reviewedAt
+      reviewNotes
+      score
+    }
+  }
+`;
+
+const GET_FORMS_STATS = `
+  query GetFormsStats {
+    getFormsStats {
+      totalForms
+      activeForms
+      totalSubmissions
+      averageCompletionRate
+      topPerformingForms {
+        formId
+        title
+        submissionCount
+        completionRate
+        averageScore
+      }
+    }
+  }
+`;
+
+// Dynamic Forms GraphQL Mutations
+const CREATE_FORM = `
+  mutation CreateForm($input: CreateFormInput!) {
+    createForm(input: $input) {
+      formId
+      title
+      description
+      jobId
+      status
+      fields {
+        fieldId
+        type
+        label
+        placeholder
+        required
+        options
+        validation {
+          minLength
+          maxLength
+          pattern
+          minValue
+          maxValue
+          customMessage
+        }
+        order
+        description
+        defaultValue
+      }
+      createdAt
+      updatedAt
+      expiresAt
+      isRequired
+      maxSubmissions
+      currentSubmissions
+    }
+  }
+`;
+
+const UPDATE_FORM = `
+  mutation UpdateForm($input: UpdateFormInput!) {
+    updateForm(input: $input) {
+      formId
+      title
+      description
+      jobId
+      status
+      fields {
+        fieldId
+        type
+        label
+        placeholder
+        required
+        options
+        validation {
+          minLength
+          maxLength
+          pattern
+          minValue
+          maxValue
+          customMessage
+        }
+        order
+        description
+        defaultValue
+      }
+      createdAt
+      updatedAt
+      expiresAt
+      isRequired
+      maxSubmissions
+      currentSubmissions
+    }
+  }
+`;
+
+const DELETE_FORM = `
+  mutation DeleteForm($formId: String!) {
+    deleteForm(formId: $formId)
+  }
+`;
+
+const PUBLISH_FORM = `
+  mutation PublishForm($formId: String!) {
+    publishForm(formId: $formId) {
+      formId
+      status
+      title
+      description
+    }
+  }
+`;
+
+const PAUSE_FORM = `
+  mutation PauseForm($formId: String!) {
+    pauseForm(formId: $formId) {
+      formId
+      status
+      title
+      description
+    }
+  }
+`;
+
+const SUBMIT_FORM = `
+  mutation SubmitForm($input: SubmitFormInput!) {
+    submitForm(input: $input) {
+      submissionId
+      formId
+      applicantId
+      responses {
+        fieldId
+        value
+        fieldType
+      }
+      submittedAt
+      status
+    }
+  }
+`;
+
+const REVIEW_SUBMISSION = `
+  mutation ReviewSubmission($input: ReviewSubmissionInput!) {
+    reviewSubmission(input: $input) {
+      submissionId
+      formId
+      applicantId
+      status
+      reviewedBy
+      reviewedAt
+      reviewNotes
+      score
     }
   }
 `;
@@ -909,6 +1353,203 @@ class GraphQLService {
     return result.pauseJobPosting;
   }
 
+  // ========== DYNAMIC FORMS METHODS ==========
+
+  /**
+   * PUBLIC: Get active forms
+   */
+  async getActiveForms(jobId?: string, limit?: number): Promise<Form[]> {
+    const result = await this.executeQuery<{ getActiveForms: Form[] }>(
+      GET_ACTIVE_FORMS,
+      { jobId, limit }
+    );
+    return result.getActiveForms;
+  }
+
+  /**
+   * PUBLIC: Get specific form
+   */
+  async getForm(formId: string): Promise<Form | null> {
+    const result = await this.executeQuery<{ getForm: Form | null }>(
+      GET_FORM,
+      { formId }
+    );
+    return result.getForm;
+  }
+
+  /**
+   * ADMIN ONLY: Get all forms
+   */
+  async getAllForms(status?: string, jobId?: string, limit?: number): Promise<Form[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access all forms');
+    }
+
+    const result = await this.executeQuery<{ getAllForms: Form[] }>(
+      GET_ALL_FORMS,
+      { status, jobId, limit }
+    );
+    return result.getAllForms;
+  }
+
+  /**
+   * ADMIN ONLY: Get form submissions
+   */
+  async getFormSubmissions(formId: string, status?: string, limit?: number): Promise<FormSubmission[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access form submissions');
+    }
+
+    const result = await this.executeQuery<{ getFormSubmissions: FormSubmission[] }>(
+      GET_FORM_SUBMISSIONS,
+      { formId, status, limit }
+    );
+    return result.getFormSubmissions;
+  }
+
+  /**
+   * POSTULANTE: Get my form submissions
+   */
+  async getMyFormSubmissions(formId?: string): Promise<FormSubmission[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'postulante') {
+      throw new Error('Only postulantes can access their form submissions');
+    }
+
+    const result = await this.executeQuery<{ getMyFormSubmissions: FormSubmission[] }>(
+      GET_MY_FORM_SUBMISSIONS,
+      { formId }
+    );
+    return result.getMyFormSubmissions;
+  }
+
+  /**
+   * ADMIN ONLY: Get forms statistics
+   */
+  async getFormsStats(): Promise<FormsStats> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access forms statistics');
+    }
+
+    const result = await this.executeQuery<{ getFormsStats: FormsStats }>(GET_FORMS_STATS);
+    return result.getFormsStats;
+  }
+
+  /**
+   * ADMIN ONLY: Create form
+   */
+  async createForm(input: CreateFormInput): Promise<Form> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can create forms');
+    }
+
+    const result = await this.executeMutation<{ createForm: Form }>(
+      CREATE_FORM,
+      { input }
+    );
+    return result.createForm;
+  }
+
+  /**
+   * ADMIN ONLY: Update form
+   */
+  async updateForm(input: UpdateFormInput): Promise<Form> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can update forms');
+    }
+
+    const result = await this.executeMutation<{ updateForm: Form }>(
+      UPDATE_FORM,
+      { input }
+    );
+    return result.updateForm;
+  }
+
+  /**
+   * ADMIN ONLY: Delete form
+   */
+  async deleteForm(formId: string): Promise<boolean> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can delete forms');
+    }
+
+    const result = await this.executeMutation<{ deleteForm: boolean }>(
+      DELETE_FORM,
+      { formId }
+    );
+    return result.deleteForm;
+  }
+
+  /**
+   * ADMIN ONLY: Publish form
+   */
+  async publishForm(formId: string): Promise<Form> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can publish forms');
+    }
+
+    const result = await this.executeMutation<{ publishForm: Form }>(
+      PUBLISH_FORM,
+      { formId }
+    );
+    return result.publishForm;
+  }
+
+  /**
+   * ADMIN ONLY: Pause form
+   */
+  async pauseForm(formId: string): Promise<Form> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can pause forms');
+    }
+
+    const result = await this.executeMutation<{ pauseForm: Form }>(
+      PAUSE_FORM,
+      { formId }
+    );
+    return result.pauseForm;
+  }
+
+  /**
+   * POSTULANTE: Submit form response
+   */
+  async submitForm(input: SubmitFormInput): Promise<FormSubmission> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'postulante') {
+      throw new Error('Only postulantes can submit forms');
+    }
+
+    const result = await this.executeMutation<{ submitForm: FormSubmission }>(
+      SUBMIT_FORM,
+      { input }
+    );
+    return result.submitForm;
+  }
+
+  /**
+   * ADMIN ONLY: Review form submission
+   */
+  async reviewSubmission(input: ReviewSubmissionInput): Promise<FormSubmission> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can review form submissions');
+    }
+
+    const result = await this.executeMutation<{ reviewSubmission: FormSubmission }>(
+      REVIEW_SUBMISSION,
+      { input }
+    );
+    return result.reviewSubmission;
+  }
+
   // ========== SUBSCRIPTIONS ==========
 
   /**
@@ -961,5 +1602,20 @@ export type {
   JobPosting,
   CreateJobPostingInput,
   UpdateJobPostingInput,
-  JobPostingStats
+  JobPostingStats,
+  Form,
+  FormField,
+  FieldValidation,
+  FormSubmission,
+  FieldResponse,
+  FormsStats,
+  FormPerformance,
+  CreateFormInput,
+  CreateFormFieldInput,
+  CreateFieldValidationInput,
+  UpdateFormInput,
+  UpdateFormFieldInput,
+  SubmitFormInput,
+  SubmitFieldResponseInput,
+  ReviewSubmissionInput
 };

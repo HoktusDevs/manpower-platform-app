@@ -103,6 +103,25 @@ type Query {
   
   # ADMIN ONLY: Get job posting statistics
   getJobPostingStats: JobPostingStats
+  
+  # DYNAMIC FORMS QUERIES
+  # PUBLIC: Get active forms (published, not expired)
+  getActiveForms(jobId: String, limit: Int): [Form!]!
+  
+  # PUBLIC/POSTULANTE: Get specific form
+  getForm(formId: String!): Form
+  
+  # ADMIN ONLY: Get all forms
+  getAllForms(status: FormStatus, jobId: String, limit: Int): [Form!]!
+  
+  # ADMIN ONLY: Get form submissions
+  getFormSubmissions(formId: String!, status: SubmissionStatus, limit: Int): [FormSubmission!]!
+  
+  # POSTULANTE: Get my form submissions
+  getMyFormSubmissions(formId: String): [FormSubmission!]!
+  
+  # ADMIN ONLY: Get forms statistics
+  getFormsStats: FormsStats
 }
 
 # MUTATIONS  
@@ -140,6 +159,28 @@ type Mutation {
   
   # ADMIN ONLY: Pause job posting
   pauseJobPosting(jobId: String!): JobPosting!
+  
+  # DYNAMIC FORMS MUTATIONS
+  # ADMIN ONLY: Create form
+  createForm(input: CreateFormInput!): Form!
+  
+  # ADMIN ONLY: Update form
+  updateForm(input: UpdateFormInput!): Form!
+  
+  # ADMIN ONLY: Delete form
+  deleteForm(formId: String!): Boolean!
+  
+  # ADMIN ONLY: Publish form
+  publishForm(formId: String!): Form!
+  
+  # ADMIN ONLY: Pause form
+  pauseForm(formId: String!): Form!
+  
+  # POSTULANTE: Submit form response
+  submitForm(input: SubmitFormInput!): FormSubmission!
+  
+  # ADMIN ONLY: Review form submission
+  reviewSubmission(input: ReviewSubmissionInput!): FormSubmission!
 }
 
 # SUBSCRIPTIONS (Real-time updates)
@@ -276,6 +317,186 @@ type ExperienceLevelStats {
   experienceLevel: ExperienceLevel!
   count: Int!
   applicationCount: Int!
+}
+
+# DYNAMIC FORMS SYSTEM
+type Form {
+  formId: String!
+  title: String!
+  description: String
+  jobId: String
+  status: FormStatus!
+  fields: [FormField!]!
+  createdAt: String!
+  updatedAt: String!
+  expiresAt: String
+  isRequired: Boolean!
+  maxSubmissions: Int
+  currentSubmissions: Int
+}
+
+type FormField {
+  fieldId: String!
+  type: FieldType!
+  label: String!
+  placeholder: String
+  required: Boolean!
+  options: [String!]
+  validation: FieldValidation
+  order: Int!
+  description: String
+  defaultValue: String
+}
+
+type FieldValidation {
+  minLength: Int
+  maxLength: Int
+  pattern: String
+  minValue: Float
+  maxValue: Float
+  customMessage: String
+}
+
+type FormSubmission {
+  submissionId: String!
+  formId: String!
+  applicantId: String!
+  responses: [FieldResponse!]!
+  submittedAt: String!
+  status: SubmissionStatus!
+  reviewedBy: String
+  reviewedAt: String
+  reviewNotes: String
+  score: Float
+}
+
+type FieldResponse {
+  fieldId: String!
+  value: String!
+  fieldType: FieldType!
+}
+
+# FORMS ENUMS
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  EXPIRED
+  CLOSED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  EMAIL
+  PHONE
+  NUMBER
+  DATE
+  SELECT
+  RADIO
+  CHECKBOX
+  FILE_UPLOAD
+  RATING
+  URL
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PENDING_INFO
+}
+
+# FORMS INPUT TYPES
+input CreateFormInput {
+  title: String!
+  description: String
+  jobId: String
+  fields: [CreateFormFieldInput!]!
+  expiresAt: String
+  isRequired: Boolean!
+  maxSubmissions: Int
+}
+
+input CreateFormFieldInput {
+  type: FieldType!
+  label: String!
+  placeholder: String
+  required: Boolean!
+  options: [String!]
+  validation: CreateFieldValidationInput
+  order: Int!
+  description: String
+  defaultValue: String
+}
+
+input CreateFieldValidationInput {
+  minLength: Int
+  maxLength: Int
+  pattern: String
+  minValue: Float
+  maxValue: Float
+  customMessage: String
+}
+
+input UpdateFormInput {
+  formId: String!
+  title: String
+  description: String
+  jobId: String
+  status: FormStatus
+  fields: [UpdateFormFieldInput!]
+  expiresAt: String
+  isRequired: Boolean
+  maxSubmissions: Int
+}
+
+input UpdateFormFieldInput {
+  fieldId: String
+  type: FieldType
+  label: String
+  placeholder: String
+  required: Boolean
+  options: [String!]
+  validation: CreateFieldValidationInput
+  order: Int
+  description: String
+  defaultValue: String
+}
+
+input SubmitFormInput {
+  formId: String!
+  responses: [SubmitFieldResponseInput!]!
+}
+
+input SubmitFieldResponseInput {
+  fieldId: String!
+  value: String!
+}
+
+input ReviewSubmissionInput {
+  submissionId: String!
+  status: SubmissionStatus!
+  reviewNotes: String
+  score: Float
+}
+
+# FORMS STATISTICS
+type FormsStats {
+  totalForms: Int!
+  activeForms: Int!
+  totalSubmissions: Int!
+  averageCompletionRate: Float
+  topPerformingForms: [FormPerformance!]!
+}
+
+type FormPerformance {
+  formId: String!
+  title: String!
+  submissionCount: Int!
+  completionRate: Float!
+  averageScore: Float
 }
 
 # DIRECTIVES

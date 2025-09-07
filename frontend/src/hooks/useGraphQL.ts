@@ -9,7 +9,14 @@ import type {
   JobPosting,
   CreateJobPostingInput,
   UpdateJobPostingInput,
-  JobPostingStats
+  JobPostingStats,
+  Form,
+  FormSubmission,
+  FormsStats,
+  CreateFormInput,
+  UpdateFormInput,
+  SubmitFormInput,
+  ReviewSubmissionInput
 } from '../services/graphqlService';
 
 interface UseGraphQLReturn {
@@ -19,6 +26,9 @@ interface UseGraphQLReturn {
   applicationStats: ApplicationStats | null;
   jobPostings: JobPosting[];
   jobPostingStats: JobPostingStats | null;
+  forms: Form[];
+  formSubmissions: FormSubmission[];
+  formsStats: FormsStats | null;
   loading: boolean;
   error: string | null;
   
@@ -34,6 +44,14 @@ interface UseGraphQLReturn {
   fetchAllJobPostings: (status?: JobPosting['status']) => Promise<void>;
   fetchJobPostingStats: () => Promise<void>;
   
+  // Dynamic Forms Methods
+  fetchActiveForms: (jobId?: string, limit?: number) => Promise<void>;
+  fetchAllForms: (status?: string, jobId?: string, limit?: number) => Promise<void>;
+  fetchForm: (formId: string) => Promise<Form | null>;
+  fetchFormSubmissions: (formId: string, status?: string, limit?: number) => Promise<void>;
+  fetchMyFormSubmissions: (formId?: string) => Promise<void>;
+  fetchFormsStats: () => Promise<void>;
+  
   // Mutations
   createApplication: (input: CreateApplicationInput) => Promise<boolean>;
   updateMyApplication: (applicationId: string, updates: Partial<CreateApplicationInput>) => Promise<boolean>;
@@ -48,6 +66,15 @@ interface UseGraphQLReturn {
   publishJobPosting: (jobId: string) => Promise<boolean>;
   pauseJobPosting: (jobId: string) => Promise<boolean>;
   
+  // Dynamic Forms Mutations
+  createForm: (input: CreateFormInput) => Promise<boolean>;
+  updateForm: (input: UpdateFormInput) => Promise<boolean>;
+  deleteForm: (formId: string) => Promise<boolean>;
+  publishForm: (formId: string) => Promise<boolean>;
+  pauseForm: (formId: string) => Promise<boolean>;
+  submitForm: (input: SubmitFormInput) => Promise<boolean>;
+  reviewSubmission: (input: ReviewSubmissionInput) => Promise<boolean>;
+  
   // Utils
   clearError: () => void;
   isGraphQLAvailable: () => boolean;
@@ -59,6 +86,9 @@ export const useGraphQL = (): UseGraphQLReturn => {
   const [applicationStats, setApplicationStats] = useState<ApplicationStats | null>(null);
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [jobPostingStats, setJobPostingStats] = useState<JobPostingStats | null>(null);
+  const [forms, setForms] = useState<Form[]>([]);
+  const [formSubmissions, setFormSubmissions] = useState<FormSubmission[]>([]);
+  const [formsStats, setFormsStats] = useState<FormsStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,6 +186,117 @@ export const useGraphQL = (): UseGraphQLReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch application stats';
       setError(errorMessage);
       console.error('Error fetching application stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  // ========== DYNAMIC FORMS QUERIES ==========
+
+  const fetchActiveForms = useCallback(async (jobId?: string, limit?: number) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getActiveForms(jobId, limit);
+      setForms(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch active forms';
+      setError(errorMessage);
+      console.error('Error fetching active forms:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchAllForms = useCallback(async (status?: string, jobId?: string, limit?: number) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getAllForms(status, jobId, limit);
+      setForms(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all forms';
+      setError(errorMessage);
+      console.error('Error fetching all forms:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchForm = useCallback(async (formId: string) => {
+    if (!isGraphQLAvailable()) return null;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getForm(formId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch form';
+      setError(errorMessage);
+      console.error('Error fetching form:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchFormSubmissions = useCallback(async (formId: string, status?: string, limit?: number) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getFormSubmissions(formId, status, limit);
+      setFormSubmissions(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch form submissions';
+      setError(errorMessage);
+      console.error('Error fetching form submissions:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchMyFormSubmissions = useCallback(async (formId?: string) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getMyFormSubmissions(formId);
+      setFormSubmissions(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch my form submissions';
+      setError(errorMessage);
+      console.error('Error fetching my form submissions:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchFormsStats = useCallback(async () => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getFormsStats();
+      setFormsStats(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch forms stats';
+      setError(errorMessage);
+      console.error('Error fetching forms stats:', err);
     } finally {
       setLoading(false);
     }
@@ -503,6 +644,189 @@ export const useGraphQL = (): UseGraphQLReturn => {
     }
   }, [isGraphQLAvailable]);
 
+  // ========== DYNAMIC FORMS MUTATIONS ==========
+
+  const createForm = useCallback(async (input: CreateFormInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.createForm(input);
+      
+      // Add new form to local state
+      setForms(prev => [result, ...prev]);
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create form';
+      setError(errorMessage);
+      console.error('Error creating form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const updateForm = useCallback(async (input: UpdateFormInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.updateForm(input);
+      
+      // Update form in local state
+      setForms(prev => 
+        prev.map(form => 
+          form.formId === input.formId ? result : form
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update form';
+      setError(errorMessage);
+      console.error('Error updating form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const deleteForm = useCallback(async (formId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const success = await graphqlService.deleteForm(formId);
+      
+      if (success) {
+        // Remove form from local state
+        setForms(prev => 
+          prev.filter(form => form.formId !== formId)
+        );
+      }
+      
+      return success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete form';
+      setError(errorMessage);
+      console.error('Error deleting form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const publishForm = useCallback(async (formId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.publishForm(formId);
+      
+      // Update form status in local state
+      setForms(prev => 
+        prev.map(form => 
+          form.formId === formId ? { ...form, status: result.status } : form
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to publish form';
+      setError(errorMessage);
+      console.error('Error publishing form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const pauseForm = useCallback(async (formId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.pauseForm(formId);
+      
+      // Update form status in local state
+      setForms(prev => 
+        prev.map(form => 
+          form.formId === formId ? { ...form, status: result.status } : form
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to pause form';
+      setError(errorMessage);
+      console.error('Error pausing form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const submitForm = useCallback(async (input: SubmitFormInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.submitForm(input);
+      
+      // Add new submission to local state
+      setFormSubmissions(prev => [result, ...prev]);
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit form';
+      setError(errorMessage);
+      console.error('Error submitting form:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const reviewSubmission = useCallback(async (input: ReviewSubmissionInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.reviewSubmission(input);
+      
+      // Update submission in local state
+      setFormSubmissions(prev => 
+        prev.map(submission => 
+          submission.submissionId === input.submissionId ? result : submission
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to review submission';
+      setError(errorMessage);
+      console.error('Error reviewing submission:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
   return {
     // State
     applications,
@@ -510,6 +834,9 @@ export const useGraphQL = (): UseGraphQLReturn => {
     applicationStats,
     jobPostings,
     jobPostingStats,
+    forms,
+    formSubmissions,
+    formsStats,
     loading,
     error,
     
@@ -525,6 +852,14 @@ export const useGraphQL = (): UseGraphQLReturn => {
     fetchAllJobPostings,
     fetchJobPostingStats,
     
+    // Dynamic Forms Queries
+    fetchActiveForms,
+    fetchAllForms,
+    fetchForm,
+    fetchFormSubmissions,
+    fetchMyFormSubmissions,
+    fetchFormsStats,
+    
     // Mutations
     createApplication,
     updateMyApplication,
@@ -538,6 +873,15 @@ export const useGraphQL = (): UseGraphQLReturn => {
     deleteJobPosting,
     publishJobPosting,
     pauseJobPosting,
+    
+    // Dynamic Forms Mutations
+    createForm,
+    updateForm,
+    deleteForm,
+    publishForm,
+    pauseForm,
+    submitForm,
+    reviewSubmission,
     
     // Utils
     clearError,
