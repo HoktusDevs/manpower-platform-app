@@ -7,6 +7,7 @@ import { AdminRegisterPage } from './pages/auth/AdminRegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
+import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import FormsManager from './components/AdminDashboard/FormsManager';
 import { RoleGuard } from './components/RoleGuard';
@@ -61,10 +62,7 @@ function AppContent() {
         } />
         <Route path="/admin/applications" element={
           <RoleGuard requiredRole="admin">
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-6">Gestión de Postulaciones</h1>
-              <p className="text-gray-600">Panel de gestión de postulaciones próximamente disponible.</p>
-            </div>
+            <ApplicationsManagementPage />
           </RoleGuard>
         } />
         <Route path="/admin/reports" element={

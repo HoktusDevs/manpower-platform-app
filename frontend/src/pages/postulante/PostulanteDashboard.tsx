@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAWSNative } from '../../hooks/useAWSNative';
 import { ApplicationsPage } from './ApplicationsPage';
+import { DocumentsPage } from './DocumentsPage';
 import { FeatureFlagControl } from '../../components/FeatureFlagControl';
 
 export const PostulanteDashboard = () => {
@@ -24,10 +25,48 @@ export const PostulanteDashboard = () => {
     return <ApplicationsPage />;
   }
 
+  if (activeTab === 'documents') {
+    return <DocumentsPage />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Navigation Menu */}
+          <div className="flex space-x-8 border-b py-4">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                activeTab === 'dashboard'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📊 Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('applications')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                activeTab === 'applications'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📝 Mis Aplicaciones
+            </button>
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                activeTab === 'documents'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📄 Mis Documentos
+            </button>
+          </div>
+          
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-8">
               <div className="flex items-center">

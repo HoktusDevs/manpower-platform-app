@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAWSNative } from '../../hooks/useAWSNative';
+import { useGraphQL } from '../../hooks/useGraphQL';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import { FeatureFlagControl } from '../../components/FeatureFlagControl';
 
@@ -42,6 +43,13 @@ const getStatusText = (status: Application['status']) => {
 };
 
 export const ApplicationsPage: React.FC = () => {
+  // Use GraphQL service as primary, fallback to DynamoDB direct
+  const graphQL = useGraphQL();
+  const awsNative = useAWSNative();
+  
+  // Choose service based on availability
+  const useGraphQLService = graphQL.isGraphQLAvailable();
+  
   const {
     applications,
     loading,
@@ -49,9 +57,16 @@ export const ApplicationsPage: React.FC = () => {
     fetchMyApplications,
     createApplication,
     updateMyApplication,
-    isAWSNativeAvailable,
     clearError
-  } = useAWSNative();
+  } = useGraphQLService ? graphQL : {
+    applications: awsNative.applications,
+    loading: awsNative.loading,
+    error: awsNative.error,
+    fetchMyApplications: awsNative.fetchMyApplications,
+    createApplication: awsNative.createApplication,
+    updateMyApplication: awsNative.updateMyApplication,
+    clearError: awsNative.clearError
+  };
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingApp, setEditingApp] = useState<string | null>(null);
@@ -64,13 +79,13 @@ export const ApplicationsPage: React.FC = () => {
   });
 
   const user = cognitoAuthService.getCurrentUser();
-  const isAWSNative = isAWSNativeAvailable();
+  const isServiceAvailable = useGraphQLService ? graphQL.isGraphQLAvailable() : awsNative.isAWSNativeAvailable();
 
   useEffect(() => {
-    if (user?.role === 'postulante' && isAWSNative) {
+    if (user?.role === 'postulante' && isServiceAvailable) {
       fetchMyApplications();
     }
-  }, [user, isAWSNative, fetchMyApplications]);
+  }, [user, isServiceAvailable, fetchMyApplications]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,13 +158,15 @@ export const ApplicationsPage: React.FC = () => {
     );
   }
 
-  if (!isAWSNative) {
+  if (!isServiceAvailable) {
     return (
       <div className="p-6">
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-          <h3 className="text-yellow-800 font-medium">🚀 Migrando a AWS-Native</h3>
+          <h3 className="text-yellow-800 font-medium">🚀 {useGraphQLService ? 'Configurando GraphQL' : 'Migrando a AWS-Native'}</h3>
           <p className="text-yellow-700 mt-1">
-            El sistema se está actualizando a la nueva arquitectura AWS-Native.
+            {useGraphQLService 
+              ? 'El cliente GraphQL se está inicializando. Verifica las variables de entorno.' 
+              : 'El sistema se está actualizando a la nueva arquitectura AWS-Native.'}
           </p>
         </div>
       </div>
@@ -164,6 +181,13 @@ export const ApplicationsPage: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Mis Aplicaciones</h1>
           <p className="mt-2 text-sm text-gray-700 flex items-center">
             Gestiona todas tus aplicaciones de trabajo. 
+            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+              useGraphQLService 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-blue-100 text-blue-800'
+            }`}>
+              {useGraphQLService ? '📡 GraphQL' : '🔄 DynamoDB'}
+            </span>
             <FeatureFlagControl feature="applications" showDetails className="ml-2" />
           </p>
         </div>
