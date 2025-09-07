@@ -66,6 +66,75 @@ interface ApplicationStats {
   }>;
 }
 
+interface JobPosting {
+  jobId: string;
+  title: string;
+  description: string;
+  requirements: string;
+  salary?: string;
+  location: string;
+  employmentType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'FREELANCE' | 'INTERNSHIP' | 'TEMPORARY';
+  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'EXPIRED' | 'CLOSED';
+  companyName: string;
+  companyId?: string;
+  benefits?: string;
+  experienceLevel: 'ENTRY_LEVEL' | 'MID_LEVEL' | 'SENIOR_LEVEL' | 'EXECUTIVE' | 'INTERNSHIP';
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+  applicationCount?: number;
+}
+
+interface CreateJobPostingInput {
+  title: string;
+  description: string;
+  requirements: string;
+  salary?: string;
+  location: string;
+  employmentType: JobPosting['employmentType'];
+  companyName: string;
+  companyId?: string;
+  benefits?: string;
+  experienceLevel: JobPosting['experienceLevel'];
+  expiresAt?: string;
+}
+
+interface UpdateJobPostingInput {
+  jobId: string;
+  title?: string;
+  description?: string;
+  requirements?: string;
+  salary?: string;
+  location?: string;
+  employmentType?: JobPosting['employmentType'];
+  companyName?: string;
+  companyId?: string;
+  benefits?: string;
+  experienceLevel?: JobPosting['experienceLevel'];
+  status?: JobPosting['status'];
+  expiresAt?: string;
+}
+
+interface JobPostingStats {
+  totalJobPostings: number;
+  publishedCount: number;
+  draftCount: number;
+  pausedCount: number;
+  expiredCount: number;
+  closedCount: number;
+  averageApplicationsPerJob?: number;
+  topEmploymentTypes: Array<{
+    employmentType: JobPosting['employmentType'];
+    count: number;
+    applicationCount: number;
+  }>;
+  topExperienceLevels: Array<{
+    experienceLevel: JobPosting['experienceLevel'];
+    count: number;
+    applicationCount: number;
+  }>;
+}
+
 // GraphQL Queries and Mutations
 const GET_MY_APPLICATIONS = `
   query GetMyApplications {
@@ -246,6 +315,198 @@ const ON_APPLICATION_CREATED = `
       createdAt
       updatedAt
       companyId
+    }
+  }
+`;
+
+// JOB POSTINGS QUERIES AND MUTATIONS
+const GET_ACTIVE_JOB_POSTINGS = `
+  query GetActiveJobPostings($limit: Int, $nextToken: String) {
+    getActiveJobPostings(limit: $limit, nextToken: $nextToken) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const GET_JOB_POSTING = `
+  query GetJobPosting($jobId: String!) {
+    getJobPosting(jobId: $jobId) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const GET_ALL_JOB_POSTINGS = `
+  query GetAllJobPostings($status: JobStatus, $limit: Int, $nextToken: String) {
+    getAllJobPostings(status: $status, limit: $limit, nextToken: $nextToken) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const GET_JOB_POSTING_STATS = `
+  query GetJobPostingStats {
+    getJobPostingStats {
+      totalJobPostings
+      publishedCount
+      draftCount
+      pausedCount
+      expiredCount
+      closedCount
+      averageApplicationsPerJob
+      topEmploymentTypes {
+        employmentType
+        count
+        applicationCount
+      }
+      topExperienceLevels {
+        experienceLevel
+        count
+        applicationCount
+      }
+    }
+  }
+`;
+
+const CREATE_JOB_POSTING = `
+  mutation CreateJobPosting($input: CreateJobPostingInput!) {
+    createJobPosting(input: $input) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const UPDATE_JOB_POSTING = `
+  mutation UpdateJobPosting($input: UpdateJobPostingInput!) {
+    updateJobPosting(input: $input) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const DELETE_JOB_POSTING = `
+  mutation DeleteJobPosting($jobId: String!) {
+    deleteJobPosting(jobId: $jobId)
+  }
+`;
+
+const PUBLISH_JOB_POSTING = `
+  mutation PublishJobPosting($jobId: String!) {
+    publishJobPosting(jobId: $jobId) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+    }
+  }
+`;
+
+const PAUSE_JOB_POSTING = `
+  mutation PauseJobPosting($jobId: String!) {
+    pauseJobPosting(jobId: $jobId) {
+      jobId
+      title
+      description
+      requirements
+      salary
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
     }
   }
 `;
@@ -509,6 +770,145 @@ class GraphQLService {
     return result.getApplicationStats;
   }
 
+  // ========== JOB POSTINGS METHODS ==========
+
+  /**
+   * PUBLIC: Get active job postings (published, not expired)
+   */
+  async getActiveJobPostings(limit?: number, nextToken?: string): Promise<JobPosting[]> {
+    const result = await this.executeQuery<{ getActiveJobPostings: JobPosting[] }>(
+      GET_ACTIVE_JOB_POSTINGS,
+      { limit, nextToken }
+    );
+    return result.getActiveJobPostings;
+  }
+
+  /**
+   * PUBLIC: Get specific job posting
+   */
+  async getJobPosting(jobId: string): Promise<JobPosting> {
+    const result = await this.executeQuery<{ getJobPosting: JobPosting }>(
+      GET_JOB_POSTING,
+      { jobId }
+    );
+    return result.getJobPosting;
+  }
+
+  /**
+   * ADMIN ONLY: Get all job postings
+   */
+  async getAllJobPostings(status?: JobPosting['status'], limit?: number, nextToken?: string): Promise<JobPosting[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to access all job postings');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeQuery<{ getAllJobPostings: JobPosting[] }>(
+      GET_ALL_JOB_POSTINGS,
+      { status, limit, nextToken }
+    );
+    return result.getAllJobPostings;
+  }
+
+  /**
+   * ADMIN ONLY: Get job posting statistics
+   */
+  async getJobPostingStats(): Promise<JobPostingStats> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeQuery<{ getJobPostingStats: JobPostingStats }>(GET_JOB_POSTING_STATS);
+    return result.getJobPostingStats;
+  }
+
+  /**
+   * ADMIN ONLY: Create job posting
+   */
+  async createJobPosting(input: CreateJobPostingInput): Promise<JobPosting> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to create job posting');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeMutation<{ createJobPosting: JobPosting }>(
+      CREATE_JOB_POSTING,
+      { input }
+    );
+    return result.createJobPosting;
+  }
+
+  /**
+   * ADMIN ONLY: Update job posting
+   */
+  async updateJobPosting(input: UpdateJobPostingInput): Promise<JobPosting> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to update job posting');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeMutation<{ updateJobPosting: JobPosting }>(
+      UPDATE_JOB_POSTING,
+      { input }
+    );
+    return result.updateJobPosting;
+  }
+
+  /**
+   * ADMIN ONLY: Delete job posting
+   */
+  async deleteJobPosting(jobId: string): Promise<boolean> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to delete job posting');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeMutation<{ deleteJobPosting: boolean }>(
+      DELETE_JOB_POSTING,
+      { jobId }
+    );
+    return result.deleteJobPosting;
+  }
+
+  /**
+   * ADMIN ONLY: Publish job posting
+   */
+  async publishJobPosting(jobId: string): Promise<JobPosting> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to publish job posting');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeMutation<{ publishJobPosting: JobPosting }>(
+      PUBLISH_JOB_POSTING,
+      { jobId }
+    );
+    return result.publishJobPosting;
+  }
+
+  /**
+   * ADMIN ONLY: Pause job posting
+   */
+  async pauseJobPosting(jobId: string): Promise<JobPosting> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      console.error('🚨 SECURITY: Non-admin attempted to pause job posting');
+      throw new Error('Admin access required');
+    }
+
+    const result = await this.executeMutation<{ pauseJobPosting: JobPosting }>(
+      PAUSE_JOB_POSTING,
+      { jobId }
+    );
+    return result.pauseJobPosting;
+  }
+
   // ========== SUBSCRIPTIONS ==========
 
   /**
@@ -552,4 +952,14 @@ class GraphQLService {
 
 // Export singleton instance
 export const graphqlService = new GraphQLService();
-export type { Application, Document, CreateApplicationInput, UploadDocumentInput, ApplicationStats };
+export type { 
+  Application, 
+  Document, 
+  CreateApplicationInput, 
+  UploadDocumentInput, 
+  ApplicationStats,
+  JobPosting,
+  CreateJobPostingInput,
+  UpdateJobPostingInput,
+  JobPostingStats
+};

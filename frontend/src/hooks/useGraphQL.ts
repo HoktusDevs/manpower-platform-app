@@ -1,12 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 import { graphqlService } from '../services/graphqlService';
-import type { Application, Document, CreateApplicationInput, UploadDocumentInput, ApplicationStats } from '../services/graphqlService';
+import type { 
+  Application, 
+  Document, 
+  CreateApplicationInput, 
+  UploadDocumentInput, 
+  ApplicationStats,
+  JobPosting,
+  CreateJobPostingInput,
+  UpdateJobPostingInput,
+  JobPostingStats
+} from '../services/graphqlService';
 
 interface UseGraphQLReturn {
   // State
   applications: Application[];
   documents: Document[];
   applicationStats: ApplicationStats | null;
+  jobPostings: JobPosting[];
+  jobPostingStats: JobPostingStats | null;
   loading: boolean;
   error: string | null;
   
@@ -16,12 +28,25 @@ interface UseGraphQLReturn {
   fetchMyDocuments: () => Promise<void>;
   fetchApplicationStats: () => Promise<void>;
   
+  // Job Posting Methods
+  fetchActiveJobPostings: (limit?: number) => Promise<void>;
+  fetchJobPosting: (jobId: string) => Promise<JobPosting | null>;
+  fetchAllJobPostings: (status?: JobPosting['status']) => Promise<void>;
+  fetchJobPostingStats: () => Promise<void>;
+  
   // Mutations
   createApplication: (input: CreateApplicationInput) => Promise<boolean>;
   updateMyApplication: (applicationId: string, updates: Partial<CreateApplicationInput>) => Promise<boolean>;
   deleteMyApplication: (applicationId: string) => Promise<boolean>;
   updateApplicationStatus: (userId: string, applicationId: string, status: Application['status']) => Promise<boolean>;
   uploadDocument: (input: UploadDocumentInput) => Promise<boolean>;
+  
+  // Job Posting Mutations
+  createJobPosting: (input: CreateJobPostingInput) => Promise<boolean>;
+  updateJobPosting: (input: UpdateJobPostingInput) => Promise<boolean>;
+  deleteJobPosting: (jobId: string) => Promise<boolean>;
+  publishJobPosting: (jobId: string) => Promise<boolean>;
+  pauseJobPosting: (jobId: string) => Promise<boolean>;
   
   // Utils
   clearError: () => void;
@@ -32,6 +57,8 @@ export const useGraphQL = (): UseGraphQLReturn => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [applicationStats, setApplicationStats] = useState<ApplicationStats | null>(null);
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [jobPostingStats, setJobPostingStats] = useState<JobPostingStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -270,11 +297,219 @@ export const useGraphQL = (): UseGraphQLReturn => {
     }
   }, [isGraphQLAvailable]);
 
+  // ========== JOB POSTING METHODS ==========
+  
+  const fetchActiveJobPostings = useCallback(async (limit?: number) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getActiveJobPostings(limit);
+      setJobPostings(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch job postings';
+      setError(errorMessage);
+      console.error('Error fetching active job postings:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchJobPosting = useCallback(async (jobId: string): Promise<JobPosting | null> => {
+    if (!isGraphQLAvailable()) return null;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getJobPosting(jobId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch job posting';
+      setError(errorMessage);
+      console.error('Error fetching job posting:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchAllJobPostings = useCallback(async (status?: JobPosting['status']) => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getAllJobPostings(status);
+      setJobPostings(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all job postings';
+      setError(errorMessage);
+      console.error('Error fetching all job postings:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const fetchJobPostingStats = useCallback(async () => {
+    if (!isGraphQLAvailable()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.getJobPostingStats();
+      setJobPostingStats(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch job posting stats';
+      setError(errorMessage);
+      console.error('Error fetching job posting stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const createJobPosting = useCallback(async (input: CreateJobPostingInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.createJobPosting(input);
+      
+      // Add new job posting to local state
+      setJobPostings(prev => [result, ...prev]);
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create job posting';
+      setError(errorMessage);
+      console.error('Error creating job posting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const updateJobPosting = useCallback(async (input: UpdateJobPostingInput): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.updateJobPosting(input);
+      
+      // Update job posting in local state
+      setJobPostings(prev => 
+        prev.map(job => 
+          job.jobId === input.jobId ? result : job
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update job posting';
+      setError(errorMessage);
+      console.error('Error updating job posting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const deleteJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const success = await graphqlService.deleteJobPosting(jobId);
+      
+      if (success) {
+        // Remove job posting from local state
+        setJobPostings(prev => 
+          prev.filter(job => job.jobId !== jobId)
+        );
+      }
+      
+      return success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete job posting';
+      setError(errorMessage);
+      console.error('Error deleting job posting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const publishJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.publishJobPosting(jobId);
+      
+      // Update job posting status in local state
+      setJobPostings(prev => 
+        prev.map(job => 
+          job.jobId === jobId ? result : job
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to publish job posting';
+      setError(errorMessage);
+      console.error('Error publishing job posting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
+  const pauseJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
+    if (!isGraphQLAvailable()) return false;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await graphqlService.pauseJobPosting(jobId);
+      
+      // Update job posting status in local state
+      setJobPostings(prev => 
+        prev.map(job => 
+          job.jobId === jobId ? result : job
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to pause job posting';
+      setError(errorMessage);
+      console.error('Error pausing job posting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [isGraphQLAvailable]);
+
   return {
     // State
     applications,
     documents,
     applicationStats,
+    jobPostings,
+    jobPostingStats,
     loading,
     error,
     
@@ -284,12 +519,25 @@ export const useGraphQL = (): UseGraphQLReturn => {
     fetchMyDocuments,
     fetchApplicationStats,
     
+    // Job Posting Queries
+    fetchActiveJobPostings,
+    fetchJobPosting,
+    fetchAllJobPostings,
+    fetchJobPostingStats,
+    
     // Mutations
     createApplication,
     updateMyApplication,
     deleteMyApplication,
     updateApplicationStatus,
     uploadDocument,
+    
+    // Job Posting Mutations
+    createJobPosting,
+    updateJobPosting,
+    deleteJobPosting,
+    publishJobPosting,
+    pauseJobPosting,
     
     // Utils
     clearError,

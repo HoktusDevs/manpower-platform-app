@@ -8,6 +8,7 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
+import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import FormsManager from './components/AdminDashboard/FormsManager';
 import { RoleGuard } from './components/RoleGuard';
@@ -63,6 +64,11 @@ function AppContent() {
         <Route path="/admin/applications" element={
           <RoleGuard requiredRole="admin">
             <ApplicationsManagementPage />
+          </RoleGuard>
+        } />
+        <Route path="/admin/jobs" element={
+          <RoleGuard requiredRole="admin">
+            <JobPostingsManagementPage />
           </RoleGuard>
         } />
         <Route path="/admin/reports" element={

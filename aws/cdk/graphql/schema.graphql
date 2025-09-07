@@ -90,6 +90,19 @@ type Query {
   
   # ADMIN ONLY: Get application statistics
   getApplicationStats: ApplicationStats
+  
+  # JOB POSTINGS QUERIES
+  # PUBLIC: Get active job postings (published, not expired)
+  getActiveJobPostings(limit: Int, nextToken: String): [JobPosting!]!
+  
+  # PUBLIC: Get specific job posting
+  getJobPosting(jobId: String!): JobPosting
+  
+  # ADMIN ONLY: Get all job postings
+  getAllJobPostings(status: JobStatus, limit: Int, nextToken: String): [JobPosting!]!
+  
+  # ADMIN ONLY: Get job posting statistics
+  getJobPostingStats: JobPostingStats
 }
 
 # MUTATIONS  
@@ -111,6 +124,22 @@ type Mutation {
   
   # ADMIN ONLY: Delete any application  
   deleteApplication(applicationId: String!, userId: String!): Boolean!
+  
+  # JOB POSTINGS MUTATIONS
+  # ADMIN ONLY: Create job posting
+  createJobPosting(input: CreateJobPostingInput!): JobPosting!
+  
+  # ADMIN ONLY: Update job posting
+  updateJobPosting(input: UpdateJobPostingInput!): JobPosting!
+  
+  # ADMIN ONLY: Delete job posting
+  deleteJobPosting(jobId: String!): Boolean!
+  
+  # ADMIN ONLY: Publish job posting
+  publishJobPosting(jobId: String!): JobPosting!
+  
+  # ADMIN ONLY: Pause job posting
+  pauseJobPosting(jobId: String!): JobPosting!
 }
 
 # SUBSCRIPTIONS (Real-time updates)
@@ -145,6 +174,108 @@ type CompanyStats {
   applicationCount: Int!
   approvedCount: Int!
   rejectedCount: Int!
+}
+
+# JOB POSTINGS TYPES
+type JobPosting {
+  jobId: String!
+  title: String!
+  description: String!
+  requirements: String!
+  salary: String
+  location: String!
+  employmentType: EmploymentType!
+  status: JobStatus!
+  companyName: String!
+  companyId: String
+  benefits: String
+  experienceLevel: ExperienceLevel!
+  createdAt: String!
+  updatedAt: String!
+  expiresAt: String
+  applicationCount: Int
+}
+
+# JOB POSTINGS ENUMS
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  EXPIRED
+  CLOSED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+  TEMPORARY
+}
+
+enum ExperienceLevel {
+  ENTRY_LEVEL
+  MID_LEVEL
+  SENIOR_LEVEL
+  EXECUTIVE
+  INTERNSHIP
+}
+
+# JOB POSTINGS INPUT TYPES
+input CreateJobPostingInput {
+  title: String!
+  description: String!
+  requirements: String!
+  salary: String
+  location: String!
+  employmentType: EmploymentType!
+  companyName: String!
+  companyId: String
+  benefits: String
+  experienceLevel: ExperienceLevel!
+  expiresAt: String
+}
+
+input UpdateJobPostingInput {
+  jobId: String!
+  title: String
+  description: String
+  requirements: String
+  salary: String
+  location: String
+  employmentType: EmploymentType
+  companyName: String
+  companyId: String
+  benefits: String
+  experienceLevel: ExperienceLevel
+  status: JobStatus
+  expiresAt: String
+}
+
+# JOB POSTING STATISTICS
+type JobPostingStats {
+  totalJobPostings: Int!
+  publishedCount: Int!
+  draftCount: Int!
+  pausedCount: Int!
+  expiredCount: Int!
+  closedCount: Int!
+  averageApplicationsPerJob: Float
+  topEmploymentTypes: [EmploymentTypeStats!]!
+  topExperienceLevels: [ExperienceLevelStats!]!
+}
+
+type EmploymentTypeStats {
+  employmentType: EmploymentType!
+  count: Int!
+  applicationCount: Int!
+}
+
+type ExperienceLevelStats {
+  experienceLevel: ExperienceLevel!
+  count: Int!
+  applicationCount: Int!
 }
 
 # DIRECTIVES
