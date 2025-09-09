@@ -1,8 +1,6 @@
 import { generateClient } from 'aws-amplify/api';
 import { Amplify } from 'aws-amplify';
-import { fetchAuthSession } from 'aws-amplify/auth';
 import { cognitoAuthService } from './cognitoAuthService';
-import type { GraphQLResultWithClientExtensions } from 'aws-amplify/api';
 
 // GraphQL Client Configuration
 interface GraphQLConfig {
@@ -970,11 +968,9 @@ class GraphQLService {
   async initialize(config: GraphQLConfig): Promise<void> {
     this.config = config;
 
-    console.log('🔧 GraphQL Service initializing with config:', config);
     
     // Get current Amplify configuration to preserve Auth settings
     const currentConfig = Amplify.getConfig();
-    console.log('📋 Current Amplify config:', currentConfig);
     
     // Configure Amplify with proper v6 structure
     const newConfig = {
@@ -983,7 +979,7 @@ class GraphQLService {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
           region: config.region,
-          defaultAuthMode: 'userPool'
+          defaultAuthMode: 'userPool' as const
         }
       }
     }
@@ -993,7 +989,6 @@ class GraphQLService {
       delete newConfig.Auth.Cognito.identityPoolId;
     }
     
-    console.log('🔄 Setting new Amplify config:', newConfig);
     Amplify.configure(newConfig);
 
     // Force a small delay and recreate client to ensure config is applied
@@ -1001,16 +996,12 @@ class GraphQLService {
     
     try {
       this.client = generateClient();
-      console.log('🚀 GraphQL Client created successfully');
-    } catch (error) {
-      console.error('❌ Failed to create GraphQL client:', error);
+    } catch {
       // Retry once more after another delay
       await new Promise(resolve => setTimeout(resolve, 300));
       this.client = generateClient();
-      console.log('🚀 GraphQL Client created on retry');
     }
     
-    console.log('🚀 GraphQL Service initialized with AppSync endpoint:', config.graphqlEndpoint);
   }
 
 
@@ -1026,51 +1017,30 @@ class GraphQLService {
     }
     
     if (!this.client) {
-      console.error('GraphQL Error: Client not initialized after waiting');
       throw new Error('GraphQL service not initialized');
     }
 
     // Check if user is authenticated and get token
     const currentUser = cognitoAuthService.getCurrentUser();
-    console.log('🔍 GraphQL Auth Check - Current User:', currentUser);
     
     if (!currentUser) {
-      console.error('🚨 GraphQL Error: User not authenticated');
       throw new Error('NoSignedUser: No current user');
     }
 
     const idToken = cognitoAuthService.getIdToken();
-    console.log('🔍 GraphQL Auth Check - Has ID Token:', !!idToken);
     
     if (!idToken) {
-      console.error('🚨 GraphQL Error: No ID token found in localStorage');
       throw new Error('No valid authentication token');
     }
 
-    console.log('✅ GraphQL: Using token for user:', currentUser.email);
 
-    try {
-      // Try to get current Amplify session to ensure it's in sync
-      const session = await fetchAuthSession();
-      console.log('📋 Amplify session status:', {
-        isSignedIn: !!session.tokens?.accessToken,
-        hasIdToken: !!session.tokens?.idToken,
-        tokenExpired: session.tokens?.accessToken?.payload?.exp ? 
-          new Date(session.tokens.accessToken.payload.exp * 1000) < new Date() : 
-          'no token'
-      });
+    const result = await this.client.graphql({
+      query,
+      variables,
+      authMode: 'userPool'
+    });
 
-      const result = await this.client.graphql({
-        query,
-        variables,
-        authMode: 'userPool'
-      });
-
-      return result.data;
-    } catch (error) {
-      console.error('GraphQL Query Error:', error);
-      throw error;
-    }
+    return result.data;
   }
 
   /**
@@ -1084,37 +1054,22 @@ class GraphQLService {
     // Check if user is authenticated and get token
     const currentUser = cognitoAuthService.getCurrentUser();
     if (!currentUser) {
-      console.error('GraphQL Error: User not authenticated');
       throw new Error('User not authenticated');
     }
 
     const idToken = cognitoAuthService.getIdToken();
     if (!idToken) {
-      console.error('GraphQL Error: No ID token found in localStorage');
       throw new Error('No valid authentication token');
     }
 
-    console.log('GraphQL: Using token for user:', currentUser.email);
 
-    try {
-      // Ensure Amplify session is current
-      const session = await fetchAuthSession();
-      console.log('📋 Amplify session status for mutation:', {
-        isSignedIn: !!session.tokens?.accessToken,
-        hasIdToken: !!session.tokens?.idToken
-      });
+    const result = await this.client.graphql({
+      query: mutation,
+      variables,
+      authMode: 'userPool'
+    });
 
-      const result = await this.client.graphql({
-        query: mutation,
-        variables,
-        authMode: 'userPool'
-      });
-
-      return result.data;
-    } catch (error) {
-      console.error('GraphQL Mutation Error:', error);
-      throw error;
-    }
+    return result.data;
   }
 
   /**
@@ -1125,18 +1080,13 @@ class GraphQLService {
       throw new Error('GraphQL service not initialized');
     }
 
-    try {
-      const sub = this.client.graphql({
-        query: subscription,
-        variables,
-        authMode: 'userPool'
-      });
+    const sub = this.client.graphql({
+      query: subscription,
+      variables,
+      authMode: 'userPool'
+    });
 
-      return sub;
-    } catch (error) {
-      console.error('GraphQL Subscription Error:', error);
-      throw error;
-    }
+    return sub;
   }
 
   // ========== POSTULANTE METHODS ==========
@@ -1244,7 +1194,6 @@ class GraphQLService {
   async getAllApplications(status?: Application['status'], limit?: number, nextToken?: string): Promise<Application[]> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to access all applications');
       throw new Error('Admin access required');
     }
 
@@ -1265,7 +1214,6 @@ class GraphQLService {
   ): Promise<Application> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to update application status');
       throw new Error('Admin access required');
     }
 
@@ -1319,7 +1267,6 @@ class GraphQLService {
   async getAllJobPostings(status?: JobPosting['status'], limit?: number, nextToken?: string): Promise<JobPosting[]> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to access all job postings');
       throw new Error('Admin access required');
     }
 
@@ -1349,7 +1296,6 @@ class GraphQLService {
   async createJobPosting(input: CreateJobPostingInput): Promise<JobPosting> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to create job posting');
       throw new Error('Admin access required');
     }
 
@@ -1366,7 +1312,6 @@ class GraphQLService {
   async updateJobPosting(input: UpdateJobPostingInput): Promise<JobPosting> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to update job posting');
       throw new Error('Admin access required');
     }
 
@@ -1383,7 +1328,6 @@ class GraphQLService {
   async deleteJobPosting(jobId: string): Promise<boolean> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to delete job posting');
       throw new Error('Admin access required');
     }
 
@@ -1400,7 +1344,6 @@ class GraphQLService {
   async publishJobPosting(jobId: string): Promise<JobPosting> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to publish job posting');
       throw new Error('Admin access required');
     }
 
@@ -1417,7 +1360,6 @@ class GraphQLService {
   async pauseJobPosting(jobId: string): Promise<JobPosting> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to pause job posting');
       throw new Error('Admin access required');
     }
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
-import { cognitoAuthService } from '../../services/cognitoAuthService';
 import type { JobPosting, CreateJobPostingInput, UpdateJobPostingInput } from '../../services/graphqlService';
 
 const getStatusColor = (status: JobPosting['status']) => {

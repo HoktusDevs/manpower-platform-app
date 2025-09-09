@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { Amplify } from 'aws-amplify';
 import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { User, RegisterRequest, LoginRequest, AuthSystem } from '../types/auth';
 
@@ -76,7 +75,7 @@ export const useAuth = (): UseAuthReturn => {
       console.log('🔑 Attempting Amplify Auth login...');
       
       try {
-        const signInResult = await signIn({
+        await signIn({
           username: credentials.email.toLowerCase(),
           password: credentials.password
         });
@@ -94,8 +93,8 @@ export const useAuth = (): UseAuthReturn => {
         // Get role from ID token claims
         let userRole: 'admin' | 'postulante' = 'postulante';
         if (idToken) {
-          const claims = idToken.payload as any;
-          userRole = claims['custom:role'] || 'postulante';
+          const claims = idToken.payload as Record<string, unknown>;
+          userRole = (claims['custom:role'] as 'admin' | 'postulante') || 'postulante';
           console.log('🏷️ User role from token:', userRole);
         }
         
@@ -127,9 +126,9 @@ export const useAuth = (): UseAuthReturn => {
         
         return true;
         
-      } catch (amplifyError: any) {
+      } catch (amplifyError: unknown) {
         // Check if user is already authenticated
-        if (amplifyError?.name === 'UserAlreadyAuthenticatedException') {
+        if ((amplifyError as Error)?.name === 'UserAlreadyAuthenticatedException') {
           console.log('✅ User already authenticated, fetching current session...');
           
           // Get the current authenticated user and session
@@ -140,8 +139,8 @@ export const useAuth = (): UseAuthReturn => {
           // Get role from ID token claims
           let userRole: 'admin' | 'postulante' = 'postulante';
           if (idToken) {
-            const claims = idToken.payload as any;
-            userRole = claims['custom:role'] || 'postulante';
+            const claims = idToken.payload as Record<string, unknown>;
+            userRole = (claims['custom:role'] as 'admin' | 'postulante') || 'postulante';
           }
           
           const userData: User = {

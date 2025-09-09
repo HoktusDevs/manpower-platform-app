@@ -59,11 +59,9 @@ export const EnhancedFormsManager: React.FC = () => {
   // Load forms on mount (only when auth and GraphQL are ready)
   useEffect(() => {
     if (isAuthenticated && user?.role === 'admin') {
-      console.log('🔍 EnhancedFormsManager: Checking if GraphQL is available...');
       
       // Check if GraphQL is available before attempting to fetch
       // SKIP GRAPHQL - Just show the UI
-      console.log('⚠️ Skipping GraphQL - showing forms UI without data');
       // loading state is already managed by useGraphQL hook
     }
   }, [fetchAllForms, isAuthenticated, user, isGraphQLAvailable]);
@@ -318,19 +316,16 @@ export const EnhancedFormsManager: React.FC = () => {
   return (
     <div>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gestor de Formularios Dinámicos</h1>
-              <p className="mt-2 text-gray-600">Crea y gestiona formularios personalizados para el proceso de aplicación</p>
-            </div>
-            <button
-              onClick={handleCreateForm}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out"
-            >
-              + Nuevo Formulario
-            </button>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Gestión de Formularios</h1>
           </div>
+          <button
+            onClick={handleCreateForm}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out"
+          >
+            + Crear nuevo formulario
+          </button>
         </div>
 
         {/* Forms List */}
@@ -348,13 +343,6 @@ export const EnhancedFormsManager: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No hay formularios</h3>
-                <p className="text-gray-500 mb-4">Comienza creando tu primer formulario dinámico</p>
-                <button
-                  onClick={handleCreateForm}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md"
-                >
-                  Crear Formulario
-                </button>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">

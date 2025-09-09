@@ -300,6 +300,249 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
+    // Mutation: Create form (admin only)
+    formsDataSource.createResolver('CreateFormResolver', {
+      typeName: 'Mutation',
+      fieldName: 'createForm',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($formId = $util.autoId())
+        #set($now = $util.time.nowISO8601())
+        #set($fields = [])
+        
+        ## Process and validate fields
+        #foreach($field in $ctx.args.input.fields)
+          #set($fieldId = $util.autoId())
+          #set($processedField = {
+            "fieldId": $fieldId,
+            "type": $field.type,
+            "label": $field.label,
+            "required": $field.required,
+            "order": $field.order
+          })
+          
+          ## Add optional field properties
+          #if($field.placeholder) #set($processedField.placeholder = $field.placeholder) #end
+          #if($field.options) #set($processedField.options = $field.options) #end
+          #if($field.validation) #set($processedField.validation = $field.validation) #end
+          #if($field.description) #set($processedField.description = $field.description) #end
+          #if($field.defaultValue) #set($processedField.defaultValue = $field.defaultValue) #end
+          
+          #set($addResult = $fields.add($processedField))
+        #end
+        
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "formId": { "S": "$formId" }
+          },
+          "attributeValues": {
+            "formId": { "S": "$formId" },
+            "title": { "S": "$ctx.args.input.title" },
+            "status": { "S": "DRAFT" },
+            "fields": { "S": "$util.toJson($fields)" },
+            "isRequired": { "BOOL": $ctx.args.input.isRequired },
+            "createdAt": { "S": "$now" },
+            "updatedAt": { "S": "$now" },
+            "currentSubmissions": { "N": "0" }
+            #if($ctx.args.input.description), "description": { "S": "$ctx.args.input.description" }#end
+            #if($ctx.args.input.jobId), "jobId": { "S": "$ctx.args.input.jobId" }#end
+            #if($ctx.args.input.expiresAt), "expiresAt": { "S": "$ctx.args.input.expiresAt" }#end
+            #if($ctx.args.input.maxSubmissions), "maxSubmissions": { "N": "$ctx.args.input.maxSubmissions" }#end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result.fields)
+          #set($parsedFields = $util.parseJson($ctx.result.fields))
+          #set($ctx.result.fields = $parsedFields)
+        #end
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Update form (admin only)
+    formsDataSource.createResolver('UpdateFormResolver', {
+      typeName: 'Mutation',
+      fieldName: 'updateForm',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($now = $util.time.nowISO8601())
+        #set($updateExpression = "SET updatedAt = :updatedAt")
+        #set($expressionAttributeValues = { ":updatedAt": { "S": "$now" } })
+        
+        ## Build dynamic update expression
+        #if($ctx.args.input.title)
+          #set($updateExpression = "$updateExpression, title = :title")
+          #set($expressionAttributeValues[":title"] = { "S": "$ctx.args.input.title" })
+        #end
+        
+        #if($ctx.args.input.description)
+          #set($updateExpression = "$updateExpression, description = :description")
+          #set($expressionAttributeValues[":description"] = { "S": "$ctx.args.input.description" })
+        #end
+        
+        #if($ctx.args.input.jobId)
+          #set($updateExpression = "$updateExpression, jobId = :jobId")
+          #set($expressionAttributeValues[":jobId"] = { "S": "$ctx.args.input.jobId" })
+        #end
+        
+        #if($ctx.args.input.status)
+          #set($updateExpression = "$updateExpression, #status = :status")
+          #set($expressionAttributeValues[":status"] = { "S": "$ctx.args.input.status" })
+        #end
+        
+        #if($ctx.args.input.isRequired != $util.isNull())
+          #set($updateExpression = "$updateExpression, isRequired = :isRequired")
+          #set($expressionAttributeValues[":isRequired"] = { "BOOL": $ctx.args.input.isRequired })
+        #end
+        
+        #if($ctx.args.input.maxSubmissions)
+          #set($updateExpression = "$updateExpression, maxSubmissions = :maxSubmissions")
+          #set($expressionAttributeValues[":maxSubmissions"] = { "N": "$ctx.args.input.maxSubmissions" })
+        #end
+        
+        #if($ctx.args.input.expiresAt)
+          #set($updateExpression = "$updateExpression, expiresAt = :expiresAt")
+          #set($expressionAttributeValues[":expiresAt"] = { "S": "$ctx.args.input.expiresAt" })
+        #end
+        
+        ## Process fields if provided
+        #if($ctx.args.input.fields)
+          #set($fields = [])
+          #foreach($field in $ctx.args.input.fields)
+            #set($processedField = {})
+            #if($field.fieldId)
+              #set($processedField.fieldId = $field.fieldId)
+            #else
+              #set($processedField.fieldId = $util.autoId())
+            #end
+            #if($field.type) #set($processedField.type = $field.type) #end
+            #if($field.label) #set($processedField.label = $field.label) #end
+            #if($field.placeholder) #set($processedField.placeholder = $field.placeholder) #end
+            #if($field.required != $util.isNull()) #set($processedField.required = $field.required) #end
+            #if($field.options) #set($processedField.options = $field.options) #end
+            #if($field.validation) #set($processedField.validation = $field.validation) #end
+            #if($field.order) #set($processedField.order = $field.order) #end
+            #if($field.description) #set($processedField.description = $field.description) #end
+            #if($field.defaultValue) #set($processedField.defaultValue = $field.defaultValue) #end
+            #set($addResult = $fields.add($processedField))
+          #end
+          #set($updateExpression = "$updateExpression, fields = :fields")
+          #set($expressionAttributeValues[":fields"] = { "S": "$util.toJson($fields)" })
+        #end
+        
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "formId": { "S": "$ctx.args.input.formId" }
+          },
+          "update": {
+            "expression": "$updateExpression",
+            "expressionValues": $util.toJson($expressionAttributeValues)
+            #if($ctx.args.input.status)
+              ,"expressionNames": { "#status": "status" }
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result.fields)
+          #set($parsedFields = $util.parseJson($ctx.result.fields))
+          #set($ctx.result.fields = $parsedFields)
+        #end
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Delete form (admin only)
+    formsDataSource.createResolver('DeleteFormResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteForm',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version": "2017-02-28",
+          "operation": "DeleteItem",
+          "key": {
+            "formId": { "S": "$ctx.args.formId" }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result)
+          true
+        #else
+          false
+        #end
+      `),
+    });
+
+    // Mutation: Publish form (admin only)
+    formsDataSource.createResolver('PublishFormResolver', {
+      typeName: 'Mutation',  
+      fieldName: 'publishForm',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "formId": { "S": "$ctx.args.formId" }
+          },
+          "update": {
+            "expression": "SET #status = :status, updatedAt = :updatedAt",
+            "expressionNames": {
+              "#status": "status"
+            },
+            "expressionValues": {
+              ":status": { "S": "PUBLISHED" },
+              ":updatedAt": { "S": "$now" }
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result.fields)
+          #set($parsedFields = $util.parseJson($ctx.result.fields))
+          #set($ctx.result.fields = $parsedFields)
+        #end
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Pause form (admin only)
+    formsDataSource.createResolver('PauseFormResolver', {
+      typeName: 'Mutation',
+      fieldName: 'pauseForm',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "formId": { "S": "$ctx.args.formId" }
+          },
+          "update": {
+            "expression": "SET #status = :status, updatedAt = :updatedAt",
+            "expressionNames": {
+              "#status": "status"
+            },
+            "expressionValues": {
+              ":status": { "S": "PAUSED" },
+              ":updatedAt": { "S": "$now" }
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result.fields)
+          #set($parsedFields = $util.parseJson($ctx.result.fields))
+          #set($ctx.result.fields = $parsedFields)
+        #end
+        $util.toJson($ctx.result)
+      `),
+    });
+
     // IMPORTANT: The Identity Pool Role Attachment is handled in CognitoAuthStack
     // We DO NOT create another one here to avoid the "already exists" error
     // Instead, we create a managed policy that can be attached manually to the role

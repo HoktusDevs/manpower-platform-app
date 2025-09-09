@@ -19,7 +19,7 @@ import { useRouteProtection } from './hooks/useRouteProtection';
 import { useAuth } from './hooks/useAuth';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
@@ -28,7 +28,6 @@ function AppContent() {
   
   // Use the auth hook to get reactive authentication state
   const { isAuthenticated, user } = useAuth();
-  const [isGraphQLInitialized, setIsGraphQLInitialized] = useState(false);
 
   // Initialize GraphQL service after a small delay to ensure auth is ready
   useEffect(() => {
@@ -41,11 +40,7 @@ function AppContent() {
         };
 
         if (config.graphqlEndpoint) {
-          console.log('🔧 Initializing GraphQL service from App component');
           await graphqlService.initialize(config);
-          setIsGraphQLInitialized(true);
-        } else {
-          console.warn('GraphQL URL not configured in environment variables');
         }
       }
     };

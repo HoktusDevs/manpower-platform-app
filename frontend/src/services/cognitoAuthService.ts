@@ -1,6 +1,5 @@
 import { AuthenticationDetails, CognitoUser, CognitoUserPool, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { Amplify } from 'aws-amplify';
-import { signIn } from 'aws-amplify/auth';
 import type { 
   User, 
   RegisterRequest, 
