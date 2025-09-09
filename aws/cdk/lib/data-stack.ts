@@ -211,6 +211,11 @@ export class DataStack extends cdk.Stack {
       this.documentsTable
     );
 
+    const formsDataSource = this.graphqlApi.addDynamoDbDataSource(
+      'FormsDataSource',
+      this.formsTable
+    );
+
     // RESOLVERS - No Lambda needed!
 
     // Query: Get applications for current user
@@ -239,7 +244,7 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getAllApplications',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims.get("custom:role") != "admin")
+        #if($ctx.identity.claims["custom:role"] != "admin")
           $util.unauthorized()
         #end
         {
@@ -275,6 +280,23 @@ export class DataStack extends cdk.Stack {
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`
         $util.toJson($ctx.result)
+      `),
+    });
+
+    // FORMS RESOLVERS
+
+    // Query: Get all forms (admin only)
+    formsDataSource.createResolver('GetAllFormsResolver', {
+      typeName: 'Query',
+      fieldName: 'getAllForms',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version" : "2017-02-28",
+          "operation" : "Scan"
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result.items)
       `),
     });
 
