@@ -39,7 +39,12 @@ export const useAnalytics = () => {
     trackAction({
       action: 'click',
       target: buttonName,
-      context
+      // Convert AnalyticsContext to AnalyticsProperties format
+      context: context ? {
+        page: context.section,
+        title: context.buttonText,
+        url: window.location.href
+      } as AnalyticsProperties : undefined
     });
   };
 
@@ -48,7 +53,12 @@ export const useAnalytics = () => {
     trackAction({
       action: 'form_submit',
       target: formName,
-      context
+      // Convert AnalyticsContext to AnalyticsProperties format
+      context: context ? {
+        page: context.section,
+        title: context.formName,
+        url: window.location.href
+      } as AnalyticsProperties : undefined
     });
   };
 

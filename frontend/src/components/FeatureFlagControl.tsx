@@ -63,7 +63,7 @@ export const FeatureFlagControl: React.FC<FeatureFlagControlProps> = ({
   
   // Type-safe comparison for A/B testing display
   const isABTesting = currentSystem === 'ab_test';
-  const showActualSystem = isABTesting && actualSystem !== 'ab_test';
+  const showActualSystem = isABTesting && actualSystem !== null;
   
   return (
     <div className={`inline-flex items-center ${className}`}>

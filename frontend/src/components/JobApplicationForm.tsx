@@ -148,12 +148,12 @@ const FormFieldRenderer: React.FC<FormFieldRendererProps> = ({
               }}
               accept={field.validation?.fileTypes?.map(ext => `.${ext}`).join(',')}
             />
-            {value && typeof value === 'object' && value !== null && 'name' in value && 'size' in value && (
+            {value && typeof value === 'object' && value !== null && 'name' in value && 'size' in value ? (
               <div className="file-info">
                 <span className="file-name">{String((value as { name: string }).name)}</span>
                 <span className="file-size">({Math.round((value as { size: number }).size / 1024)}KB)</span>
               </div>
-            )}
+            ) : null}
           </div>
         );
 

@@ -3,7 +3,7 @@
 
 import { cognitoAuthService } from '../services/cognitoAuthService';
 import { migrationService } from './migrationService';
-import type { AnalyticsProperties, EventMetadata } from '../types/analytics';
+import type { AnalyticsProperties, AnalyticsContext, EventMetadata } from '../types/analytics';
 
 interface AnalyticsEvent {
   eventName: string;
@@ -81,9 +81,12 @@ class AnalyticsService {
       sessionId: this.sessionId,
       timestamp: Date.now(),
       properties: {
+        page: window.location.pathname,
+        title: document.title,
+        url: window.location.href,
         action: userAction.action,
         target: userAction.target,
-        context: userAction.context || {}
+        context: userAction.context as AnalyticsContext
       }
     };
 

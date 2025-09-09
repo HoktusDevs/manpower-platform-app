@@ -259,8 +259,16 @@ class MigrationService {
   /**
    * Force a feature to use a specific system (admin override)
    */
-  forceFeatureSystem(feature: keyof MigrationConfig['features'], system: 'legacy' | 'aws_native' | 'ab_test'): void {
-    this.config.features[feature] = system as typeof this.config.features[typeof feature];
+  forceFeatureSystem(feature: keyof MigrationConfig['features'], system: 'legacy' | 'aws_native' | 'ab_test' | 'cognito'): void {
+    if (feature === 'authentication') {
+      if (system === 'cognito' || system === 'legacy' || system === 'ab_test') {
+        this.config.features[feature] = system;
+      }
+    } else if (feature === 'applications' || feature === 'documents' || feature === 'realtime' || feature === 'analytics') {
+      if (system === 'legacy' || system === 'aws_native' || system === 'ab_test') {
+        this.config.features[feature] = system;
+      }
+    }
     this.saveConfigToStorage();
     
     console.log(`🔀 Feature '${feature}' forced to '${system}' system`);
@@ -304,7 +312,12 @@ class MigrationService {
     
     // Set all features to legacy system
     Object.keys(this.config.features).forEach(feature => {
-      this.config.features[feature as keyof MigrationConfig['features']] = 'legacy';
+      const featureKey = feature as keyof MigrationConfig['features'];
+      if (featureKey === 'authentication') {
+        this.config.features[featureKey] = 'legacy';
+      } else {
+        this.config.features[featureKey] = 'legacy';
+      }
     });
     
     this.saveConfigToStorage();

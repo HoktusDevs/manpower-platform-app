@@ -45,7 +45,7 @@ class DocumentsService {
         console.log('✅ Document uploaded via AWS-Native S3');
       } else {
         // Legacy: Upload via REST API
-        const token = cognitoAuthService.getToken();
+        const token = cognitoAuthService.getIdToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -173,9 +173,10 @@ class DocumentsService {
     }
   }
 
-  private async getFromS3(/* userId: string */): Promise<Document[]> {
+  private async getFromS3(userId: string): Promise<Document[]> {
     // Simulate S3 document listing
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+    console.log(`Getting documents for user: ${userId}`);
     return []; // Would query DynamoDB for user documents
   }
 

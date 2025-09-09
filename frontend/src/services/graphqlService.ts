@@ -995,7 +995,7 @@ class GraphQLService {
     });
     
     Amplify.configure(amplifyConfig);
-    this.client = generateClient() as never;
+    this.client = generateClient() as typeof this.client;
     
     console.log('✅ GraphQL service initialized successfully');
   }

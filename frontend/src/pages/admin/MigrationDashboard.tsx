@@ -53,7 +53,11 @@ export const MigrationDashboard = () => {
     
     // Track migration configuration change
     trackMigrationEvent(feature, system === 'ab_test' ? 'aws_native' : system);
-    trackButtonClick(`migration_${feature}_${system}`, { previousSystem: config.features[feature as keyof typeof config.features] });
+    trackButtonClick(`migration_${feature}_${system}`, { 
+      section: 'migration_dashboard',
+      buttonText: `${feature}_${system}`,
+      buttonId: `migration_${feature}_${system}`
+    });
   };
 
   const handleRollbackToggle = () => {

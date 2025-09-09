@@ -10,7 +10,7 @@ export const RegisterPage = () => {
     password: '',
     confirmPassword: '',
     fullName: '',
-    role: 'postulante' as 'admin' | 'postulante' | 'employee',
+    role: 'postulante' as 'admin' | 'postulante',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -124,7 +124,6 @@ export const RegisterPage = () => {
               disabled={isLoading}
             >
               <option value="postulante">Postulante</option>
-              <option value="employee">Empleado</option>
               <option value="admin">Administrador</option>
             </select>
           </div>

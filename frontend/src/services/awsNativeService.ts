@@ -6,7 +6,6 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand /*, DeleteCommand*/ } from "@aws-sdk/lib-dynamodb";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 import { cognitoAuthService } from '../services/cognitoAuthService';
-import type { User } from '../types/auth';
 import type { DynamoDBExpressionAttributeValues } from '../types/aws';
 
 interface AWSNativeConfig {
@@ -297,24 +296,6 @@ class AWSNativeService {
     }
   }
 
-  /**
-   * SECURITY: Validate user has access to perform operation
-   * TODO: Used in future features for role validation
-   */
-  private validateUserAccess(requiredRole?: 'admin' | 'postulante'): User {
-    const user = cognitoAuthService.getCurrentUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    if (requiredRole && user.role !== requiredRole) {
-      console.error(`🚨 SECURITY: User ${user.email} (${user.role}) attempted ${requiredRole} operation`);
-      throw new Error(`Unauthorized: ${requiredRole} access required`);
-    }
-
-    return user;
-  }
 
   /**
    * Check if service is initialized

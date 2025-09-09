@@ -3,7 +3,7 @@ import { awsNativeService } from '../services/awsNativeService';
 import { legacyApiService } from '../services/legacyApiService';
 import { cognitoAuthService } from '../services/cognitoAuthService';
 import { migrationService } from '../services/migrationService';
-import type { MigrationConfigUpdate } from '../types/config';
+import type { MigrationConfig } from '../services/migrationService';
 
 interface Application {
   userId: string;
@@ -89,7 +89,7 @@ export const useAWSNative = () => {
         console.log(`✅ Fetched ${data.length} applications directly from DynamoDB`);
       } else {
         // Legacy API fallback
-        const token = cognitoAuthService.getToken();
+        const token = cognitoAuthService.getIdToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -155,7 +155,7 @@ export const useAWSNative = () => {
         console.log('✅ Application created successfully via AWS-Native');
       } else {
         // Legacy API fallback
-        const token = cognitoAuthService.getToken();
+        const token = cognitoAuthService.getIdToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
@@ -352,7 +352,7 @@ export const useAWSNative = () => {
   /**
    * Update migration configuration (admin only)
    */
-  const updateMigrationConfig = (newConfig: MigrationConfigUpdate) => {
+  const updateMigrationConfig = (newConfig: Partial<MigrationConfig>) => {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role === 'admin') {
       migrationService.updateConfig(newConfig);

@@ -11,13 +11,12 @@ import type { JWTPayload } from '../types/config';
 class CognitoAuthService {
   private userPool: CognitoUserPool | null = null;
   private currentUser: CognitoUser | null = null;
-  private config: CognitoConfig | null = null;
 
   /**
    * Initialize the Cognito service with configuration
    */
   initialize(config: CognitoConfig): void {
-    this.config = config;
+    // Store configuration values directly in userPool initialization
     this.userPool = new CognitoUserPool({
       UserPoolId: config.userPoolId,
       ClientId: config.userPoolClientId,
