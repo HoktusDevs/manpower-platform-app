@@ -37,7 +37,6 @@ class CognitoAuthService {
         }
       }, { ssr: false });
     } else {
-      console.log('🚫 Skipping Identity Pool configuration due to IAM issues');
       Amplify.configure({
         Auth: {
           Cognito: {
@@ -192,16 +191,15 @@ class CognitoAuthService {
    * Logout current user
    */
   logout(): void {
+    // Just clear the current user reference and let the parent handle localStorage
     if (this.currentUser) {
-      this.currentUser.signOut();
+      try {
+        this.currentUser.signOut();
+      } catch (error) {
+        console.warn('Error signing out current user:', error);
+      }
       this.currentUser = null;
     }
-    
-    // Clear stored tokens
-    localStorage.removeItem('cognito_access_token');
-    localStorage.removeItem('cognito_id_token');
-    localStorage.removeItem('cognito_refresh_token');
-    localStorage.removeItem('cognito_user');
   }
 
   /**
@@ -222,14 +220,20 @@ class CognitoAuthService {
         return false;
       }
 
+      // Check for either access token or id token (we use id token for GraphQL)
       const accessToken = localStorage.getItem('cognito_access_token');
-      if (!accessToken) {
-        console.warn('🚨 SECURITY: No access token found');
+      const idToken = localStorage.getItem('cognito_id_token');
+      
+      if (!accessToken && !idToken) {
+        console.warn('🚨 SECURITY: No tokens found');
         return false;
       }
+      
+      // Use whichever token exists
+      const tokenToCheck = accessToken || idToken;
 
       // Basic JWT validation (check if token is expired)
-      const tokenPayload = this.parseJWT(accessToken);
+      const tokenPayload = this.parseJWT(tokenToCheck!);
       const now = Math.floor(Date.now() / 1000);
       
       if (tokenPayload.exp && tokenPayload.exp < now) {

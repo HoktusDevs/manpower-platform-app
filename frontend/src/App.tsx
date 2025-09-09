@@ -32,7 +32,7 @@ function AppContent() {
 
   // Initialize GraphQL service after a small delay to ensure auth is ready
   useEffect(() => {
-    const initGraphQL = () => {
+    const initGraphQL = async () => {
       if (!graphqlService.isInitialized()) {
         const config = {
           graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
@@ -42,7 +42,7 @@ function AppContent() {
 
         if (config.graphqlEndpoint) {
           console.log('🔧 Initializing GraphQL service from App component');
-          graphqlService.initialize(config);
+          await graphqlService.initialize(config);
           setIsGraphQLInitialized(true);
         } else {
           console.warn('GraphQL URL not configured in environment variables');

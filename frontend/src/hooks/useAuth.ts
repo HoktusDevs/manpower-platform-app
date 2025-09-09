@@ -87,12 +87,24 @@ export const useAuth = (): UseAuthReturn => {
         const amplifyUser = await getCurrentUser();
         console.log('👤 Amplify user:', amplifyUser);
         
+        // Get session and extract role from ID token
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken;
+        
+        // Get role from ID token claims
+        let userRole: 'admin' | 'postulante' = 'postulante';
+        if (idToken) {
+          const claims = idToken.payload as any;
+          userRole = claims['custom:role'] || 'postulante';
+          console.log('🏷️ User role from token:', userRole);
+        }
+        
         // Create our User object from Amplify user attributes
         const userData: User = {
           userId: amplifyUser.userId,
           email: credentials.email.toLowerCase(),
           fullName: credentials.email.split('@')[0], // Use email prefix as name
-          role: credentials.email.includes('admin') ? 'admin' : 'postulante', // Simple role detection
+          role: userRole,
           createdAt: new Date().toISOString(),
           isActive: true,
           emailVerified: true
@@ -101,17 +113,65 @@ export const useAuth = (): UseAuthReturn => {
         setUser(userData);
         cognitoAuthService.setUserData(userData);
         
-        // Get session and store token
-        const session = await fetchAuthSession();
-        const idToken = session.tokens?.idToken?.toString();
-        setIdToken(idToken || null);
-        if (idToken) {
-          localStorage.setItem('cognito_id_token', idToken);
+        // Store both tokens
+        const idTokenString = idToken?.toString();
+        const accessTokenString = session.tokens?.accessToken?.toString();
+        
+        setIdToken(idTokenString || null);
+        if (idTokenString) {
+          localStorage.setItem('cognito_id_token', idTokenString);
+        }
+        if (accessTokenString) {
+          localStorage.setItem('cognito_access_token', accessTokenString);
         }
         
         return true;
         
-      } catch (amplifyError) {
+      } catch (amplifyError: any) {
+        // Check if user is already authenticated
+        if (amplifyError?.name === 'UserAlreadyAuthenticatedException') {
+          console.log('✅ User already authenticated, fetching current session...');
+          
+          // Get the current authenticated user and session
+          const amplifyUser = await getCurrentUser();
+          const session = await fetchAuthSession();
+          const idToken = session.tokens?.idToken;
+          
+          // Get role from ID token claims
+          let userRole: 'admin' | 'postulante' = 'postulante';
+          if (idToken) {
+            const claims = idToken.payload as any;
+            userRole = claims['custom:role'] || 'postulante';
+          }
+          
+          const userData: User = {
+            userId: amplifyUser.userId,
+            email: credentials.email.toLowerCase(),
+            fullName: credentials.email.split('@')[0],
+            role: userRole,
+            createdAt: new Date().toISOString(),
+            isActive: true,
+            emailVerified: true
+          };
+          
+          setUser(userData);
+          cognitoAuthService.setUserData(userData);
+          
+          // Store both tokens
+          const idTokenString = idToken?.toString();
+          const accessTokenString = session.tokens?.accessToken?.toString();
+          
+          setIdToken(idTokenString || null);
+          if (idTokenString) {
+            localStorage.setItem('cognito_id_token', idTokenString);
+          }
+          if (accessTokenString) {
+            localStorage.setItem('cognito_access_token', accessTokenString);
+          }
+          
+          return true;
+        }
+        
         console.warn('❌ Amplify Auth failed, falling back to custom Cognito service:', amplifyError);
         
         // Fallback to custom Cognito service
@@ -175,19 +235,26 @@ export const useAuth = (): UseAuthReturn => {
   }, [isInitialized]);
 
   const logout = useCallback(async () => {
-    try {
-      // Sign out from Amplify first
-      await signOut();
-      console.log('✅ Amplify signout successful');
-    } catch (error) {
-      console.warn('❌ Amplify signout failed:', error);
-    }
+    console.log('🚪 Logging out...');
     
-    // Also cleanup our custom service
-    cognitoAuthService.logout();
+    // Clear everything immediately
     setUser(null);
     setError(null);
     setIdToken(null);
+    
+    // Clear localStorage
+    localStorage.removeItem('cognito_access_token');
+    localStorage.removeItem('cognito_id_token');
+    localStorage.removeItem('cognito_refresh_token');
+    localStorage.removeItem('cognito_user');
+    
+    // Try Amplify signout but don't wait for it
+    signOut().catch(error => console.warn('❌ Amplify signout failed:', error));
+    
+    // Also cleanup our custom service
+    cognitoAuthService.logout();
+    
+    console.log('✅ Logout completed');
   }, []);
 
   // Cognito-specific functions

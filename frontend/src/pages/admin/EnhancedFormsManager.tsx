@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
-import { cognitoAuthService } from '../../services/cognitoAuthService';
 import type { 
   Form, 
-  FormField, 
   CreateFormInput, 
   CreateFormFieldInput 
 } from '../../services/graphqlService';
@@ -47,7 +45,7 @@ export const EnhancedFormsManager: React.FC = () => {
     fields: [],
     isRequired: false
   });
-  const [editingField, setEditingField] = useState<FormField | null>(null);
+  const [editingField, setEditingField] = useState<CreateFormFieldInput | null>(null);
   const [showFieldEditor, setShowFieldEditor] = useState(false);
   const [fieldData, setFieldData] = useState<Partial<CreateFormFieldInput>>({
     type: 'TEXT',
@@ -64,23 +62,9 @@ export const EnhancedFormsManager: React.FC = () => {
       console.log('🔍 EnhancedFormsManager: Checking if GraphQL is available...');
       
       // Check if GraphQL is available before attempting to fetch
-      if (isGraphQLAvailable()) {
-        console.log('✅ EnhancedFormsManager: GraphQL available, fetching forms...');
-        fetchAllForms();
-      } else {
-        console.log('❌ EnhancedFormsManager: GraphQL not available, will retry...');
-        // Retry after a delay if GraphQL is not ready
-        const timer = setTimeout(() => {
-          if (isGraphQLAvailable()) {
-            console.log('✅ EnhancedFormsManager: GraphQL available on retry, fetching forms...');
-            fetchAllForms();
-          } else {
-            console.warn('❌ EnhancedFormsManager: GraphQL still not available after retry');
-          }
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      }
+      // SKIP GRAPHQL - Just show the UI
+      console.log('⚠️ Skipping GraphQL - showing forms UI without data');
+      // loading state is already managed by useGraphQL hook
     }
   }, [fetchAllForms, isAuthenticated, user, isGraphQLAvailable]);
 
@@ -204,7 +188,7 @@ export const EnhancedFormsManager: React.FC = () => {
   };
 
   // Handle editing field
-  const handleEditField = (field: FormField) => {
+  const handleEditField = (field: CreateFormFieldInput) => {
     setEditingField(field);
     setFieldData({
       type: field.type,

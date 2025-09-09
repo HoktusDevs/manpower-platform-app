@@ -7,12 +7,25 @@ import { Input, FormField, Button, Container, Typography, useToast } from '../..
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
   const { showSuccess, showError, showLoading, hideToast } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    console.log('🔍 LoginPage - isAuthenticated:', isAuthenticated);
+    const user = cognitoAuthService.getCurrentUser();
+    console.log('🔍 LoginPage - currentUser:', user);
+    
+    if (isAuthenticated && user) {
+      const route = user.role === 'admin' ? '/admin' : '/postulante';
+      console.log('➡️ LoginPage - Redirecting to:', route);
+      navigate(route, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -55,10 +55,13 @@ export const ApplicationsManagementPage: React.FC = () => {
 
 
   useEffect(() => {
-    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
-      const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-      fetchAllApplications(statusFilter);
-    }
+    // SKIP GraphQL fetch - just show empty applications interface
+    console.log('⚠️ Skipping GraphQL applications fetch - showing empty interface');
+    // TODO: Re-enable when GraphQL is properly configured
+    // if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
+    //   const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+    //   fetchAllApplications(statusFilter);
+    // }
   }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllApplications]);
 
   const handleStatusChange = async (
@@ -89,7 +92,7 @@ export const ApplicationsManagementPage: React.FC = () => {
     return acc;
   }, {} as Record<Application['status'], number>);
 
-  if (user?.role !== 'admin') {
+  if (authUser?.role !== 'admin') {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">

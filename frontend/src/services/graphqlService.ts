@@ -967,7 +967,7 @@ class GraphQLService {
   /**
    * Initialize GraphQL service with AppSync configuration
    */
-  initialize(config: GraphQLConfig): void {
+  async initialize(config: GraphQLConfig): Promise<void> {
     this.config = config;
 
     console.log('🔧 GraphQL Service initializing with config:', config);
@@ -996,11 +996,19 @@ class GraphQLService {
     console.log('🔄 Setting new Amplify config:', newConfig);
     Amplify.configure(newConfig);
 
-    // Wait a moment for config to be applied then generate client
-    setTimeout(() => {
+    // Force a small delay and recreate client to ensure config is applied
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    try {
       this.client = generateClient();
-      console.log('🚀 GraphQL Client created after configuration');
-    }, 100);
+      console.log('🚀 GraphQL Client created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create GraphQL client:', error);
+      // Retry once more after another delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      this.client = generateClient();
+      console.log('🚀 GraphQL Client created on retry');
+    }
     
     console.log('🚀 GraphQL Service initialized with AppSync endpoint:', config.graphqlEndpoint);
   }

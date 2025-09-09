@@ -77,9 +77,12 @@ class AWSNativeService {
    * SECURITY: Get Cognito access token for DynamoDB access
    */
   private getCognitoAccessToken(): string {
-    const token = localStorage.getItem('cognito_access_token');
+    const accessToken = localStorage.getItem('cognito_access_token');
+    const idToken = localStorage.getItem('cognito_id_token');
+    
+    const token = accessToken || idToken;
     if (!token) {
-      throw new Error('No Cognito access token found');
+      throw new Error('No Cognito tokens found');
     }
     return token;
   }
