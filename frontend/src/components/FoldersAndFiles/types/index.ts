@@ -146,6 +146,7 @@ export interface UseModalStateReturn {
     onConfirm: () => void;
     variant?: 'danger' | 'warning' | 'info';
   };
+  viewMode: 'table' | 'grid';
   formData: CreateModalFormData;
   openCreateModal: () => void;
   openEditModal: (folderId: string, folderName: string, folderType: string) => void;
@@ -161,6 +162,7 @@ export interface UseModalStateReturn {
     variant?: 'danger' | 'warning' | 'info';
   }) => void;
   closeConfirmModal: () => void;
+  setViewMode: (mode: 'table' | 'grid') => void;
 }
 
 export interface UseClickOutsideReturn {

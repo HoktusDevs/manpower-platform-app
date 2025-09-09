@@ -1,5 +1,6 @@
 import { ToolbarSection, CreateFolderModal, ConfirmationModal } from '../molecules';
 import { FoldersTable } from './FoldersTable';
+import { FoldersGrid } from './FoldersGrid';
 import { 
   useFoldersState, 
   useSelectionState, 
@@ -47,6 +48,7 @@ export const FoldersManager: React.FC = () => {
     showRowActionsMenu,
     showConfirmModal,
     confirmModalData,
+    viewMode,
     formData,
     openCreateModal,
     openEditModal,
@@ -56,6 +58,7 @@ export const FoldersManager: React.FC = () => {
     updateFormData,
     openConfirmModal,
     closeConfirmModal,
+    setViewMode,
   } = useModalState();
 
   // Click outside detection hooks
@@ -154,26 +157,40 @@ export const FoldersManager: React.FC = () => {
         onSearchChange={handleSearchChange}
         showActionsMenu={showActionsMenu}
         selectedCount={selectedCount}
+        viewMode={viewMode}
         onToggleActionsMenu={toggleActionsMenu}
         onCreateFolder={openCreateModal}
         onDeleteSelected={handleDeleteSelected}
         onCloseActionsMenu={handleCloseActionsMenu}
+        onViewModeChange={setViewMode}
         actionsMenuRef={actionsMenuRef.ref}
       />
 
-      {/* Table */}
+      {/* Content View (Table or Grid) */}
       <div className="overflow-visible">
-        <FoldersTable
-          folders={filteredFolders}
-          selectedRows={selectedRows}
-          isAllSelected={isAllSelected}
-          showRowActionsMenu={showRowActionsMenu}
-          onSelectRow={selectRow}
-          onSelectAll={handleSelectAll}
-          onRowAction={handleRowAction}
-          onToggleRowActionsMenu={setRowActionsMenu}
-          rowActionsMenuRef={rowActionsMenuRef.ref}
-        />
+        {viewMode === 'table' ? (
+          <FoldersTable
+            folders={filteredFolders}
+            selectedRows={selectedRows}
+            isAllSelected={isAllSelected}
+            showRowActionsMenu={showRowActionsMenu}
+            onSelectRow={selectRow}
+            onSelectAll={handleSelectAll}
+            onRowAction={handleRowAction}
+            onToggleRowActionsMenu={setRowActionsMenu}
+            rowActionsMenuRef={rowActionsMenuRef.ref}
+          />
+        ) : (
+          <FoldersGrid
+            folders={filteredFolders}
+            selectedRows={selectedRows}
+            showRowActionsMenu={showRowActionsMenu}
+            onSelectRow={selectRow}
+            onRowAction={handleRowAction}
+            onToggleRowActionsMenu={setRowActionsMenu}
+            rowActionsMenuRef={rowActionsMenuRef.ref}
+          />
+        )}
       </div>
 
       {/* Create/Edit Modal */}

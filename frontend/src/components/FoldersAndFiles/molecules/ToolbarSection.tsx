@@ -1,4 +1,4 @@
-import { SearchInput, FilterButton, DownloadButton } from '../atoms';
+import { SearchInput, FilterButton, DownloadButton, ViewToggle } from '../atoms';
 import { ActionsDropdown } from './ActionsDropdown';
 
 interface ToolbarSectionProps {
@@ -6,10 +6,12 @@ interface ToolbarSectionProps {
   onSearchChange: (value: string) => void;
   showActionsMenu: boolean;
   selectedCount: number;
+  viewMode: 'table' | 'grid';
   onToggleActionsMenu: () => void;
   onCreateFolder: () => void;
   onDeleteSelected: () => void;
   onCloseActionsMenu: () => void;
+  onViewModeChange: (mode: 'table' | 'grid') => void;
   actionsMenuRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -23,10 +25,12 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
   onSearchChange,
   showActionsMenu,
   selectedCount,
+  viewMode,
   onToggleActionsMenu,
   onCreateFolder,
   onDeleteSelected,
   onCloseActionsMenu,
+  onViewModeChange,
   actionsMenuRef
 }) => {
   return (
@@ -39,6 +43,11 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
       
       {/* Action Buttons */}
       <div className="flex gap-3 w-full sm:w-auto">
+        <ViewToggle 
+          currentView={viewMode}
+          onViewChange={onViewModeChange}
+        />
+        
         <FilterButton />
         
         <div className="relative" ref={actionsMenuRef}>

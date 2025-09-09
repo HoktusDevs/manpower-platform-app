@@ -6,3 +6,4 @@ export { FolderIcon } from './FolderIcon';
 export { TypeBadge } from './TypeBadge';
 export { RowActionsButton } from './RowActionsButton';
 export { Checkbox } from './Checkbox';
+export { ViewToggle } from './ViewToggle';
