@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import type { JobPosting, CreateJobPostingInput, UpdateJobPostingInput } from '../../services/graphqlService';
@@ -91,15 +92,15 @@ export const JobPostingsManagementPage: React.FC = () => {
     expiresAt: ''
   });
 
-  const user = cognitoAuthService.getCurrentUser();
+  const { user: authUser, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (user?.role === 'admin' && isGraphQLAvailable()) {
+    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
       const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
       fetchAllJobPostings(statusFilter);
       fetchJobPostingStats();
     }
-  }, [user, isGraphQLAvailable, selectedStatus, fetchAllJobPostings, fetchJobPostingStats]);
+  }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllJobPostings, fetchJobPostingStats]);
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job => 
@@ -231,7 +232,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
       {/* Header */}
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">

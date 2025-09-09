@@ -1,4 +1,6 @@
 import { AuthenticationDetails, CognitoUser, CognitoUserPool, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
+import { Amplify } from 'aws-amplify';
+import { signIn } from 'aws-amplify/auth';
 import type { 
   User, 
   RegisterRequest, 
@@ -22,6 +24,29 @@ class CognitoAuthService {
       UserPoolId: config.userPoolId,
       ClientId: config.userPoolClientId,
     });
+
+    // Configure Amplify Auth for GraphQL compatibility - NO IDENTITY POOL  
+    if (config.identityPoolId) {
+      Amplify.configure({
+        Auth: {
+          Cognito: {
+            userPoolId: config.userPoolId,
+            userPoolClientId: config.userPoolClientId,
+            // Skip identity pool if empty/undefined to avoid IAM issues
+          }
+        }
+      }, { ssr: false });
+    } else {
+      console.log('🚫 Skipping Identity Pool configuration due to IAM issues');
+      Amplify.configure({
+        Auth: {
+          Cognito: {
+            userPoolId: config.userPoolId,
+            userPoolClientId: config.userPoolClientId,
+          }
+        }
+      }, { ssr: false });
+    }
   }
 
   /**
@@ -461,6 +486,20 @@ class CognitoAuthService {
     localStorage.setItem('cognito_access_token', session.getAccessToken().getJwtToken());
     localStorage.setItem('cognito_id_token', session.getIdToken().getJwtToken());
     localStorage.setItem('cognito_refresh_token', session.getRefreshToken().getToken());
+  }
+
+  /**
+   * Get current ID token
+   */
+  getIdToken(): string | null {
+    return localStorage.getItem('cognito_id_token');
+  }
+
+  /**
+   * Get current access token
+   */
+  getAccessToken(): string | null {
+    return localStorage.getItem('cognito_access_token');
   }
 
   private translateCognitoError(error: string): string {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import type { 
@@ -24,6 +25,7 @@ const fieldTypeOptions = [
 ] as const;
 
 export const EnhancedFormsManager: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const { 
     forms, 
     loading, 
@@ -33,7 +35,8 @@ export const EnhancedFormsManager: React.FC = () => {
     updateForm, 
     deleteForm, 
     publishForm, 
-    pauseForm 
+    pauseForm,
+    isGraphQLAvailable 
   } = useGraphQL();
   
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
@@ -54,12 +57,32 @@ export const EnhancedFormsManager: React.FC = () => {
     order: 0
   });
 
-  const user = cognitoAuthService.getCurrentUser();
 
-  // Load forms on mount
+  // Load forms on mount (only when auth and GraphQL are ready)
   useEffect(() => {
-    fetchAllForms();
-  }, [fetchAllForms]);
+    if (isAuthenticated && user?.role === 'admin') {
+      console.log('🔍 EnhancedFormsManager: Checking if GraphQL is available...');
+      
+      // Check if GraphQL is available before attempting to fetch
+      if (isGraphQLAvailable()) {
+        console.log('✅ EnhancedFormsManager: GraphQL available, fetching forms...');
+        fetchAllForms();
+      } else {
+        console.log('❌ EnhancedFormsManager: GraphQL not available, will retry...');
+        // Retry after a delay if GraphQL is not ready
+        const timer = setTimeout(() => {
+          if (isGraphQLAvailable()) {
+            console.log('✅ EnhancedFormsManager: GraphQL available on retry, fetching forms...');
+            fetchAllForms();
+          } else {
+            console.warn('❌ EnhancedFormsManager: GraphQL still not available after retry');
+          }
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [fetchAllForms, isAuthenticated, user, isGraphQLAvailable]);
 
   // Handle creating new form
   const handleCreateForm = () => {
@@ -309,8 +332,7 @@ export const EnhancedFormsManager: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div>
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
@@ -694,7 +716,6 @@ export const EnhancedFormsManager: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

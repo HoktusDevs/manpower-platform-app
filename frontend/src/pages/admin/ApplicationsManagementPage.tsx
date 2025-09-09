@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import type { Application } from '../../services/graphqlService';
@@ -37,6 +38,7 @@ const statusOptions: Application['status'][] = [
 ];
 
 export const ApplicationsManagementPage: React.FC = () => {
+  const { user: authUser, isAuthenticated } = useAuth();
   const {
     applications,
     loading,
@@ -51,14 +53,13 @@ export const ApplicationsManagementPage: React.FC = () => {
   const [editingApplication, setEditingApplication] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const user = cognitoAuthService.getCurrentUser();
 
   useEffect(() => {
-    if (user?.role === 'admin' && isGraphQLAvailable()) {
+    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
       const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
       fetchAllApplications(statusFilter);
     }
-  }, [user, isGraphQLAvailable, selectedStatus, fetchAllApplications]);
+  }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllApplications]);
 
   const handleStatusChange = async (
     userId: string,
@@ -113,7 +114,7 @@ export const ApplicationsManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
       {/* Header */}
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">

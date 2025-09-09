@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { graphqlService } from '../services/graphqlService';
+import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { 
   Application, 
   Document, 
@@ -92,29 +93,35 @@ export const useGraphQL = (): UseGraphQLReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize GraphQL service on mount
-  useEffect(() => {
-    if (!graphqlService.isInitialized()) {
-      const config = {
-        graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
-        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-        authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const
-      };
-
-      if (config.graphqlEndpoint) {
-        graphqlService.initialize(config);
-      } else {
-        console.warn('GraphQL URL not configured in environment variables');
-      }
-    }
-  }, []);
+  // GraphQL service is now initialized in App component
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
   const isGraphQLAvailable = useCallback(() => {
-    return graphqlService.isInitialized() && !!import.meta.env.VITE_GRAPHQL_URL;
+    const isServiceInitialized = graphqlService.isInitialized();
+    const hasGraphQLUrl = !!import.meta.env.VITE_GRAPHQL_URL;
+    const isUserAuthenticated = cognitoAuthService.isAuthenticated();
+    const currentUser = cognitoAuthService.getCurrentUser();
+    const hasValidToken = cognitoAuthService.getIdToken() !== null;
+    
+    const isAvailable = isServiceInitialized && hasGraphQLUrl && isUserAuthenticated && hasValidToken && currentUser !== null;
+    
+    console.log('🔍 GraphQL availability check:', {
+      isServiceInitialized,
+      hasGraphQLUrl,
+      isUserAuthenticated,
+      hasValidToken,
+      hasCurrentUser: !!currentUser,
+      result: isAvailable
+    });
+    
+    if (!isAvailable) {
+      console.warn('❌ GraphQL service not available - skipping operation');
+    }
+    
+    return isAvailable;
   }, []);
 
   // ========== QUERIES ==========
@@ -212,7 +219,10 @@ export const useGraphQL = (): UseGraphQLReturn => {
   }, [isGraphQLAvailable]);
 
   const fetchAllForms = useCallback(async (status?: string, jobId?: string, limit?: number) => {
-    if (!isGraphQLAvailable()) return;
+    if (!isGraphQLAvailable()) {
+      console.warn('GraphQL service not available, skipping fetchAllForms');
+      return;
+    }
 
     setLoading(true);
     setError(null);

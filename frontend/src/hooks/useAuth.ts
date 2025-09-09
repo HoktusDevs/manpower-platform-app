@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { Amplify } from 'aws-amplify';
 import { cognitoAuthService } from '../services/cognitoAuthService';
 import type { User, RegisterRequest, LoginRequest, AuthSystem } from '../types/auth';
 
@@ -14,7 +16,7 @@ interface UseAuthReturn {
   // Acciones
   login: (credentials: LoginRequest) => Promise<boolean>;
   register: (userData: RegisterRequest) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   
   // Funciones adicionales para Cognito
@@ -30,24 +32,23 @@ export const useAuth = (): UseAuthReturn => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [idToken, setIdToken] = useState<string | null>(null);
 
-  // Initialize Cognito auth service
+  // Initialize Amplify Auth
   useEffect(() => {
     const initializeAuth = async () => {
-      // Initialize Cognito with environment variables
-      const cognitoConfig = {
-        userPoolId: import.meta.env.VITE_USER_POOL_ID,
-        userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-        identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID,
-        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-      };
-
-      if (!cognitoConfig.userPoolId || !cognitoConfig.userPoolClientId) {
+      if (!import.meta.env.VITE_USER_POOL_ID || !import.meta.env.VITE_USER_POOL_CLIENT_ID) {
         console.error('Cognito configuration missing. Please check environment variables.');
         setError('Authentication configuration error');
         return;
       }
 
-      cognitoAuthService.initialize(cognitoConfig);
+      // Initialize cognitoAuthService WITHOUT identity pool
+      cognitoAuthService.initialize({
+        userPoolId: import.meta.env.VITE_USER_POOL_ID,
+        userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
+        identityPoolId: '', // Empty string instead of undefined to avoid IAM issues
+        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+      });
+
       setUser(cognitoAuthService.getCurrentUser());
       setIdToken(localStorage.getItem('cognito_id_token'));
       
@@ -71,17 +72,62 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const result = await cognitoAuthService.login(credentials);
+      // First try Amplify Auth to establish proper session
+      console.log('🔑 Attempting Amplify Auth login...');
       
-      if (result.success && result.data?.user) {
-        setUser(result.data.user);
-        cognitoAuthService.setUserData(result.data.user);
-        setIdToken(result.data.idToken || null);
+      try {
+        const signInResult = await signIn({
+          username: credentials.email.toLowerCase(),
+          password: credentials.password
+        });
+        
+        console.log('✅ Amplify Auth login successful');
+        
+        // Get the authenticated user from Amplify
+        const amplifyUser = await getCurrentUser();
+        console.log('👤 Amplify user:', amplifyUser);
+        
+        // Create our User object from Amplify user attributes
+        const userData: User = {
+          userId: amplifyUser.userId,
+          email: credentials.email.toLowerCase(),
+          fullName: credentials.email.split('@')[0], // Use email prefix as name
+          role: credentials.email.includes('admin') ? 'admin' : 'postulante', // Simple role detection
+          createdAt: new Date().toISOString(),
+          isActive: true,
+          emailVerified: true
+        };
+        
+        setUser(userData);
+        cognitoAuthService.setUserData(userData);
+        
+        // Get session and store token
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString();
+        setIdToken(idToken || null);
+        if (idToken) {
+          localStorage.setItem('cognito_id_token', idToken);
+        }
+        
         return true;
-      } else {
-        setError(result.message || 'Login failed');
-        return false;
+        
+      } catch (amplifyError) {
+        console.warn('❌ Amplify Auth failed, falling back to custom Cognito service:', amplifyError);
+        
+        // Fallback to custom Cognito service
+        const result = await cognitoAuthService.login(credentials);
+        
+        if (result.success && result.data?.user) {
+          setUser(result.data.user);
+          cognitoAuthService.setUserData(result.data.user);
+          setIdToken(result.data.idToken || null);
+          return true;
+        } else {
+          setError(result.message || 'Login failed');
+          return false;
+        }
       }
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -128,7 +174,16 @@ export const useAuth = (): UseAuthReturn => {
     }
   }, [isInitialized]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      // Sign out from Amplify first
+      await signOut();
+      console.log('✅ Amplify signout successful');
+    } catch (error) {
+      console.warn('❌ Amplify signout failed:', error);
+    }
+    
+    // Also cleanup our custom service
     cognitoAuthService.logout();
     setUser(null);
     setError(null);

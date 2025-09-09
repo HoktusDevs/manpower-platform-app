@@ -9,6 +9,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
+import { AdminLayout } from './components/AdminLayout';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
@@ -17,6 +18,8 @@ import { SecurityBoundary } from './components/SecurityBoundary';
 import { useRouteProtection } from './hooks/useRouteProtection';
 import { useAuth } from './hooks/useAuth';
 import { ToastProvider } from './core-ui';
+import { graphqlService } from './services/graphqlService';
+import { useEffect, useState } from 'react';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
@@ -25,6 +28,32 @@ function AppContent() {
   
   // Use the auth hook to get reactive authentication state
   const { isAuthenticated, user } = useAuth();
+  const [isGraphQLInitialized, setIsGraphQLInitialized] = useState(false);
+
+  // Initialize GraphQL service after a small delay to ensure auth is ready
+  useEffect(() => {
+    const initGraphQL = () => {
+      if (!graphqlService.isInitialized()) {
+        const config = {
+          graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
+          region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+          authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const
+        };
+
+        if (config.graphqlEndpoint) {
+          console.log('🔧 Initializing GraphQL service from App component');
+          graphqlService.initialize(config);
+          setIsGraphQLInitialized(true);
+        } else {
+          console.warn('GraphQL URL not configured in environment variables');
+        }
+      }
+    };
+
+    // Wait a bit for auth to initialize first
+    const timer = setTimeout(initGraphQL, 100);
+    return () => clearTimeout(timer);
+  }, []);
   
   const getDefaultRedirect = () => {
     if (isAuthenticated && user) {
@@ -51,43 +80,45 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         
         {/* SECURITY: Admin routes with MILITARY-GRADE protection */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/migration" element={
-          <RoleGuard requiredRole="admin">
-            <MigrationDashboard />
-          </RoleGuard>
-        } />
-        <Route path="/admin/forms/*" element={
-          <RoleGuard requiredRole="admin">
-            <EnhancedFormsManager />
-          </RoleGuard>
-        } />
-        <Route path="/admin/applications" element={
-          <RoleGuard requiredRole="admin">
-            <ApplicationsManagementPage />
-          </RoleGuard>
-        } />
-        <Route path="/admin/jobs" element={
-          <RoleGuard requiredRole="admin">
-            <JobPostingsManagementPage />
-          </RoleGuard>
-        } />
-        <Route path="/admin/reports" element={
-          <RoleGuard requiredRole="admin">
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-6">Reportes y Analíticas</h1>
-              <p className="text-gray-600">Panel de reportes próximamente disponible.</p>
-            </div>
-          </RoleGuard>
-        } />
-        <Route path="/admin/users" element={
-          <RoleGuard requiredRole="admin">
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-6">Administrar Usuarios</h1>
-              <p className="text-gray-600">Panel de administración de usuarios próximamente disponible.</p>
-            </div>
-          </RoleGuard>
-        } />
+        <Route path="/admin/*" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="migration" element={
+            <RoleGuard requiredRole="admin">
+              <MigrationDashboard />
+            </RoleGuard>
+          } />
+          <Route path="forms/*" element={
+            <RoleGuard requiredRole="admin">
+              <EnhancedFormsManager />
+            </RoleGuard>
+          } />
+          <Route path="applications" element={
+            <RoleGuard requiredRole="admin">
+              <ApplicationsManagementPage />
+            </RoleGuard>
+          } />
+          <Route path="jobs" element={
+            <RoleGuard requiredRole="admin">
+              <JobPostingsManagementPage />
+            </RoleGuard>
+          } />
+          <Route path="reports" element={
+            <RoleGuard requiredRole="admin">
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-6">Reportes y Analíticas</h1>
+                <p className="text-gray-600">Panel de reportes próximamente disponible.</p>
+              </div>
+            </RoleGuard>
+          } />
+          <Route path="users" element={
+            <RoleGuard requiredRole="admin">
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-6">Administrar Usuarios</h1>
+                <p className="text-gray-600">Panel de administración de usuarios próximamente disponible.</p>
+              </div>
+            </RoleGuard>
+          } />
+        </Route>
         
         {/* SECURITY: Postulante routes with STRICT limitations */}
         <Route path="/postulante/forms/:formId" element={

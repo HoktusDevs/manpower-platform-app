@@ -1,12 +1,17 @@
 import { generateClient } from 'aws-amplify/api';
 import { Amplify } from 'aws-amplify';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { cognitoAuthService } from './cognitoAuthService';
+import type { GraphQLResultWithClientExtensions } from 'aws-amplify/api';
 
 // GraphQL Client Configuration
 interface GraphQLConfig {
   graphqlEndpoint: string;
   region: string;
   authenticationType: 'AMAZON_COGNITO_USER_POOLS' | 'AWS_IAM';
+  userPoolId?: string;
+  userPoolClientId?: string;
+  identityPoolId?: string;
 }
 
 interface Application {
@@ -956,7 +961,7 @@ const REVIEW_SUBMISSION = `
 `;
 
 class GraphQLService {
-  private client: unknown = null;
+  private client: any = null;
   private config: GraphQLConfig | null = null;
 
   /**
@@ -965,8 +970,15 @@ class GraphQLService {
   initialize(config: GraphQLConfig): void {
     this.config = config;
 
-    // Configure Amplify for GraphQL
-    Amplify.configure({
+    console.log('🔧 GraphQL Service initializing with config:', config);
+    
+    // Get current Amplify configuration to preserve Auth settings
+    const currentConfig = Amplify.getConfig();
+    console.log('📋 Current Amplify config:', currentConfig);
+    
+    // Configure Amplify with proper v6 structure
+    const newConfig = {
+      ...currentConfig,
       API: {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
@@ -974,12 +986,20 @@ class GraphQLService {
           defaultAuthMode: 'userPool'
         }
       }
-    });
+    }
+    
+    // Remove identity pool from auth config to avoid IAM role issues
+    if (newConfig.Auth && newConfig.Auth.Cognito) {
+      delete newConfig.Auth.Cognito.identityPoolId;
+    }
+    
+    console.log('🔄 Setting new Amplify config:', newConfig);
+    Amplify.configure(newConfig);
 
-    // Generate GraphQL client
+    // Generate GraphQL client after configuration
     this.client = generateClient();
     
-    console.log('🚀 GraphQL Service initialized with AppSync');
+    console.log('🚀 GraphQL Service initialized with AppSync endpoint:', config.graphqlEndpoint);
   }
 
 
@@ -988,10 +1008,40 @@ class GraphQLService {
    */
   private async executeQuery<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     if (!this.client) {
+      console.error('GraphQL Error: Client not initialized');
       throw new Error('GraphQL service not initialized');
     }
 
+    // Check if user is authenticated and get token
+    const currentUser = cognitoAuthService.getCurrentUser();
+    console.log('🔍 GraphQL Auth Check - Current User:', currentUser);
+    
+    if (!currentUser) {
+      console.error('🚨 GraphQL Error: User not authenticated');
+      throw new Error('NoSignedUser: No current user');
+    }
+
+    const idToken = cognitoAuthService.getIdToken();
+    console.log('🔍 GraphQL Auth Check - Has ID Token:', !!idToken);
+    
+    if (!idToken) {
+      console.error('🚨 GraphQL Error: No ID token found in localStorage');
+      throw new Error('No valid authentication token');
+    }
+
+    console.log('✅ GraphQL: Using token for user:', currentUser.email);
+
     try {
+      // Try to get current Amplify session to ensure it's in sync
+      const session = await fetchAuthSession();
+      console.log('📋 Amplify session status:', {
+        isSignedIn: !!session.tokens?.accessToken,
+        hasIdToken: !!session.tokens?.idToken,
+        tokenExpired: session.tokens?.accessToken?.payload?.exp ? 
+          new Date(session.tokens.accessToken.payload.exp * 1000) < new Date() : 
+          'no token'
+      });
+
       const result = await this.client.graphql({
         query,
         variables,
@@ -1013,7 +1063,29 @@ class GraphQLService {
       throw new Error('GraphQL service not initialized');
     }
 
+    // Check if user is authenticated and get token
+    const currentUser = cognitoAuthService.getCurrentUser();
+    if (!currentUser) {
+      console.error('GraphQL Error: User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
+    const idToken = cognitoAuthService.getIdToken();
+    if (!idToken) {
+      console.error('GraphQL Error: No ID token found in localStorage');
+      throw new Error('No valid authentication token');
+    }
+
+    console.log('GraphQL: Using token for user:', currentUser.email);
+
     try {
+      // Ensure Amplify session is current
+      const session = await fetchAuthSession();
+      console.log('📋 Amplify session status for mutation:', {
+        isSignedIn: !!session.tokens?.accessToken,
+        hasIdToken: !!session.tokens?.idToken
+      });
+
       const result = await this.client.graphql({
         query: mutation,
         variables,
