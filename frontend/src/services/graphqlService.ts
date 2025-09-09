@@ -996,8 +996,11 @@ class GraphQLService {
     console.log('🔄 Setting new Amplify config:', newConfig);
     Amplify.configure(newConfig);
 
-    // Generate GraphQL client after configuration
-    this.client = generateClient();
+    // Wait a moment for config to be applied then generate client
+    setTimeout(() => {
+      this.client = generateClient();
+      console.log('🚀 GraphQL Client created after configuration');
+    }, 100);
     
     console.log('🚀 GraphQL Service initialized with AppSync endpoint:', config.graphqlEndpoint);
   }
@@ -1007,8 +1010,15 @@ class GraphQLService {
    * Execute GraphQL query
    */
   private async executeQuery<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+    // Wait for client to be ready if it's still initializing
+    let attempts = 0;
+    while (!this.client && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
     if (!this.client) {
-      console.error('GraphQL Error: Client not initialized');
+      console.error('GraphQL Error: Client not initialized after waiting');
       throw new Error('GraphQL service not initialized');
     }
 
