@@ -16,13 +16,10 @@ export const LoginPage = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log('🔍 LoginPage - isAuthenticated:', isAuthenticated);
     const user = cognitoAuthService.getCurrentUser();
-    console.log('🔍 LoginPage - currentUser:', user);
     
     if (isAuthenticated && user) {
       const route = user.role === 'admin' ? '/admin' : '/postulante';
-      console.log('➡️ LoginPage - Redirecting to:', route);
       navigate(route, { replace: true });
     }
   }, [isAuthenticated, navigate]);
@@ -43,14 +40,7 @@ export const LoginPage = () => {
     
     if (success) {
       showSuccess('¡Bienvenido!', 'Has iniciado sesión correctamente');
-      
-      // Forzar navegación después del login exitoso
-      const userData = cognitoAuthService.getCurrentUser();
-      
-      if (userData) {
-        const route = userData.role === 'admin' ? '/admin' : '/postulante';
-        navigate(route);
-      }
+      // Navigation will be handled by useEffect when isAuthenticated updates
     }
   };
 

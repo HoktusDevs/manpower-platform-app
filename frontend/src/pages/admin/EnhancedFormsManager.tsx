@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
+import { FieldTemplateSelector } from '../../components/Forms/FieldTemplateSelector';
 import type { 
   Form, 
   CreateFormInput, 
@@ -58,11 +59,8 @@ export const EnhancedFormsManager: React.FC = () => {
 
   // Load forms on mount (only when auth and GraphQL are ready)
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'admin') {
-      
-      // Check if GraphQL is available before attempting to fetch
-      // SKIP GRAPHQL - Just show the UI
-      // loading state is already managed by useGraphQL hook
+    if (isAuthenticated && user?.role === 'admin' && isGraphQLAvailable()) {
+      fetchAllForms();
     }
   }, [fetchAllForms, isAuthenticated, user, isGraphQLAvailable]);
 
@@ -239,6 +237,14 @@ export const EnhancedFormsManager: React.FC = () => {
 
     setShowFieldEditor(false);
     setEditingField(null);
+  };
+
+  // Handle adding multiple fields from templates
+  const handleAddFieldsFromTemplate = (newFields: CreateFormFieldInput[]) => {
+    setFormData(prev => ({
+      ...prev,
+      fields: [...(prev.fields || []), ...newFields]
+    }));
   };
 
   // Handle deleting field
@@ -472,8 +478,16 @@ export const EnhancedFormsManager: React.FC = () => {
                     onClick={handleAddField}
                     className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md text-sm"
                   >
-                    + Agregar Campo
+                    + Agregar Campo Manual
                   </button>
+                </div>
+
+                {/* Field Templates Selector */}
+                <div className="mb-6">
+                  <FieldTemplateSelector
+                    onAddFields={handleAddFieldsFromTemplate}
+                    currentFieldsCount={formData.fields?.length || 0}
+                  />
                 </div>
 
                 {formData.fields && formData.fields.length === 0 ? (

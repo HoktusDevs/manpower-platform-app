@@ -1,5 +1,4 @@
 import { AuthenticationDetails, CognitoUser, CognitoUserPool, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
-import { Amplify } from 'aws-amplify';
 import type { 
   User, 
   RegisterRequest, 
@@ -24,27 +23,8 @@ class CognitoAuthService {
       ClientId: config.userPoolClientId,
     });
 
-    // Configure Amplify Auth for GraphQL compatibility - NO IDENTITY POOL  
-    if (config.identityPoolId) {
-      Amplify.configure({
-        Auth: {
-          Cognito: {
-            userPoolId: config.userPoolId,
-            userPoolClientId: config.userPoolClientId,
-            // Skip identity pool if empty/undefined to avoid IAM issues
-          }
-        }
-      }, { ssr: false });
-    } else {
-      Amplify.configure({
-        Auth: {
-          Cognito: {
-            userPoolId: config.userPoolId,
-            userPoolClientId: config.userPoolClientId,
-          }
-        }
-      }, { ssr: false });
-    }
+    // Skip Amplify configuration - let graphqlService handle it with complete config
+    // This prevents configuration conflicts between cognitoAuthService and graphqlService
   }
 
   /**

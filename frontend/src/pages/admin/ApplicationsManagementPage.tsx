@@ -121,12 +121,6 @@ export const ApplicationsManagementPage: React.FC = () => {
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Gestión de Aplicaciones</h1>
-          <p className="mt-2 text-sm text-gray-700 flex items-center">
-            Administra todas las aplicaciones de trabajo del sistema.
-            <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
-              🛡️ ADMIN ONLY
-            </span>
-          </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
@@ -159,58 +153,61 @@ export const ApplicationsManagementPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="mt-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Buscar por empresa, posición o usuario..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          />
-        </div>
-        <div className="sm:w-48">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as Application['status'] | 'ALL')}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          >
-            <option value="ALL">Todos los Estados</option>
-            {statusOptions.map(status => (
-              <option key={status} value={status}>
-                {getStatusText(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-              </svg>
+      {/* Main Content Card */}
+      <div className="mt-6 bg-white shadow rounded-lg">
+        <div className="p-6">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Buscar por empresa, posición o usuario..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              />
             </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-              <button
-                onClick={clearError}
-                className="mt-2 text-sm text-red-600 hover:text-red-500"
+            <div className="sm:w-48">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as Application['status'] | 'ALL')}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
-                Cerrar
-              </button>
+                <option value="ALL">Todos los Estados</option>
+                {statusOptions.map(status => (
+                  <option key={status} value={status}>
+                    {getStatusText(status)}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Applications Table */}
-      <div className="mt-8">
+          {/* Error Alert */}
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error</h3>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                  <button
+                    onClick={clearError}
+                    className="mt-2 text-sm text-red-600 hover:text-red-500"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Applications Table */}
+          <div className="mt-6">
         {loading && !applications.length ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -237,7 +234,7 @@ export const ApplicationsManagementPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -347,6 +344,8 @@ export const ApplicationsManagementPage: React.FC = () => {
             </table>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

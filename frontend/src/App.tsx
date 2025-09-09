@@ -14,29 +14,29 @@ import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
-import { SecurityBoundary } from './components/SecurityBoundary';
-import { useRouteProtection } from './hooks/useRouteProtection';
-import { useAuth } from './hooks/useAuth';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
 import { useEffect } from 'react';
+import { Input } from './components/ui';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
   // SECURITY: Initialize route protection (now inside Router context)
-  useRouteProtection();
+  // TEMPORARY: Disabled for debugging redirect loop
+  // useRouteProtection();
   
-  // Use the auth hook to get reactive authentication state
-  const { isAuthenticated, user } = useAuth();
+  // Remove unused auth state - authentication handled by RoleGuard
 
-  // Initialize GraphQL service after a small delay to ensure auth is ready
+  // Initialize GraphQL service
   useEffect(() => {
     const initGraphQL = async () => {
       if (!graphqlService.isInitialized()) {
         const config = {
           graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
           region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-          authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const
+          authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const,
+          userPoolId: import.meta.env.VITE_USER_POOL_ID,
+          userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID
         };
 
         if (config.graphqlEndpoint) {
@@ -45,24 +45,17 @@ function AppContent() {
       }
     };
 
-    // Wait a bit for auth to initialize first
-    const timer = setTimeout(initGraphQL, 100);
-    return () => clearTimeout(timer);
+    initGraphQL();
   }, []);
   
-  const getDefaultRedirect = () => {
-    if (isAuthenticated && user) {
-      // SECURITY: Force role-based redirection
-      return user.role === 'admin' ? '/admin' : '/postulante';
-    }
-    return '/login';
-  };
+  // Simple approach - just redirect everyone to login initially
+  // This should stop any bouncing issues
 
   return (
     <ToastProvider>
-      <SecurityBoundary>
+      {/* <SecurityBoundary> DISABLED TEMPORARILY FOR DEBUG */}
         <Routes>
-        <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         
         {/* LEGACY: Keep old register for backwards compatibility - redirect to specific */}
@@ -97,11 +90,47 @@ function AppContent() {
               <JobPostingsManagementPage />
             </RoleGuard>
           } />
-          <Route path="reports" element={
+          <Route path="folders&files" element={
             <RoleGuard requiredRole="admin">
               <div className="p-6">
-                <h1 className="text-2xl font-bold mb-6">Reportes y Analíticas</h1>
-                <p className="text-gray-600">Panel de reportes próximamente disponible.</p>
+                <h1 className="text-2xl font-bold mb-6">Directorios y Archivos</h1>
+                <div className="bg-white shadow rounded-lg p-6">
+                  {/* Barra de herramientas */}
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
+                    {/* Barra de búsqueda */}
+                    <div className="flex-1 w-full sm:w-auto">
+                      <Input
+                        variant="search"
+                        placeholder="Buscar archivos y carpetas..."
+                        fullWidth
+                      />
+                    </div>
+                    
+                    {/* Botones de acción */}
+                    <div className="flex gap-3 w-full sm:w-auto">
+                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                        </svg>
+                        Filtro
+                      </button>
+                      
+                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                        Acciones
+                      </button>
+                      
+                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Descargar
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </RoleGuard>
           } />
@@ -125,10 +154,10 @@ function AppContent() {
         
         {/* SECURITY: Catch-all route - redirect based on role */}
         <Route path="*" element={
-          <Navigate to={getDefaultRedirect()} replace />
+          <Navigate to="/login" replace />
         } />
         </Routes>
-      </SecurityBoundary>
+      {/* </SecurityBoundary> DISABLED TEMPORARILY FOR DEBUG */}
     </ToastProvider>
   );
 }

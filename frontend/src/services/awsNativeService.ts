@@ -67,10 +67,6 @@ class AWSNativeService {
     });
 
     this.dynamoClient = DynamoDBDocumentClient.from(dynamoBaseClient);
-
-    // Direct DynamoDB access only - no GraphQL needed
-
-    console.log('🚀 AWS-Native Service initialized - Direct DynamoDB access');
   }
 
   /**
@@ -156,11 +152,9 @@ class AWSNativeService {
       await this.dynamoClient.send(new PutCommand({
         TableName: this.config.applicationsTable,
         Item: application,
-        // SECURITY: Prevent overwriting existing applications
         ConditionExpression: 'attribute_not_exists(applicationId)'
       }));
 
-      console.log('✅ Application created successfully:', applicationId);
       return application;
     } catch (error) {
       console.error('❌ Error creating application:', error);
@@ -191,7 +185,7 @@ class AWSNativeService {
         if (value !== undefined) {
           updateExpressions.push(`#${key} = :${key}`);
           expressionAttributeNames[`#${key}`] = key;
-          expressionAttributeValues[`:${key}`] = value;
+          expressionAttributeValues[`:${key}` as keyof DynamoDBExpressionAttributeValues] = value;
         }
       });
 
@@ -296,7 +290,6 @@ class AWSNativeService {
         ReturnValues: 'ALL_NEW'
       }));
 
-      console.log(`✅ Application status updated: ${applicationId} -> ${status}`);
       return result.Attributes as Application;
     } catch (error) {
       console.error('❌ Error updating application status:', error);
@@ -306,6 +299,7 @@ class AWSNativeService {
 
   /**
    * SECURITY: Validate user has access to perform operation
+   * TODO: Used in future features for role validation
    */
   private validateUserAccess(requiredRole?: 'admin' | 'postulante'): User {
     const user = cognitoAuthService.getCurrentUser();

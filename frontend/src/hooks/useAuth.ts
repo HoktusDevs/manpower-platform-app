@@ -35,7 +35,6 @@ export const useAuth = (): UseAuthReturn => {
   useEffect(() => {
     const initializeAuth = async () => {
       if (!import.meta.env.VITE_USER_POOL_ID || !import.meta.env.VITE_USER_POOL_CLIENT_ID) {
-        console.error('Cognito configuration missing. Please check environment variables.');
         setError('Authentication configuration error');
         return;
       }
@@ -72,19 +71,14 @@ export const useAuth = (): UseAuthReturn => {
 
     try {
       // First try Amplify Auth to establish proper session
-      console.log('🔑 Attempting Amplify Auth login...');
-      
       try {
         await signIn({
           username: credentials.email.toLowerCase(),
           password: credentials.password
         });
         
-        console.log('✅ Amplify Auth login successful');
-        
         // Get the authenticated user from Amplify
         const amplifyUser = await getCurrentUser();
-        console.log('👤 Amplify user:', amplifyUser);
         
         // Get session and extract role from ID token
         const session = await fetchAuthSession();
@@ -95,7 +89,6 @@ export const useAuth = (): UseAuthReturn => {
         if (idToken) {
           const claims = idToken.payload as Record<string, unknown>;
           userRole = (claims['custom:role'] as 'admin' | 'postulante') || 'postulante';
-          console.log('🏷️ User role from token:', userRole);
         }
         
         // Create our User object from Amplify user attributes
@@ -129,7 +122,6 @@ export const useAuth = (): UseAuthReturn => {
       } catch (amplifyError: unknown) {
         // Check if user is already authenticated
         if ((amplifyError as Error)?.name === 'UserAlreadyAuthenticatedException') {
-          console.log('✅ User already authenticated, fetching current session...');
           
           // Get the current authenticated user and session
           const amplifyUser = await getCurrentUser();
@@ -170,8 +162,6 @@ export const useAuth = (): UseAuthReturn => {
           
           return true;
         }
-        
-        console.warn('❌ Amplify Auth failed, falling back to custom Cognito service:', amplifyError);
         
         // Fallback to custom Cognito service
         const result = await cognitoAuthService.login(credentials);
@@ -234,7 +224,6 @@ export const useAuth = (): UseAuthReturn => {
   }, [isInitialized]);
 
   const logout = useCallback(async () => {
-    console.log('🚪 Logging out...');
     
     // Clear everything immediately
     setUser(null);
@@ -248,12 +237,10 @@ export const useAuth = (): UseAuthReturn => {
     localStorage.removeItem('cognito_user');
     
     // Try Amplify signout but don't wait for it
-    signOut().catch(error => console.warn('❌ Amplify signout failed:', error));
+    signOut().catch(() => {});
     
     // Also cleanup our custom service
     cognitoAuthService.logout();
-    
-    console.log('✅ Logout completed');
   }, []);
 
   // Cognito-specific functions
@@ -324,7 +311,7 @@ export const useAuth = (): UseAuthReturn => {
     user,
     isLoading,
     error,
-    isAuthenticated: cognitoAuthService.isAuthenticated(),
+    isAuthenticated: !!user,
     authSystem: 'cognito',
     idToken,
     login,

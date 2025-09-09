@@ -296,39 +296,67 @@ export class DataStack extends cdk.Stack {
         }
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        ## Parse JSON fields for each form and handle migration
+        #foreach($form in $ctx.result.items)
+          #if($form.fields)
+            #set($parsedFields = $util.parseJson($form.fields))
+            #set($migratedFields = [])
+            
+            ## Migrate fields without fieldId (for backwards compatibility)
+            #foreach($field in $parsedFields)
+              #if($util.isNull($field.fieldId) || $field.fieldId == "")
+                #set($field.fieldId = $util.autoId())
+              #end
+              #set($void = $migratedFields.add($field))
+            #end
+            
+            #set($form.fields = $migratedFields)
+          #else
+            ## If no fields, set empty array
+            #set($form.fields = [])
+          #end
+        #end
         $util.toJson($ctx.result.items)
       `),
     });
 
-    // Mutation: Create form (admin only)
+    // Mutation: Create form (admin only) - Simplified approach
     formsDataSource.createResolver('CreateFormResolver', {
       typeName: 'Mutation',
       fieldName: 'createForm',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
         #set($formId = $util.autoId())
         #set($now = $util.time.nowISO8601())
-        #set($fields = [])
         
-        ## Process and validate fields
+        ## Generate fieldId for each field
+        #set($fieldsWithIds = [])
         #foreach($field in $ctx.args.input.fields)
-          #set($fieldId = $util.autoId())
-          #set($processedField = {
-            "fieldId": $fieldId,
-            "type": $field.type,
-            "label": $field.label,
-            "required": $field.required,
-            "order": $field.order
-          })
-          
-          ## Add optional field properties
-          #if($field.placeholder) #set($processedField.placeholder = $field.placeholder) #end
-          #if($field.options) #set($processedField.options = $field.options) #end
-          #if($field.validation) #set($processedField.validation = $field.validation) #end
-          #if($field.description) #set($processedField.description = $field.description) #end
-          #if($field.defaultValue) #set($processedField.defaultValue = $field.defaultValue) #end
-          
-          #set($addResult = $fields.add($processedField))
+          #set($fieldWithId = {})
+          #set($fieldWithId.fieldId = $util.autoId())
+          #set($fieldWithId.type = $field.type)
+          #set($fieldWithId.label = $field.label)
+          #set($fieldWithId.required = $field.required)
+          #set($fieldWithId.order = $field.order)
+          #if($field.placeholder)
+            #set($fieldWithId.placeholder = $field.placeholder)
+          #end
+          #if($field.options)
+            #set($fieldWithId.options = $field.options)
+          #end
+          #if($field.description)
+            #set($fieldWithId.description = $field.description)
+          #end
+          #if($field.defaultValue)
+            #set($fieldWithId.defaultValue = $field.defaultValue)
+          #end
+          #if($field.validation)
+            #set($fieldWithId.validation = $field.validation)
+          #end
+          $util.list.add($fieldsWithIds, $fieldWithId)
         #end
+        
+        ## Serialize fields with IDs as JSON string
+        #set($fieldsJson = $util.escapeJavaScript($util.toJson($fieldsWithIds)))
         
         {
           "version": "2017-02-28",
@@ -340,7 +368,7 @@ export class DataStack extends cdk.Stack {
             "formId": { "S": "$formId" },
             "title": { "S": "$ctx.args.input.title" },
             "status": { "S": "DRAFT" },
-            "fields": { "S": "$util.toJson($fields)" },
+            "fields": { "S": "$fieldsJson" },
             "isRequired": { "BOOL": $ctx.args.input.isRequired },
             "createdAt": { "S": "$now" },
             "updatedAt": { "S": "$now" },
@@ -353,9 +381,9 @@ export class DataStack extends cdk.Stack {
         }
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        ## Parse JSON string back to object
         #if($ctx.result.fields)
-          #set($parsedFields = $util.parseJson($ctx.result.fields))
-          #set($ctx.result.fields = $parsedFields)
+          #set($ctx.result.fields = $util.parseJson($ctx.result.fields))
         #end
         $util.toJson($ctx.result)
       `),

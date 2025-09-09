@@ -12,6 +12,8 @@ interface GraphQLConfig {
   identityPoolId?: string;
 }
 
+// Using direct ReturnType of generateClient to avoid type conflicts
+
 interface Application {
   userId: string;
   applicationId: string;
@@ -959,7 +961,8 @@ const REVIEW_SUBMISSION = `
 `;
 
 class GraphQLService {
-  private client: any = null;
+  // Using a more flexible type to avoid complex Amplify type issues
+  private client: { graphql: (options: { query: string; variables?: Record<string, unknown>; authMode?: string }) => Promise<{ data?: unknown; errors?: unknown[] }> } | null = null;
   private config: GraphQLConfig | null = null;
 
   /**
@@ -967,41 +970,34 @@ class GraphQLService {
    */
   async initialize(config: GraphQLConfig): Promise<void> {
     this.config = config;
-
     
-    // Get current Amplify configuration to preserve Auth settings
-    const currentConfig = Amplify.getConfig();
-    
-    // Configure Amplify with proper v6 structure
-    const newConfig = {
-      ...currentConfig,
+    // Configure Amplify properly for AppSync with Cognito User Pools
+    const amplifyConfig = {
       API: {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
           region: config.region,
           defaultAuthMode: 'userPool' as const
         }
+      },
+      Auth: {
+        Cognito: {
+          userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
+          userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
+        }
       }
-    }
+    };
     
-    // Remove identity pool from auth config to avoid IAM role issues
-    if (newConfig.Auth && newConfig.Auth.Cognito) {
-      delete newConfig.Auth.Cognito.identityPoolId;
-    }
+    console.log('🔧 Configuring Amplify with:', {
+      endpoint: config.graphqlEndpoint,
+      region: config.region,
+      userPoolId: amplifyConfig.Auth.Cognito.userPoolId
+    });
     
-    Amplify.configure(newConfig);
-
-    // Force a small delay and recreate client to ensure config is applied
-    await new Promise(resolve => setTimeout(resolve, 200));
+    Amplify.configure(amplifyConfig);
+    this.client = generateClient() as never;
     
-    try {
-      this.client = generateClient();
-    } catch {
-      // Retry once more after another delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      this.client = generateClient();
-    }
-    
+    console.log('✅ GraphQL service initialized successfully');
   }
 
 
@@ -1040,7 +1036,7 @@ class GraphQLService {
       authMode: 'userPool'
     });
 
-    return result.data;
+    return (result as { data: T }).data;
   }
 
   /**
@@ -1062,14 +1058,13 @@ class GraphQLService {
       throw new Error('No valid authentication token');
     }
 
-
     const result = await this.client.graphql({
       query: mutation,
       variables,
       authMode: 'userPool'
     });
 
-    return result.data;
+    return (result as { data: T }).data;
   }
 
   /**
@@ -1463,6 +1458,8 @@ class GraphQLService {
     if (user?.role !== 'admin') {
       throw new Error('Only admins can create forms');
     }
+
+    console.log('🔍 createForm input data:', JSON.stringify(input, null, 2));
 
     const result = await this.executeMutation<{ createForm: Form }>(
       CREATE_FORM,
