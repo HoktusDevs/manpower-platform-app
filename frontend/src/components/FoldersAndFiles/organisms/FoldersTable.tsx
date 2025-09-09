@@ -44,7 +44,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
   }
 
   return (
-    <div className="bg-white shadow overflow-visible sm:rounded-md">
+    <div className="bg-white overflow-visible">
       {/* Table Header */}
       <TableHeader
         isAllSelected={isAllSelected}
@@ -54,8 +54,8 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       />
       
       {/* Table Rows */}
-      <ul className="divide-y divide-gray-200">
-        {folders.map((folder) => (
+      <ul>
+        {folders.map((folder, index) => (
           <div 
             key={folder.id} 
             ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
@@ -64,6 +64,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
               folder={folder}
               isSelected={selectedRows.has(folder.id)}
               showActionsMenu={showRowActionsMenu === folder.id}
+              isLastRow={index === folders.length - 1}
               onSelect={onSelectRow}
               onAction={onRowAction}
               onToggleActionsMenu={onToggleRowActionsMenu}

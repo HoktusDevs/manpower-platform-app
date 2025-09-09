@@ -75,6 +75,7 @@ export interface FolderRowProps {
   folder: FolderRow;
   isSelected: boolean;
   showActionsMenu: boolean;
+  isLastRow?: boolean;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;

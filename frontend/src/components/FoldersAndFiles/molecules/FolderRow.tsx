@@ -11,6 +11,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   folder,
   isSelected,
   showActionsMenu,
+  isLastRow = false,
   onSelect,
   onAction,
   onToggleActionsMenu
@@ -23,7 +24,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
     onToggleActionsMenu(showActionsMenu ? null : folder.id);
   };
 
-  const rowClassName = `px-6 py-4 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`;
+  const rowClassName = `px-6 py-4 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''} ${!isLastRow ? 'border-b border-gray-200' : ''}`;
 
   return (
     <li className={rowClassName}>

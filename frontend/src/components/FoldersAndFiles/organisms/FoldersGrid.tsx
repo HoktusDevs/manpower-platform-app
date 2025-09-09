@@ -40,7 +40,7 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
   }
 
   return (
-    <div className="bg-white shadow overflow-visible sm:rounded-md p-4">
+    <div className="bg-white overflow-visible p-4">
       {/* Grid Container */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {folders.map((folder) => (
