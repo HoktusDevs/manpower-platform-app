@@ -9,6 +9,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
+import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
 import { AdminLayout } from './components/AdminLayout';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
@@ -17,7 +18,6 @@ import { RoleGuard } from './components/RoleGuard';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
 import { useEffect } from 'react';
-import { Input } from './components/ui';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
@@ -92,46 +92,7 @@ function AppContent() {
           } />
           <Route path="folders&files" element={
             <RoleGuard requiredRole="admin">
-              <div className="p-6">
-                <h1 className="text-2xl font-bold mb-6">Directorios y Archivos</h1>
-                <div className="bg-white shadow rounded-lg p-6">
-                  {/* Barra de herramientas */}
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
-                    {/* Barra de búsqueda */}
-                    <div className="flex-1 w-full sm:w-auto">
-                      <Input
-                        variant="search"
-                        placeholder="Buscar archivos y carpetas..."
-                        fullWidth
-                      />
-                    </div>
-                    
-                    {/* Botones de acción */}
-                    <div className="flex gap-3 w-full sm:w-auto">
-                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                        </svg>
-                        Filtro
-                      </button>
-                      
-                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                        Acciones
-                      </button>
-                      
-                      <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Descargar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <FoldersAndFilesPage />
             </RoleGuard>
           } />
           <Route path="users" element={
