@@ -14,6 +14,7 @@ interface FoldersGridProps {
   onToggleRowActionsMenu: (folderId: string | null) => void;
   rowActionsMenuRef: React.RefObject<HTMLDivElement | null>;
   onNavigateToFolder: (folderId: string) => void;
+  getSubfolders: (parentId: string) => FolderRow[];
 }
 
 /**
@@ -29,7 +30,8 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
   onRowAction,
   onToggleRowActionsMenu,
   rowActionsMenuRef,
-  onNavigateToFolder
+  onNavigateToFolder,
+  getSubfolders
 }) => {
   // Empty state
   if (folders.length === 0) {
@@ -56,6 +58,7 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
               folder={folder}
               isSelected={selectedRows.has(folder.id)}
               showActionsMenu={showRowActionsMenu === folder.id}
+              subfolderCount={getSubfolders(folder.id).length}
               onSelect={onSelectRow}
               onAction={onRowAction}
               onToggleActionsMenu={onToggleRowActionsMenu}

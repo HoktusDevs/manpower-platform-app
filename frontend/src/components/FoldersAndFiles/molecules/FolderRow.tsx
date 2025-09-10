@@ -12,6 +12,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   isSelected,
   showActionsMenu,
   isLastRow = false,
+  subfolderCount,
   onSelect,
   onAction,
   onToggleActionsMenu,
@@ -52,7 +53,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
           <div>
             <p className="text-sm font-medium text-gray-900">{folder.name}</p>
             <p className="text-sm text-gray-500">
-              Creado: {new Date(folder.createdAt).toLocaleDateString('es-ES')}
+              {subfolderCount === 0 ? 'Sin subcarpetas' : `${subfolderCount} subcarpeta${subfolderCount > 1 ? 's' : ''}`}
             </p>
           </div>
         </div>

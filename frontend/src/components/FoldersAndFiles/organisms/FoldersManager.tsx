@@ -28,6 +28,7 @@ export const FoldersManager: React.FC = () => {
     deleteFolder,
     updateFolder,
     getFolderById,
+    getSubfolders,
     navigateToFolder,
     navigateBack,
     navigateToRoot,
@@ -203,6 +204,7 @@ export const FoldersManager: React.FC = () => {
             onToggleRowActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
             onNavigateToFolder={navigateToFolder}
+            getSubfolders={getSubfolders}
           />
         ) : (
           <FoldersGrid
@@ -214,6 +216,7 @@ export const FoldersManager: React.FC = () => {
             onToggleRowActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
             onNavigateToFolder={navigateToFolder}
+            getSubfolders={getSubfolders}
           />
         )}
       </div>

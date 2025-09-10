@@ -6,6 +6,7 @@ interface FolderGridItemProps {
   folder: FolderRow;
   isSelected: boolean;
   showActionsMenu: boolean;
+  subfolderCount: number;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
@@ -21,6 +22,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   folder,
   isSelected,
   showActionsMenu,
+  subfolderCount,
   onSelect,
   onAction,
   onToggleActionsMenu,
@@ -85,9 +87,9 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
           <TypeBadge type={folder.type} />
         </div>
         
-        {/* Created Date */}
+        {/* Subfolder Count */}
         <p className="text-xs text-gray-500">
-          {new Date(folder.createdAt).toLocaleDateString('es-ES')}
+          {subfolderCount === 0 ? 'Sin subcarpetas' : `${subfolderCount} subcarpeta${subfolderCount > 1 ? 's' : ''}`}
         </p>
       </div>
     </div>
