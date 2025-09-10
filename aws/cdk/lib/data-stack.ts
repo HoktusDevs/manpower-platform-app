@@ -255,6 +255,11 @@ export class DataStack extends cdk.Stack {
       this.foldersTable
     );
 
+    const jobPostingsDataSource = this.graphqlApi.addDynamoDbDataSource(
+      'JobPostingsDataSource',
+      this.jobPostingsTable
+    );
+
     // RESOLVERS - No Lambda needed!
 
     // Query: Get applications for current user
@@ -606,6 +611,297 @@ export class DataStack extends cdk.Stack {
           #set($parsedFields = $util.parseJson($ctx.result.fields))
           #set($ctx.result.fields = $parsedFields)
         #end
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // JOB POSTINGS RESOLVERS
+
+    // Query: Get active job postings (public)
+    jobPostingsDataSource.createResolver('GetActiveJobPostingsResolver', {
+      typeName: 'Query',
+      fieldName: 'getActiveJobPostings',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version": "2017-02-28",
+          "operation": "Query",
+          "index": "StatusIndex",
+          "query": {
+            "expression": "#status = :status",
+            "expressionNames": {
+              "#status": "status"
+            },
+            "expressionValues": {
+              ":status": $util.dynamodb.toDynamoDBJson("PUBLISHED")
+            }
+          }
+          #if($ctx.args.limit)
+            ,"limit": $ctx.args.limit
+          #end
+          #if($ctx.args.nextToken)
+            ,"nextToken": "$ctx.args.nextToken"
+          #end
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result.items)
+      `),
+    });
+
+    // Query: Get specific job posting (public)
+    jobPostingsDataSource.createResolver('GetJobPostingResolver', {
+      typeName: 'Query',
+      fieldName: 'getJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version": "2017-02-28",
+          "operation": "GetItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($ctx.args.jobId)
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Query: Get all job postings (admin only)
+    jobPostingsDataSource.createResolver('GetAllJobPostingsResolver', {
+      typeName: 'Query',
+      fieldName: 'getAllJobPostings',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "Scan"
+          #if($ctx.args.limit)
+            ,"limit": $ctx.args.limit
+          #end
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result.items)
+      `),
+    });
+
+    // Mutation: Create job posting (admin only)
+    jobPostingsDataSource.createResolver('CreateJobPostingResolver', {
+      typeName: 'Mutation',
+      fieldName: 'createJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($jobId = $util.autoId())
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($jobId)
+          },
+          "attributeValues": {
+            "jobId": $util.dynamodb.toDynamoDBJson($jobId),
+            "title": $util.dynamodb.toDynamoDBJson($ctx.args.input.title),
+            "description": $util.dynamodb.toDynamoDBJson($ctx.args.input.description),
+            "requirements": $util.dynamodb.toDynamoDBJson($ctx.args.input.requirements),
+            "location": $util.dynamodb.toDynamoDBJson($ctx.args.input.location),
+            "employmentType": $util.dynamodb.toDynamoDBJson($ctx.args.input.employmentType),
+            "status": $util.dynamodb.toDynamoDBJson("DRAFT"),
+            "companyName": $util.dynamodb.toDynamoDBJson($ctx.args.input.companyName),
+            "experienceLevel": $util.dynamodb.toDynamoDBJson($ctx.args.input.experienceLevel),
+            "createdAt": $util.dynamodb.toDynamoDBJson($now),
+            "updatedAt": $util.dynamodb.toDynamoDBJson($now),
+            "applicationCount": $util.dynamodb.toDynamoDBJson(0)
+            #if($ctx.args.input.salary)
+              ,"salary": $util.dynamodb.toDynamoDBJson($ctx.args.input.salary)
+            #end
+            #if($ctx.args.input.companyId)
+              ,"companyId": $util.dynamodb.toDynamoDBJson($ctx.args.input.companyId)
+            #end
+            #if($ctx.args.input.benefits)
+              ,"benefits": $util.dynamodb.toDynamoDBJson($ctx.args.input.benefits)
+            #end
+            #if($ctx.args.input.expiresAt)
+              ,"expiresAt": $util.dynamodb.toDynamoDBJson($ctx.args.input.expiresAt)
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Update job posting (admin only)
+    jobPostingsDataSource.createResolver('UpdateJobPostingResolver', {
+      typeName: 'Mutation',
+      fieldName: 'updateJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($now = $util.time.nowISO8601())
+        #set($updateExpression = "SET updatedAt = :updatedAt")
+        #set($expressionAttributeValues = { ":updatedAt": { "S": "$now" } })
+        
+        #if($ctx.args.input.title)
+          #set($updateExpression = "$updateExpression, title = :title")
+          #set($expressionAttributeValues[":title"] = { "S": "$ctx.args.input.title" })
+        #end
+        
+        #if($ctx.args.input.description)
+          #set($updateExpression = "$updateExpression, description = :description")
+          #set($expressionAttributeValues[":description"] = { "S": "$ctx.args.input.description" })
+        #end
+        
+        #if($ctx.args.input.requirements)
+          #set($updateExpression = "$updateExpression, requirements = :requirements")
+          #set($expressionAttributeValues[":requirements"] = { "S": "$ctx.args.input.requirements" })
+        #end
+        
+        #if($ctx.args.input.salary)
+          #set($updateExpression = "$updateExpression, salary = :salary")
+          #set($expressionAttributeValues[":salary"] = { "S": "$ctx.args.input.salary" })
+        #end
+        
+        #if($ctx.args.input.location)
+          #set($updateExpression = "$updateExpression, #location = :location")
+          #set($expressionAttributeValues[":location"] = { "S": "$ctx.args.input.location" })
+        #end
+        
+        #if($ctx.args.input.employmentType)
+          #set($updateExpression = "$updateExpression, employmentType = :employmentType")
+          #set($expressionAttributeValues[":employmentType"] = { "S": "$ctx.args.input.employmentType" })
+        #end
+        
+        #if($ctx.args.input.companyName)
+          #set($updateExpression = "$updateExpression, companyName = :companyName")
+          #set($expressionAttributeValues[":companyName"] = { "S": "$ctx.args.input.companyName" })
+        #end
+        
+        #if($ctx.args.input.experienceLevel)
+          #set($updateExpression = "$updateExpression, experienceLevel = :experienceLevel")
+          #set($expressionAttributeValues[":experienceLevel"] = { "S": "$ctx.args.input.experienceLevel" })
+        #end
+        
+        #if($ctx.args.input.status)
+          #set($updateExpression = "$updateExpression, #status = :status")
+          #set($expressionAttributeValues[":status"] = { "S": "$ctx.args.input.status" })
+        #end
+        
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($ctx.args.input.jobId)
+          },
+          "update": {
+            "expression": "$updateExpression",
+            "expressionValues": $util.toJson($expressionAttributeValues)
+            #if($ctx.args.input.location || $ctx.args.input.status)
+              ,"expressionNames": {
+                #if($ctx.args.input.location) "#location": "location" #end
+                #if($ctx.args.input.location && $ctx.args.input.status), #end
+                #if($ctx.args.input.status) "#status": "status" #end
+              }
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Delete job posting (admin only)
+    jobPostingsDataSource.createResolver('DeleteJobPostingResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "DeleteItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($ctx.args.jobId)
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result)
+          true
+        #else
+          false
+        #end
+      `),
+    });
+
+    // Mutation: Publish job posting (admin only)
+    jobPostingsDataSource.createResolver('PublishJobPostingResolver', {
+      typeName: 'Mutation',
+      fieldName: 'publishJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($ctx.args.jobId)
+          },
+          "update": {
+            "expression": "SET #status = :status, updatedAt = :updatedAt",
+            "expressionNames": {
+              "#status": "status"
+            },
+            "expressionValues": {
+              ":status": $util.dynamodb.toDynamoDBJson("PUBLISHED"),
+              ":updatedAt": $util.dynamodb.toDynamoDBJson($now)
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Pause job posting (admin only)
+    jobPostingsDataSource.createResolver('PauseJobPostingResolver', {
+      typeName: 'Mutation',
+      fieldName: 'pauseJobPosting',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "jobId": $util.dynamodb.toDynamoDBJson($ctx.args.jobId)
+          },
+          "update": {
+            "expression": "SET #status = :status, updatedAt = :updatedAt",
+            "expressionNames": {
+              "#status": "status"
+            },
+            "expressionValues": {
+              ":status": $util.dynamodb.toDynamoDBJson("PAUSED"),
+              ":updatedAt": $util.dynamodb.toDynamoDBJson($now)
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
         $util.toJson($ctx.result)
       `),
     });
