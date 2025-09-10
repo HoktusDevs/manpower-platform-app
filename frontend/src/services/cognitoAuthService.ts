@@ -263,6 +263,60 @@ class CognitoAuthService {
   }
 
   /**
+   * TEMPORARY: Update user role to admin (for development/testing)
+   */
+  async updateUserRole(newRole: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      if (!this.currentUser) {
+        reject(new Error('No user logged in'));
+        return;
+      }
+
+      const attributeList = [
+        new CognitoUserAttribute({
+          Name: 'custom:role',
+          Value: newRole,
+        })
+      ];
+
+      this.currentUser.updateAttributes(attributeList, (err, result) => {
+        if (err) {
+          console.error('❌ Failed to update user role:', err);
+          reject(err);
+          return;
+        }
+        
+        console.log('✅ User role updated successfully:', result);
+        
+        // Refresh the session to get updated tokens
+        this.currentUser!.getSession((err: Error | null, session: CognitoUserSession | null) => {
+          if (err) {
+            console.error('❌ Failed to refresh session after role update:', err);
+            reject(err);
+            return;
+          }
+          
+          if (session) {
+            const idToken = session.getIdToken().getJwtToken();
+            const accessToken = session.getAccessToken().getJwtToken();
+            const refreshToken = session.getRefreshToken().getToken();
+            
+            // Update stored tokens
+            localStorage.setItem('cognito_id_token', idToken);
+            localStorage.setItem('cognito_access_token', accessToken);
+            localStorage.setItem('cognito_refresh_token', refreshToken);
+            
+            console.log('✅ Session refreshed with new role');
+            resolve(true);
+          } else {
+            reject(new Error('No session after refresh'));
+          }
+        });
+      });
+    });
+  }
+
+  /**
    * Get valid access token (refresh if needed)
    */
   async getValidAccessToken(): Promise<string | null> {
