@@ -291,55 +291,6 @@ export const EnhancedFormsManager: React.FC = () => {
     );
   }
 
-  if (loading) {
-    return (
-      <div>
-        {/* Header skeleton */}
-        <div className="mb-8 flex justify-between items-center animate-pulse">
-          <div>
-            <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
-          </div>
-          <div className="h-10 bg-gray-200 rounded w-48"></div>
-        </div>
-
-        {/* Forms List skeleton */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-48"></div>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="p-6 animate-pulse">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="h-6 bg-gray-200 rounded w-48"></div>
-                      <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                    </div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-                    <div className="flex items-center space-x-4">
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
-                      <div className="h-2 bg-gray-200 rounded w-1"></div>
-                      <div className="h-4 bg-gray-200 rounded w-24"></div>
-                      <div className="h-2 bg-gray-200 rounded w-1"></div>
-                      <div className="h-4 bg-gray-200 rounded w-32"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <div className="h-6 bg-gray-200 rounded w-16"></div>
-                    <div className="h-6 bg-gray-200 rounded w-16"></div>
-                    <div className="h-6 bg-gray-200 rounded w-20"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -380,7 +331,38 @@ export const EnhancedFormsManager: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900">Formularios Existentes</h2>
             </div>
             
-            {forms.length === 0 ? (
+            {loading ? (
+              /* Skeleton Loading for Forms List */
+              <div className="divide-y divide-gray-200">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="p-6">
+                    <div className="animate-pulse">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <div className="h-6 bg-gray-200 rounded w-48"></div>
+                            <div className="h-5 bg-gray-200 rounded-full w-16"></div>
+                          </div>
+                          <div className="h-4 bg-gray-200 rounded w-96 mb-2"></div>
+                          <div className="flex items-center space-x-4">
+                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                            <div className="h-3 bg-gray-200 rounded w-1"></div>
+                            <div className="h-3 bg-gray-200 rounded w-20"></div>
+                            <div className="h-3 bg-gray-200 rounded w-1"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32"></div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="h-8 bg-gray-200 rounded w-16"></div>
+                          <div className="h-8 bg-gray-200 rounded w-16"></div>
+                          <div className="h-8 bg-gray-200 rounded w-16"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : forms.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="text-gray-400 mb-4">
                   <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -24,6 +24,7 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
+  const userDismissedRef = useRef<boolean>(false);
 
   const parseJWT = (token: string) => {
     try {
@@ -45,6 +46,7 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
     if (!isAuthenticated) {
       setState(prev => ({ ...prev, showRenewalModal: false }));
       warningShownRef.current = false;
+      userDismissedRef.current = false;
       return;
     }
 
@@ -66,23 +68,26 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
 
     // Token has already expired
     if (timeRemaining <= 0) {
-      setState(prev => ({ ...prev, showRenewalModal: true, timeRemaining: 0 }));
+      if (!warningShownRef.current) {
+        setState(prev => ({ ...prev, showRenewalModal: true, timeRemaining: 0 }));
+        warningShownRef.current = true;
+      }
       return;
     }
 
-    // Show warning if token expires within WARNING_TIME and hasn't been shown yet
-    if (timeRemaining <= TOKEN_WARNING_TIME && !warningShownRef.current) {
+    // Show warning if token expires within WARNING_TIME and hasn't been shown yet and user hasn't dismissed
+    if (timeRemaining <= TOKEN_WARNING_TIME && !warningShownRef.current && !userDismissedRef.current) {
       setState(prev => ({ 
         ...prev, 
         showRenewalModal: true, 
         timeRemaining 
       }));
       warningShownRef.current = true;
-    } else if (state.showRenewalModal) {
-      // Update time remaining if modal is already shown
+    } else if (warningShownRef.current && !userDismissedRef.current) {
+      // Update time remaining if warning is already shown and not dismissed
       setState(prev => ({ ...prev, timeRemaining }));
     }
-  }, [isAuthenticated, state.showRenewalModal]);
+  }, [isAuthenticated]);
 
   const renewSession = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isRenewing: true }));
@@ -107,12 +112,10 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
           timeRemaining: 0 
         }));
         warningShownRef.current = false;
+        userDismissedRef.current = false; // Reset dismiss flag after successful renewal
         console.log('✅ Token renewed successfully');
         
-        // Force a page refresh to ensure all components get the new token
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        // NO reload - just close modal and continue
       } else {
         throw new Error('Token refresh returned null - authentication expired');
       }
@@ -145,8 +148,14 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
   }, []);
 
   const dismissModal = useCallback(() => {
-    setState(prev => ({ ...prev, showRenewalModal: false }));
+    setState(prev => ({ 
+      ...prev, 
+      showRenewalModal: false,
+      isRenewing: false,
+      timeRemaining: 0 
+    }));
     warningShownRef.current = false;
+    userDismissedRef.current = true; // User manually dismissed, don't show again
   }, []);
 
   // Start/stop monitoring based on authentication status
@@ -169,6 +178,7 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
         isRenewing: false
       });
       warningShownRef.current = false;
+      userDismissedRef.current = false;
     }
 
     return () => {

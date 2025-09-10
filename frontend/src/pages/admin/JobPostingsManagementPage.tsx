@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
-import type { JobPosting } from '../../services/graphqlService';
+import type { JobPosting, CreateJobPostingInput } from '../../services/graphqlService';
+import { 
+  validateJobPostingBasic, 
+  formatZodErrors
+} from '../../schemas/jobPostingSchema';
 
 const getStatusColor = (status: JobPosting['status']) => {
   switch (status) {
@@ -62,33 +66,11 @@ interface JobFieldSpec {
 
 const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
   {
-    id: 'salary',
-    label: 'Rango Salarial',
-    description: 'Especifica el rango de salario para esta posición',
-    type: 'range',
-    required: false
-  },
-  {
     id: 'location',
-    label: 'Ubicación',
-    description: 'Lugar de trabajo (remoto, oficina, híbrido)',
+    label: 'Ubicación Detallada',
+    description: 'Especifica el tipo de ubicación y dirección exacta',
     type: 'location',
     required: true
-  },
-  {
-    id: 'schedule',
-    label: 'Horario',
-    description: 'Horario de trabajo y días laborables',
-    type: 'schedule',
-    required: false
-  },
-  {
-    id: 'experience',
-    label: 'Experiencia Requerida',
-    description: 'Nivel de experiencia necesario',
-    type: 'select',
-    required: true,
-    options: ['Junior', 'Semi-Senior', 'Senior', 'Ejecutivo', 'Práctica']
   },
   {
     id: 'employment_type',
@@ -99,18 +81,33 @@ const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
     options: ['Tiempo Completo', 'Medio Tiempo', 'Contrato', 'Freelance', 'Práctica', 'Temporal']
   },
   {
-    id: 'benefits',
-    label: 'Beneficios',
-    description: 'Beneficios adicionales que ofrece la empresa',
-    type: 'textarea',
+    id: 'experience',
+    label: 'Nivel de Experiencia',
+    description: 'Nivel de experiencia requerido para el puesto',
+    type: 'select',
+    required: true,
+    options: ['Junior', 'Semi-Senior', 'Senior', 'Ejecutivo', 'Práctica']
+  },
+  {
+    id: 'salary',
+    label: 'Rango Salarial',
+    description: 'Especifica el rango de salario para esta posición',
+    type: 'range',
     required: false
   },
   {
-    id: 'requirements',
-    label: 'Requisitos',
-    description: 'Requisitos específicos para el puesto',
+    id: 'schedule',
+    label: 'Horario de Trabajo',
+    description: 'Horario de trabajo y días laborables',
+    type: 'schedule',
+    required: false
+  },
+  {
+    id: 'benefits',
+    label: 'Beneficios Adicionales',
+    description: 'Beneficios extra que ofrece la empresa',
     type: 'textarea',
-    required: true
+    required: false
   }
 ];
 
@@ -123,6 +120,7 @@ export const JobPostingsManagementPage: React.FC = () => {
     error,
     fetchAllJobPostings,
     fetchAllForms,
+    createJobPosting,
     clearError,
     isGraphQLAvailable
   } = useGraphQL();
@@ -136,11 +134,22 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [jobData, setJobData] = useState({
     title: '',
     description: '',
-    companyName: ''
+    companyName: '',
+    requirements: '',
+    // Los siguientes campos ahora se manejan via fieldValues
+    salary: '',
+    location: '',
+    employmentType: 'FULL_TIME' as JobPosting['employmentType'],
+    experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
+    benefits: '',
+    expiresAt: ''
   });
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [showFieldConfigModal, setShowFieldConfigModal] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
@@ -162,6 +171,285 @@ export const JobPostingsManagementPage: React.FC = () => {
     acc[job.status] = (acc[job.status] || 0) + 1;
     return acc;
   }, {} as Record<JobPosting['status'], number>);
+
+  // Field validation errors state
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Zod-based validation functions
+  const validateBasicFields = () => {
+    const basicData = {
+      title: jobData.title,
+      companyName: jobData.companyName,
+      description: jobData.description,
+      requirements: jobData.requirements,
+    };
+    
+    const result = validateJobPostingBasic(basicData);
+    return result.success ? {} : formatZodErrors(result.error);
+  };
+
+  const validateForm = (): Record<string, string> => {
+    // Start with basic field validation
+    const basicErrors = validateBasicFields();
+    
+    // Add custom validation for dynamic fields
+    const customErrors: Record<string, string> = {};
+    
+    // Validate additional field values
+    selectedFields.forEach(fieldId => {
+      const fieldSpec = AVAILABLE_JOB_FIELDS.find(f => f.id === fieldId);
+      if (!fieldSpec) return;
+
+      const fieldValue = fieldValues[fieldId];
+      
+      if (fieldSpec.required && (!fieldValue || 
+        (typeof fieldValue === 'string' && !fieldValue.trim()) ||
+        (typeof fieldValue === 'object' && Object.values(fieldValue).every(v => !v)))) {
+        customErrors[`field_${fieldId}`] = `${fieldSpec.label} es requerido`;
+      }
+
+      // Specific validation for salary range
+      if (fieldId === 'salary' && fieldValue && typeof fieldValue === 'object') {
+        const salaryObj = fieldValue as { min?: string; max?: string };
+        if (salaryObj.min && salaryObj.max) {
+          const minVal = parseFloat(salaryObj.min);
+          const maxVal = parseFloat(salaryObj.max);
+          if (minVal >= maxVal) {
+            customErrors[`field_${fieldId}`] = 'El salario mínimo debe ser menor al máximo';
+          }
+        }
+      }
+
+      // Specific validation for location
+      if (fieldId === 'location' && fieldValue && typeof fieldValue === 'object') {
+        const locationObj = fieldValue as { type?: string; address?: string };
+        if (locationObj.type && locationObj.type !== 'remote' && !locationObj.address?.trim()) {
+          customErrors[`field_${fieldId}`] = 'La dirección es requerida para ubicaciones no remotas';
+        }
+      }
+    });
+
+    return { ...basicErrors, ...customErrors };
+  };
+
+
+  // Function to validate and show errors (only used on submit)
+  const validateAndShowErrors = () => {
+    const errors = validateForm();
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle field blur - simplified (no premature validation)
+  const handleFieldBlur = () => {
+    // Real-time validation disabled to prevent premature errors
+  };
+
+  // Clear field error when user starts typing (DISABLED to prevent premature errors)
+  const handleFieldFocus = (fieldName: string) => {
+    // Only clear errors if they already exist (after form submission)
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  // Reset modal state
+  const resetModalState = () => {
+    setJobData({
+      title: '',
+      description: '',
+      companyName: '',
+      requirements: '',
+      salary: '',
+      location: '',
+      employmentType: 'FULL_TIME' as JobPosting['employmentType'],
+      experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
+      benefits: '',
+      expiresAt: ''
+    });
+    setSelectedFields(new Set());
+    setFieldValues({});
+    setSelectedFormId(null);
+    setActiveTab('basic');
+    setIsCreating(false);
+    setFieldErrors({});
+    setShowFieldConfigModal(false);
+    setHasAttemptedSubmit(false);
+  };
+
+  // Map fieldValues to API format
+  const mapFieldValuesToAPI = () => {
+    const mappedData: Partial<CreateJobPostingInput> = {};
+    
+    // Handle salary range
+    if (fieldValues.salary && typeof fieldValues.salary === 'object') {
+      const salaryObj = fieldValues.salary as { min?: string; max?: string };
+      if (salaryObj.min || salaryObj.max) {
+        const salaryParts = [];
+        if (salaryObj.min) salaryParts.push(`$${salaryObj.min}`);
+        if (salaryObj.max) salaryParts.push(`$${salaryObj.max}`);
+        mappedData.salary = salaryParts.join(' - ');
+      }
+    }
+    
+    // Handle location
+    if (fieldValues.location && typeof fieldValues.location === 'object') {
+      const locationObj = fieldValues.location as { type?: string; address?: string };
+      const locationParts = [];
+      if (locationObj.address) locationParts.push(locationObj.address);
+      if (locationObj.type) {
+        const typeMap = {
+          'remote': '100% Remoto',
+          'office': 'Presencial',
+          'hybrid': 'Híbrido'
+        };
+        locationParts.push(`(${typeMap[locationObj.type as keyof typeof typeMap] || locationObj.type})`);
+      }
+      if (locationParts.length > 0) {
+        mappedData.location = locationParts.join(' ');
+      }
+    }
+    
+    // Handle requirements from fieldValues
+    if (fieldValues.requirements && typeof fieldValues.requirements === 'string') {
+      mappedData.requirements = fieldValues.requirements.trim();
+    }
+    
+    // Handle benefits from fieldValues
+    if (fieldValues.benefits && typeof fieldValues.benefits === 'string') {
+      mappedData.benefits = fieldValues.benefits.trim();
+    }
+    
+    // Handle experience level from fieldValues
+    if (fieldValues.experience && typeof fieldValues.experience === 'string') {
+      const experienceMap = {
+        'Junior': 'ENTRY_LEVEL',
+        'Semi-Senior': 'MID_LEVEL', 
+        'Senior': 'SENIOR_LEVEL',
+        'Ejecutivo': 'EXECUTIVE',
+        'Práctica': 'INTERNSHIP'
+      };
+      mappedData.experienceLevel = experienceMap[fieldValues.experience as keyof typeof experienceMap] as JobPosting['experienceLevel'];
+    }
+    
+    // Handle employment type from fieldValues
+    if (fieldValues.employment_type && typeof fieldValues.employment_type === 'string') {
+      const typeMap = {
+        'Tiempo Completo': 'FULL_TIME',
+        'Medio Tiempo': 'PART_TIME',
+        'Contrato': 'CONTRACT',
+        'Freelance': 'FREELANCE',
+        'Práctica': 'INTERNSHIP',
+        'Temporal': 'TEMPORARY'
+      };
+      mappedData.employmentType = typeMap[fieldValues.employment_type as keyof typeof typeMap] as JobPosting['employmentType'];
+    }
+    
+    return mappedData;
+  };
+
+  // Get user-friendly error message
+  const getUserFriendlyErrorMessage = (error: unknown): string => {
+    if (typeof error === 'string') {
+      // Common API error patterns
+      if (error.includes('Network Error') || error.includes('fetch')) {
+        return 'Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.';
+      }
+      if (error.includes('Unauthorized') || error.includes('401')) {
+        return 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      }
+      if (error.includes('Forbidden') || error.includes('403')) {
+        return 'No tienes permisos para crear ofertas de trabajo.';
+      }
+      if (error.includes('Validation') || error.includes('Invalid')) {
+        return 'Algunos campos contienen información inválida. Revisa los datos ingresados.';
+      }
+      if (error.includes('Duplicate') || error.includes('already exists')) {
+        return 'Ya existe una oferta de trabajo con información similar.';
+      }
+      if (error.includes('Timeout') || error.includes('timeout')) {
+        return 'La operación tardó demasiado tiempo. Inténtalo de nuevo.';
+      }
+      return error;
+    }
+    
+    if (error instanceof Error) {
+      return getUserFriendlyErrorMessage(error.message);
+    }
+    
+    return 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
+  };
+
+  // Handle job creation
+  const handleCreateJob = async () => {
+    setHasAttemptedSubmit(true);
+    if (!validateAndShowErrors()) {
+      // Validation failed and errors are now shown
+      return;
+    }
+
+    setIsCreating(true);
+    
+    try {
+      // Map additional field values to API format
+      const mappedFieldData = mapFieldValuesToAPI();
+      
+      // Prepare the job posting data with defaults
+      const jobPostingData: CreateJobPostingInput = {
+        title: jobData.title.trim(),
+        description: jobData.description.trim(),
+        requirements: jobData.requirements.trim(),
+        companyName: jobData.companyName.trim(),
+        // Use mapped field values or defaults
+        location: mappedFieldData.location || 'Por definir',
+        employmentType: mappedFieldData.employmentType || 'FULL_TIME',
+        experienceLevel: mappedFieldData.experienceLevel || 'ENTRY_LEVEL',
+        // Optional fields
+        ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
+        ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
+        ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
+      };
+
+      // Call the GraphQL service
+      const success = await createJobPosting(jobPostingData);
+      
+      if (success) {
+        // Clear any previous errors
+        setFieldErrors({});
+        clearError();
+        
+        // Close modal and reset form
+        setShowCreateModal(false);
+        resetModalState();
+        
+        // Refresh the job postings list
+        const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+        await fetchAllJobPostings(statusFilter);
+        
+        // Optional: Show success message (you could add a toast notification here)
+        console.log('✅ Oferta de trabajo creada exitosamente');
+      } else {
+        // If success is false but no exception, show generic error
+        console.error('❌ No se pudo crear la oferta de trabajo');
+      }
+    } catch (err) {
+      console.error('Error creating job posting:', err);
+      
+      // The error is already handled by the hook and shown in the UI,
+      // but we can also log a user-friendly message
+      const friendlyMessage = getUserFriendlyErrorMessage(err);
+      console.error('User-friendly error:', friendlyMessage);
+      
+      // Optional: You could show a more specific error in a toast or modal
+      // For now, the error from the GraphQL hook will be displayed
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   if (authUser?.role !== 'admin') {
     return (
@@ -411,7 +699,10 @@ export const JobPostingsManagementPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900">Crear Nueva Oferta de Trabajo</h3>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetModalState();
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -422,34 +713,34 @@ export const JobPostingsManagementPage: React.FC = () => {
             </div>
 
             {/* Tabs Navigation */}
-            <div className="border-b border-gray-200">
+            <div className="bg-gray-50 border-b border-gray-200 px-6 py-2">
               <nav className="-mb-px flex">
                 <button
                   onClick={() => setActiveTab('basic')}
-                  className={`py-2 px-6 text-sm font-medium border-b-2 ${
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'basic'
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-green-500 text-green-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-100'
                   }`}
                 >
                   Información Básica
                 </button>
                 <button
                   onClick={() => setActiveTab('fields')}
-                  className={`py-2 px-6 text-sm font-medium border-b-2 ${
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'fields'
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-green-500 text-green-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-100'
                   }`}
                 >
                   Campos Adicionales
                 </button>
                 <button
                   onClick={() => setActiveTab('forms')}
-                  className={`py-2 px-6 text-sm font-medium border-b-2 ${
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'forms'
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-green-500 text-green-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-100'
                   }`}
                 >
                   Asignación de Formulario
@@ -472,9 +763,18 @@ export const JobPostingsManagementPage: React.FC = () => {
                         type="text"
                         value={jobData.title}
                         onChange={(e) => setJobData(prev => ({ ...prev, title: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onBlur={handleFieldBlur}
+                        onFocus={() => handleFieldFocus('title')}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          hasAttemptedSubmit && fieldErrors.title 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                        }`}
                         placeholder="Ej: Desarrollador Full Stack Senior"
                       />
+                      {hasAttemptedSubmit && fieldErrors.title && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors.title}</p>
+                      )}
                     </div>
                     
                     <div>
@@ -485,9 +785,18 @@ export const JobPostingsManagementPage: React.FC = () => {
                         type="text"
                         value={jobData.companyName}
                         onChange={(e) => setJobData(prev => ({ ...prev, companyName: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onBlur={handleFieldBlur}
+                        onFocus={() => handleFieldFocus('companyName')}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          hasAttemptedSubmit && fieldErrors.companyName 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                        }`}
                         placeholder="Ej: Tech Solutions Inc"
                       />
+                      {hasAttemptedSubmit && fieldErrors.companyName && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors.companyName}</p>
+                      )}
                     </div>
 
                     <div>
@@ -497,11 +806,43 @@ export const JobPostingsManagementPage: React.FC = () => {
                       <textarea
                         value={jobData.description}
                         onChange={(e) => setJobData(prev => ({ ...prev, description: e.target.value }))}
+                        onBlur={handleFieldBlur}
+                        onFocus={() => handleFieldFocus('description')}
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          hasAttemptedSubmit && fieldErrors.description 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                        }`}
                         placeholder="Describe el puesto de trabajo, responsabilidades principales y lo que hace especial a esta oportunidad..."
                       />
+                      {hasAttemptedSubmit && fieldErrors.description && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors.description}</p>
+                      )}
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Requisitos *
+                      </label>
+                      <textarea
+                        value={jobData.requirements}
+                        onChange={(e) => setJobData(prev => ({ ...prev, requirements: e.target.value }))}
+                        onBlur={handleFieldBlur}
+                        onFocus={() => handleFieldFocus('requirements')}
+                        rows={3}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          hasAttemptedSubmit && fieldErrors.requirements 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                        }`}
+                        placeholder="Especifica los requisitos indispensables para el puesto..."
+                      />
+                      {hasAttemptedSubmit && fieldErrors.requirements && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors.requirements}</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -510,13 +851,13 @@ export const JobPostingsManagementPage: React.FC = () => {
               {activeTab === 'fields' && (
                 <div>
                   <h4 className="text-md font-medium text-gray-900 mb-4">Campos Adicionales</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-gray-600 mb-6">
                     Selecciona los campos que quieres especificar para este empleo:
                   </p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                     {AVAILABLE_JOB_FIELDS.map((field) => (
-                      <div key={field.id} className="flex items-start">
+                      <div key={field.id} className="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                         <div className="flex items-center h-5">
                           <input
                             id={field.id}
@@ -538,36 +879,50 @@ export const JobPostingsManagementPage: React.FC = () => {
                             className="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300 rounded"
                           />
                         </div>
-                        <div className="ml-3 text-sm">
-                          <label htmlFor={field.id} className="font-medium text-gray-700">
+                        <div className="ml-3 text-sm flex-1">
+                          <label htmlFor={field.id} className="font-medium text-gray-900 cursor-pointer">
                             {field.label}
                             {field.required && <span className="text-red-500 ml-1">*</span>}
                           </label>
-                          <p className="text-gray-500">{field.description}</p>
+                          <p className="text-gray-500 mt-1">{field.description}</p>
+                          {selectedFields.has(field.id) && fieldValues[field.id] !== undefined && (
+                            <div className="mt-2 text-xs text-green-600 font-medium">
+                              ✓ Configurado
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Dynamic Field Specifications */}
-                  {Array.from(selectedFields).length > 0 && (
+                  {/* Configure Button */}
+                  {selectedFields.size > 0 && (
                     <div className="border-t pt-6">
-                      <h5 className="text-sm font-medium text-gray-900 mb-4">Especificaciones de Campos</h5>
-                      <div className="space-y-6">
-                        {Array.from(selectedFields).map((fieldId) => {
-                          const fieldSpec = AVAILABLE_JOB_FIELDS.find(f => f.id === fieldId);
-                          if (!fieldSpec) return null;
-
-                          return (
-                            <div key={fieldId} className="bg-gray-50 p-4 rounded-lg">
-                              <h6 className="font-medium text-gray-900 mb-3">{fieldSpec.label}</h6>
-                              {renderFieldSpecification(fieldSpec, fieldValues[fieldId], (value) => {
-                                setFieldValues(prev => ({ ...prev, [fieldId]: value }));
-                              })}
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-900">
+                            {selectedFields.size} campo{selectedFields.size !== 1 ? 's' : ''} seleccionado{selectedFields.size !== 1 ? 's' : ''}
+                          </h5>
+                          <p className="text-sm text-gray-500">
+                            Haz clic en "Configurar Campos" para especificar los detalles
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowFieldConfigModal(true)}
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Configurar Campos
+                        </button>
                       </div>
+                    </div>
+                  )}
+
+                  {selectedFields.size === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p>Selecciona al menos un campo adicional para continuar</p>
                     </div>
                   )}
                 </div>
@@ -640,21 +995,125 @@ export const JobPostingsManagementPage: React.FC = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              {/* Validation Error Summary - Only show after attempted submission */}
+              {hasAttemptedSubmit && Object.keys(fieldErrors).length > 0 && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-start">
+                    <svg className="h-5 w-5 text-red-400 mt-0.5" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m0 0V9m0 0V6m0 0H6m3 0h3" />
+                    </svg>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Corrige los siguientes errores:
+                      </h3>
+                      <ul className="mt-2 text-sm text-red-700 space-y-1">
+                        {Object.entries(fieldErrors).map(([field, error]) => (
+                          <li key={field}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetModalState();
+                  }}
+                  disabled={isCreating}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateJob}
+                  disabled={isCreating}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isCreating && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isCreating ? 'Creando...' : 'Crear Empleo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Field Configuration Modal */}
+      {showFieldConfigModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Configurar Campos Adicionales
+                </h3>
+                <button
+                  onClick={() => setShowFieldConfigModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-6">
+                Especifica los detalles para los {selectedFields.size} campos seleccionados:
+              </p>
+              
+              <div className="space-y-6">
+                {Array.from(selectedFields).map((fieldId, index) => {
+                  const fieldSpec = AVAILABLE_JOB_FIELDS.find(f => f.id === fieldId);
+                  if (!fieldSpec) return null;
+
+                  return (
+                    <div key={fieldId} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center mb-3">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded-full mr-3">
+                          {index + 1}
+                        </span>
+                        <h4 className="font-medium text-gray-900">
+                          {fieldSpec.label}
+                          {fieldSpec.required && <span className="text-red-500 ml-1">*</span>}
+                        </h4>
+                      </div>
+                      <p className="text-sm text-gray-500 mb-4">{fieldSpec.description}</p>
+                      
+                      {renderFieldSpecification(fieldSpec, fieldValues[fieldId], (value) => {
+                        setFieldValues(prev => ({ ...prev, [fieldId]: value }));
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowFieldConfigModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => {
-                    // TODO: Handle job creation
-                    alert('Crear empleo - función próximamente');
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  onClick={() => setShowFieldConfigModal(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  Crear Empleo
+                  Guardar Configuración
                 </button>
               </div>
             </div>
