@@ -1,4 +1,4 @@
-import { ToolbarSection, CreateFolderModal, ConfirmationModal } from '../molecules';
+import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
 import { 
@@ -28,6 +28,10 @@ export const FoldersManager: React.FC = () => {
     deleteFolder,
     updateFolder,
     getFolderById,
+    navigateToFolder,
+    navigateBack,
+    navigateToRoot,
+    getBreadcrumbPath,
     setSearchTerm,
   } = useFoldersState();
 
@@ -44,6 +48,7 @@ export const FoldersManager: React.FC = () => {
     showCreateModal,
     modalMode,
     editingFolderId,
+    parentFolderId,
     showActionsMenu,
     showRowActionsMenu,
     showConfirmModal,
@@ -103,6 +108,12 @@ export const FoldersManager: React.FC = () => {
 
   const handleRowAction = (folderId: string, action: FolderAction): void => {
     switch (action) {
+      case 'create-subfolder': {
+        // Open create modal with parent folder set
+        console.log('🗂️ Creando subcarpeta para:', folderId);
+        openCreateModal(folderId);
+        break;
+      }
       case 'edit': {
         const folder = getFolderById(folderId);
         if (!folder) return;
@@ -139,14 +150,18 @@ export const FoldersManager: React.FC = () => {
       // Update existing folder
       updateFolder(editingFolderId, data);
     } else {
-      // Create new folder
-      createFolder(data);
+      // Create new folder (with parent if specified)
+      createFolder(data, parentFolderId);
     }
     closeCreateModal();
   };
 
   const handleCloseActionsMenu = (): void => {
     setRowActionsMenu(null);
+  };
+
+  const handleCreateFolder = (): void => {
+    openCreateModal(null);
   };
 
   return (
@@ -159,11 +174,19 @@ export const FoldersManager: React.FC = () => {
         selectedCount={selectedCount}
         viewMode={viewMode}
         onToggleActionsMenu={toggleActionsMenu}
-        onCreateFolder={openCreateModal}
+        onCreateFolder={handleCreateFolder}
         onDeleteSelected={handleDeleteSelected}
         onCloseActionsMenu={handleCloseActionsMenu}
         onViewModeChange={setViewMode}
         actionsMenuRef={actionsMenuRef.ref}
+      />
+
+      {/* Breadcrumb Navigation */}
+      <BreadcrumbNavigation
+        breadcrumbPath={getBreadcrumbPath()}
+        onNavigateToRoot={navigateToRoot}
+        onNavigateToFolder={navigateToFolder}
+        onNavigateBack={navigateBack}
       />
 
       {/* Content View (Table or Grid) */}
@@ -179,6 +202,7 @@ export const FoldersManager: React.FC = () => {
             onRowAction={handleRowAction}
             onToggleRowActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
+            onNavigateToFolder={navigateToFolder}
           />
         ) : (
           <FoldersGrid
@@ -189,6 +213,7 @@ export const FoldersManager: React.FC = () => {
             onRowAction={handleRowAction}
             onToggleRowActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
+            onNavigateToFolder={navigateToFolder}
           />
         )}
       </div>
@@ -197,6 +222,7 @@ export const FoldersManager: React.FC = () => {
       <CreateFolderModal
         show={showCreateModal}
         mode={modalMode}
+        parentFolderName={parentFolderId ? getFolderById(parentFolderId)?.name : undefined}
         formData={formData}
         onFormChange={updateFormData}
         onSubmit={handleCreateSubmit}

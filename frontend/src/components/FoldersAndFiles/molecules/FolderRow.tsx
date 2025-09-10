@@ -14,7 +14,8 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   isLastRow = false,
   onSelect,
   onAction,
-  onToggleActionsMenu
+  onToggleActionsMenu,
+  onNavigateToFolder
 }) => {
   const handleSelect = (): void => {
     onSelect(folder.id);
@@ -24,12 +25,19 @@ export const FolderRow: React.FC<FolderRowProps> = ({
     onToggleActionsMenu(showActionsMenu ? null : folder.id);
   };
 
+  const handleDoubleClick = (): void => {
+    if (onNavigateToFolder) {
+      onNavigateToFolder(folder.id);
+    }
+  };
+
   const rowClassName = `px-6 py-4 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''} ${!isLastRow ? 'border-b border-gray-200' : ''}`;
 
   return (
-    <li className={rowClassName}>
+    <li className={rowClassName} onDoubleClick={handleDoubleClick}>
       <div className="flex items-center justify-between">
         <div className="flex items-center">
+          
           {/* Selection Checkbox */}
           <Checkbox
             checked={isSelected}

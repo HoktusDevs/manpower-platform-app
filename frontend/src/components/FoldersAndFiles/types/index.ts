@@ -6,7 +6,7 @@ export interface FolderRow {
   name: string;
   type: string; // Free text type
   createdAt: string;
-  parentId?: string;
+  parentId?: string | null;
 }
 
 export interface CreateFolderData {
@@ -38,7 +38,7 @@ export interface CreateModalFormData {
 }
 
 // Action types for folder operations
-export type FolderAction = 'edit' | 'delete';
+export type FolderAction = 'edit' | 'delete' | 'create-subfolder';
 
 // Event handler types
 export interface FolderEventHandlers {
@@ -79,6 +79,7 @@ export interface FolderRowProps {
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
+  onNavigateToFolder?: (folderId: string) => void;
 }
 
 export interface TableHeaderProps {
@@ -99,6 +100,7 @@ export interface ActionsDropdownProps {
 export interface CreateFolderModalProps {
   show: boolean;
   mode?: 'create' | 'edit';
+  parentFolderName?: string;
   formData: CreateModalFormData;
   onFormChange: (data: Partial<CreateModalFormData>) => void;
   onSubmit: (data: CreateFolderData) => void;
@@ -117,10 +119,17 @@ export interface UseFoldersStateReturn {
   folders: FolderRow[];
   filteredFolders: FolderRow[];
   searchTerm: string;
-  createFolder: (data: CreateFolderData) => void;
+  currentFolderId: string | null;
+  createFolder: (data: CreateFolderData, parentId?: string | null) => void;
   deleteFolder: (folderId: string) => void;
   updateFolder: (folderId: string, data: CreateFolderData) => void;
   getFolderById: (folderId: string) => FolderRow | undefined;
+  getSubfolders: (parentId: string) => FolderRow[];
+  navigateToFolder: (folderId: string) => void;
+  navigateBack: () => void;
+  navigateToRoot: () => void;
+  getCurrentFolder: () => FolderRow | null;
+  getBreadcrumbPath: () => FolderRow[];
   setSearchTerm: (term: string) => void;
 }
 
@@ -138,6 +147,7 @@ export interface UseModalStateReturn {
   showCreateModal: boolean;
   modalMode: 'create' | 'edit';
   editingFolderId: string | null;
+  parentFolderId: string | null;
   showActionsMenu: boolean;
   showRowActionsMenu: string | null;
   showConfirmModal: boolean;
@@ -149,7 +159,7 @@ export interface UseModalStateReturn {
   };
   viewMode: 'table' | 'grid';
   formData: CreateModalFormData;
-  openCreateModal: () => void;
+  openCreateModal: (parentId?: string | null) => void;
   openEditModal: (folderId: string, folderName: string, folderType: string) => void;
   closeCreateModal: () => void;
   toggleActionsMenu: () => void;

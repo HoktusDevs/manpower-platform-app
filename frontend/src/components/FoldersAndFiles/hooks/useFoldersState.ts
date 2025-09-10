@@ -13,16 +13,26 @@ import type {
 export const useFoldersState = (): UseFoldersStateReturn => {
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
-  // Memoized filtered folders for performance
+  // Memoized filtered folders for performance - show only folders in current directory level
   const filteredFolders = useMemo(() => {
-    if (!searchTerm.trim()) return folders;
+    // If searching, show all matching folders regardless of hierarchy and location
+    if (searchTerm.trim()) {
+      return folders.filter(folder =>
+        folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        folder.type.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
     
-    return folders.filter(folder =>
-      folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      folder.type.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [folders, searchTerm]);
+    // Show folders in current directory level
+    // If currentFolderId is null, show root folders (no parentId)
+    // If currentFolderId is set, show folders with that parentId
+    if (currentFolderId === null) {
+      return folders.filter(folder => !folder.parentId || folder.parentId === null);
+    }
+    return folders.filter(folder => folder.parentId === currentFolderId);
+  }, [folders, searchTerm, currentFolderId]);
 
   /**
    * Generate unique folder ID
@@ -34,12 +44,13 @@ export const useFoldersState = (): UseFoldersStateReturn => {
   /**
    * Create new folder
    */
-  const createFolder = (data: CreateFolderData): void => {
+  const createFolder = (data: CreateFolderData, parentId: string | null = null): void => {
     const newFolder: FolderRow = {
       id: generateFolderId(),
       name: data.name,
       type: data.type,
       createdAt: new Date().toISOString(),
+      parentId: parentId || null,
     };
 
     setFolders(prevFolders => [newFolder, ...prevFolders]);
@@ -103,14 +114,81 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     return folders.find(f => f.id === folderId);
   };
 
+  /**
+   * Get subfolders for a given parent folder ID
+   */
+  const getSubfolders = (parentId: string): FolderRow[] => {
+    return folders.filter(f => f.parentId === parentId);
+  };
+
+  /**
+   * Navigate into a folder (like double-clicking in Windows Explorer)
+   */
+  const navigateToFolder = (folderId: string): void => {
+    setCurrentFolderId(folderId);
+  };
+
+  /**
+   * Navigate back to parent folder
+   */
+  const navigateBack = (): void => {
+    if (currentFolderId) {
+      const currentFolder = getFolderById(currentFolderId);
+      setCurrentFolderId(currentFolder?.parentId || null);
+    }
+  };
+
+  /**
+   * Navigate to root folder
+   */
+  const navigateToRoot = (): void => {
+    setCurrentFolderId(null);
+  };
+
+  /**
+   * Get current folder information
+   */
+  const getCurrentFolder = (): FolderRow | null => {
+    return currentFolderId ? getFolderById(currentFolderId) || null : null;
+  };
+
+  /**
+   * Get breadcrumb path from root to current folder
+   */
+  const getBreadcrumbPath = (): FolderRow[] => {
+    if (!currentFolderId) return [];
+    
+    const path: FolderRow[] = [];
+    let currentId: string | null | undefined = currentFolderId;
+    
+    while (currentId) {
+      const folder = getFolderById(currentId);
+      if (folder) {
+        path.unshift(folder);
+        currentId = folder.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return path;
+  };
+
   return {
     folders,
     filteredFolders,
     searchTerm,
+    currentFolderId,
     createFolder,
     deleteFolder,
     updateFolder,
     getFolderById,
+    getSubfolders,
+    navigateToFolder,
+    navigateBack,
+    navigateToRoot,
+    getCurrentFolder,
+    getBreadcrumbPath,
     setSearchTerm,
   };
 };

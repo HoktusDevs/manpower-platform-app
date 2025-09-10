@@ -9,6 +9,7 @@ interface FolderGridItemProps {
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
+  onNavigateToFolder?: (folderId: string) => void;
 }
 
 /**
@@ -22,7 +23,8 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   showActionsMenu,
   onSelect,
   onAction,
-  onToggleActionsMenu
+  onToggleActionsMenu,
+  onNavigateToFolder
 }) => {
   const handleSelect = (): void => {
     onSelect(folder.id);
@@ -33,8 +35,9 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   };
 
   const handleDoubleClick = (): void => {
-    console.log('📂 Abriendo carpeta:', folder.name);
-    // Future: Navigate into folder
+    if (onNavigateToFolder) {
+      onNavigateToFolder(folder.id);
+    }
   };
 
   return (

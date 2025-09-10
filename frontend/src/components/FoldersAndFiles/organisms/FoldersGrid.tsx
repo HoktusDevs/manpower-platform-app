@@ -13,6 +13,7 @@ interface FoldersGridProps {
   onRowAction: (folderId: string, action: FolderAction) => void;
   onToggleRowActionsMenu: (folderId: string | null) => void;
   rowActionsMenuRef: React.RefObject<HTMLDivElement | null>;
+  onNavigateToFolder: (folderId: string) => void;
 }
 
 /**
@@ -27,7 +28,8 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
   onSelectRow,
   onRowAction,
   onToggleRowActionsMenu,
-  rowActionsMenuRef
+  rowActionsMenuRef,
+  onNavigateToFolder
 }) => {
   // Empty state
   if (folders.length === 0) {
@@ -38,6 +40,8 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
       />
     );
   }
+
+  // Simple folder rendering - no hierarchy needed for Windows-style navigation
 
   return (
     <div className="bg-white overflow-visible p-4">
@@ -55,6 +59,7 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
               onSelect={onSelectRow}
               onAction={onRowAction}
               onToggleActionsMenu={onToggleRowActionsMenu}
+              onNavigateToFolder={onNavigateToFolder}
             />
           </div>
         ))}

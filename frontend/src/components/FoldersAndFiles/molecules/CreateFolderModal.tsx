@@ -9,6 +9,7 @@ import type { CreateFolderModalProps, CreateFolderData } from '../types';
 export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   show,
   mode = 'create',
+  parentFolderName,
   formData,
   onFormChange,
   onSubmit,
@@ -17,7 +18,12 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   if (!show) return null;
 
   const isEditMode = mode === 'edit';
-  const modalTitle = isEditMode ? 'Editar Carpeta' : 'Crear Nueva Carpeta';
+  const isSubfolder = parentFolderName !== undefined;
+  const modalTitle = isEditMode 
+    ? 'Editar Carpeta' 
+    : isSubfolder 
+      ? `Crear Subcarpeta en "${parentFolderName}"` 
+      : 'Crear Nueva Carpeta';
   const submitButtonText = isEditMode ? 'Guardar Cambios' : 'Crear Carpeta';
 
   const handleSubmit = (e: React.FormEvent): void => {

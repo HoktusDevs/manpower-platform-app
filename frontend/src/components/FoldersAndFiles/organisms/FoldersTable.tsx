@@ -15,6 +15,7 @@ interface FoldersTableProps {
   onRowAction: (folderId: string, action: FolderAction) => void;
   onToggleRowActionsMenu: (folderId: string | null) => void;
   rowActionsMenuRef: React.RefObject<HTMLDivElement | null>;
+  onNavigateToFolder: (folderId: string) => void;
 }
 
 /**
@@ -31,8 +32,11 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
   onSelectAll,
   onRowAction,
   onToggleRowActionsMenu,
-  rowActionsMenuRef
+  rowActionsMenuRef,
+  onNavigateToFolder
 }) => {
+  // Simple folder rendering - no hierarchy needed for Windows-style navigation
+
   // Empty state
   if (folders.length === 0) {
     return (
@@ -68,6 +72,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
               onSelect={onSelectRow}
               onAction={onRowAction}
               onToggleActionsMenu={onToggleRowActionsMenu}
+              onNavigateToFolder={onNavigateToFolder}
             />
           </div>
         ))}

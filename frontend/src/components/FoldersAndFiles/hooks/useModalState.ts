@@ -9,6 +9,7 @@ export const useModalState = (): UseModalStateReturn => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState<boolean>(false);
   const [showRowActionsMenu, setShowRowActionsMenu] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
@@ -32,9 +33,10 @@ export const useModalState = (): UseModalStateReturn => {
   /**
    * Open create folder modal
    */
-  const openCreateModal = (): void => {
+  const openCreateModal = (parentId: string | null = null): void => {
     setModalMode('create');
     setEditingFolderId(null);
+    setParentFolderId(parentId);
     setShowCreateModal(true);
     setShowActionsMenu(false);
     resetFormData();
@@ -61,6 +63,7 @@ export const useModalState = (): UseModalStateReturn => {
     setShowCreateModal(false);
     setModalMode('create');
     setEditingFolderId(null);
+    setParentFolderId(null);
     resetFormData();
   };
 
@@ -125,6 +128,7 @@ export const useModalState = (): UseModalStateReturn => {
     showCreateModal,
     modalMode,
     editingFolderId,
+    parentFolderId,
     showActionsMenu,
     showRowActionsMenu,
     showConfirmModal,

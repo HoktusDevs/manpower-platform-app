@@ -26,6 +26,16 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({
     <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
       <div className="py-1">
         <button
+          onClick={() => handleAction('create-subfolder')}
+          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+        >
+          <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Crear Subcarpeta
+        </button>
+
+        <button
           onClick={() => handleAction('edit')}
           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
         >

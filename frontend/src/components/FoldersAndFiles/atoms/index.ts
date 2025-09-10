@@ -7,3 +7,4 @@ export { TypeBadge } from './TypeBadge';
 export { RowActionsButton } from './RowActionsButton';
 export { Checkbox } from './Checkbox';
 export { ViewToggle } from './ViewToggle';
+export { BreadcrumbItem } from './BreadcrumbItem';
