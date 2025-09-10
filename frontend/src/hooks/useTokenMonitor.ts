@@ -119,15 +119,28 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
     } catch (error) {
       console.error('❌ Failed to renew session:', error);
       
+      // Check if the error is due to expired refresh token
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isRefreshTokenExpired = errorMessage.includes('Refresh Token has expired') || 
+                                    errorMessage.includes('NotAuthorizedException') ||
+                                    errorMessage.includes('authentication expired');
+      
       // Show error state but don't close modal immediately
       setState(prev => ({ ...prev, isRenewing: false }));
       
-      // Force logout after a short delay to show the error
-      setTimeout(() => {
-        console.log('🚀 Redirecting to login due to session renewal failure');
+      if (isRefreshTokenExpired) {
+        console.log('🚀 Refresh token expired - redirecting to login immediately');
+        // Immediate redirect for expired refresh tokens
         cognitoAuthService.logout();
         window.location.href = '/login';
-      }, 2000);
+      } else {
+        // For other errors, wait a moment to show the error
+        setTimeout(() => {
+          console.log('🚀 Redirecting to login due to session renewal failure');
+          cognitoAuthService.logout();
+          window.location.href = '/login';
+        }, 2000);
+      }
     }
   }, []);
 

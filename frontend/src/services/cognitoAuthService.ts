@@ -307,24 +307,44 @@ class CognitoAuthService {
       return null;
     }
 
+    // Get user data from localStorage to reconstruct CognitoUser
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      console.error('❌ No user data found for token refresh');
+      return null;
+    }
+
     return new Promise((resolve) => {
-      const cognitoUser = this.userPool!.getCurrentUser();
+      // Try to get current user from pool first
+      let cognitoUser = this.userPool!.getCurrentUser();
+      
+      // If no current user, reconstruct from stored data
       if (!cognitoUser) {
-        console.error('❌ No current Cognito user found');
-        resolve(null);
-        return;
+        console.log('🔧 Reconstructing CognitoUser from stored data...');
+        cognitoUser = new CognitoUser({
+          Username: currentUser.email,
+          Pool: this.userPool!,
+        });
       }
 
       console.log('🔍 Calling cognitoUser.getSession()...');
       cognitoUser.getSession((err: Error | null, session: CognitoUserSession) => {
         if (err) {
           console.error('❌ Error refreshing token:', err.message);
+          
+          // If session is invalid, the refresh token might be expired
+          if (err.message.includes('Refresh Token has expired') || 
+              err.message.includes('NotAuthorizedException')) {
+            console.error('❌ Refresh token expired - need to re-authenticate');
+          }
+          
           resolve(null);
           return;
         }
 
         if (session && session.isValid()) {
           console.log('✅ Session refreshed successfully');
+          this.currentUser = cognitoUser; // Update current user reference
           this.saveTokens(session);
           resolve(session.getAccessToken().getJwtToken());
         } else {
