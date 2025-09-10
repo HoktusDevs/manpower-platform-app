@@ -118,13 +118,12 @@ export const JobPostingsManagementPage: React.FC = () => {
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
             onClick={() => {
-              const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-              fetchAllJobPostings(statusFilter);
+              // TODO: Implement job creation modal
+              alert('Función de crear empleo próximamente');
             }}
-            disabled={loading}
-            className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+            className="block rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
           >
-            {loading ? 'Actualizando...' : '🔄 Actualizar'}
+            + Crear Empleo
           </button>
         </div>
       </div>
@@ -231,15 +230,15 @@ export const JobPostingsManagementPage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="h-4 bg-gray-200 rounded w-36 mb-2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-28"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32"></div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                            <div className="h-6 bg-gray-200 rounded-full w-20"></div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-3 bg-gray-200 rounded w-40 mb-1"></div>
+                            <div className="h-3 bg-gray-200 rounded w-36 mb-1"></div>
                             <div className="h-3 bg-gray-200 rounded w-28 mb-1"></div>
-                            <div className="h-2 bg-gray-200 rounded w-24"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32"></div>
                           </td>
                         </tr>
                       ))}

@@ -224,14 +224,19 @@ export const ApplicationsManagementPage: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Detalles
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {[...Array(5)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-24"></div>
+                        <div className="h-3 bg-gray-200 rounded w-20 font-mono text-xs"></div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="h-4 bg-gray-200 rounded w-40 mb-2"></div>
@@ -241,9 +246,17 @@ export const ApplicationsManagementPage: React.FC = () => {
                         <div className="h-6 bg-gray-200 rounded-full w-20"></div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-3 bg-gray-200 rounded w-36 mb-1"></div>
                         <div className="h-3 bg-gray-200 rounded w-24 mb-1"></div>
-                        <div className="h-2 bg-gray-200 rounded w-20"></div>
+                        <div className="h-3 bg-gray-200 rounded w-28 mb-1"></div>
+                        <div className="h-3 bg-gray-200 rounded w-32"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-3 bg-gray-200 rounded w-20 mb-1"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-20"></div>
                       </td>
                     </tr>
                   ))}
