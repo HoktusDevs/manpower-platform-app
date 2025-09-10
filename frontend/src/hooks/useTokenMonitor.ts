@@ -88,10 +88,18 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
     setState(prev => ({ ...prev, isRenewing: true }));
 
     try {
+      console.log('🔄 Attempting to renew session...');
+      
+      // First check if user is still authenticated
+      if (!cognitoAuthService.isAuthenticated()) {
+        throw new Error('User no longer authenticated');
+      }
+
       // Try to get a valid access token (this will refresh if needed)
       const validToken = await cognitoAuthService.getValidAccessToken();
       
       if (validToken) {
+        // Successfully renewed - close modal and reset state
         setState(prev => ({ 
           ...prev, 
           showRenewalModal: false, 
@@ -100,15 +108,24 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
         }));
         warningShownRef.current = false;
         console.log('✅ Token renewed successfully');
+        
+        // Force a page refresh to ensure all components get the new token
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        throw new Error('Failed to renew token');
+        throw new Error('Token refresh returned null - authentication expired');
       }
     } catch (error) {
       console.error('❌ Failed to renew session:', error);
+      
+      // Show error state but don't close modal immediately
       setState(prev => ({ ...prev, isRenewing: false }));
       
-      // If renewal fails, force logout
+      // Force logout after a short delay to show the error
       setTimeout(() => {
+        console.log('🚀 Redirecting to login due to session renewal failure');
+        cognitoAuthService.logout();
         window.location.href = '/login';
       }, 2000);
     }

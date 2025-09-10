@@ -110,12 +110,13 @@ export const useGraphQL = (): UseGraphQLReturn => {
     
     // Only log when GraphQL is actually unavailable for debugging
     if (!isAvailable) {
-      console.debug('🔍 GraphQL not available:', {
+      console.log('🔍 GraphQL not available:', {
         isServiceInitialized,
         hasGraphQLUrl,
         isUserAuthenticated,
         hasValidToken,
-        hasCurrentUser: !!currentUser
+        hasCurrentUser: !!currentUser,
+        graphqlUrl: import.meta.env.VITE_GRAPHQL_URL
       });
     }
     

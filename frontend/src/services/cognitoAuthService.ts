@@ -294,33 +294,41 @@ class CognitoAuthService {
    * Refresh access token
    */
   private async refreshAccessToken(): Promise<string | null> {
+    console.log('🔄 Attempting to refresh access token...');
+    
     if (!this.userPool) {
+      console.error('❌ UserPool not initialized for token refresh');
       return null;
     }
 
     const refreshToken = localStorage.getItem('cognito_refresh_token');
     if (!refreshToken) {
+      console.error('❌ No refresh token available');
       return null;
     }
 
     return new Promise((resolve) => {
       const cognitoUser = this.userPool!.getCurrentUser();
       if (!cognitoUser) {
+        console.error('❌ No current Cognito user found');
         resolve(null);
         return;
       }
 
+      console.log('🔍 Calling cognitoUser.getSession()...');
       cognitoUser.getSession((err: Error | null, session: CognitoUserSession) => {
         if (err) {
-          console.error('Error refreshing token:', err);
+          console.error('❌ Error refreshing token:', err.message);
           resolve(null);
           return;
         }
 
-        if (session.isValid()) {
+        if (session && session.isValid()) {
+          console.log('✅ Session refreshed successfully');
           this.saveTokens(session);
           resolve(session.getAccessToken().getJwtToken());
         } else {
+          console.error('❌ Invalid session after refresh');
           resolve(null);
         }
       });
