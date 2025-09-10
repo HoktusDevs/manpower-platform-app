@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
+import { graphqlService, type Folder, type CreateFolderInput, type UpdateFolderInput } from '../../../services/graphqlService';
 import type { 
   FolderRow, 
   CreateFolderData, 
@@ -10,10 +11,49 @@ import type {
  * Custom hook to manage folders state and operations
  * Follows Single Responsibility Principle - only handles folder data
  */
+// Helper function to convert backend Folder to frontend FolderRow
+const folderToFolderRow = (folder: Folder): FolderRow => ({
+  id: folder.folderId,
+  name: folder.name,
+  type: folder.type,
+  createdAt: folder.createdAt,
+  parentId: folder.parentId || null,
+});
+
+// Helper function to convert frontend CreateFolderData to backend CreateFolderInput
+const createFolderDataToInput = (data: CreateFolderData, parentId?: string | null): CreateFolderInput => ({
+  name: data.name,
+  type: data.type,
+  parentId: parentId || undefined,
+});
+
 export const useFoldersState = (): UseFoldersStateReturn => {
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  /**
+   * Load folders from backend
+   */
+  const loadFolders = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const backendFolders = await graphqlService.getAllFolders();
+      const frontendFolders = backendFolders.map(folderToFolderRow);
+      setFolders(frontendFolders);
+    } catch (error) {
+      console.error('Error loading folders:', error);
+      // Keep existing folders on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load folders on component mount
+  useEffect(() => {
+    loadFolders();
+  }, []);
 
   // Memoized filtered folders for performance - show only folders in current directory level
   const filteredFolders = useMemo(() => {
@@ -34,77 +74,90 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     return folders.filter(folder => folder.parentId === currentFolderId);
   }, [folders, searchTerm, currentFolderId]);
 
-  /**
-   * Generate unique folder ID
-   */
-  const generateFolderId = (): string => {
-    return `folder_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  };
 
   /**
    * Create new folder
    */
-  const createFolder = (data: CreateFolderData, parentId: string | null = null): void => {
-    const newFolder: FolderRow = {
-      id: generateFolderId(),
-      name: data.name,
-      type: data.type,
-      createdAt: new Date().toISOString(),
-      parentId: parentId || null,
-    };
+  const createFolder = async (data: CreateFolderData, parentId: string | null = null): Promise<void> => {
+    try {
+      const input = createFolderDataToInput(data, parentId);
+      const backendFolder = await graphqlService.createFolder(input);
+      const frontendFolder = folderToFolderRow(backendFolder);
 
-    setFolders(prevFolders => [newFolder, ...prevFolders]);
-    
-    // Console.log for tracking
-    console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
-      id: newFolder.id,
-      name: newFolder.name,
-      type: newFolder.type,
-      createdAt: newFolder.createdAt,
-      totalFolders: folders.length + 1
-    });
+      setFolders(prevFolders => [frontendFolder, ...prevFolders]);
+      
+      // Console.log for tracking
+      console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
+        id: frontendFolder.id,
+        name: frontendFolder.name,
+        type: frontendFolder.type,
+        createdAt: frontendFolder.createdAt,
+        totalFolders: folders.length + 1
+      });
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      throw error;
+    }
   };
 
   /**
    * Delete folder by ID
    */
-  const deleteFolder = (folderId: string): void => {
+  const deleteFolder = async (folderId: string): Promise<void> => {
     const folderToDelete = folders.find(f => f.id === folderId);
     if (!folderToDelete) return;
 
-    setFolders(prevFolders => prevFolders.filter(f => f.id !== folderId));
-    
-    // Console.log for tracking
-    console.log(FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS, {
-      id: folderToDelete.id,
-      name: folderToDelete.name,
-      type: folderToDelete.type
-    });
+    try {
+      await graphqlService.deleteFolder(folderId);
+      setFolders(prevFolders => prevFolders.filter(f => f.id !== folderId));
+      
+      // Console.log for tracking
+      console.log(FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS, {
+        id: folderToDelete.id,
+        name: folderToDelete.name,
+        type: folderToDelete.type
+      });
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      throw error;
+    }
   };
 
 
   /**
    * Update existing folder with new data
    */
-  const updateFolder = (folderId: string, data: CreateFolderData): void => {
+  const updateFolder = async (folderId: string, data: CreateFolderData): Promise<void> => {
     const folderIndex = folders.findIndex(f => f.id === folderId);
     if (folderIndex === -1) return;
 
-    setFolders(prevFolders => 
-      prevFolders.map(folder => 
-        folder.id === folderId 
-          ? { ...folder, name: data.name, type: data.type }
-          : folder
-      )
-    );
-    
-    // Console.log for tracking
-    console.log('📝 Carpeta actualizada', {
-      id: folderId,
-      newName: data.name,
-      newType: data.type,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const input: UpdateFolderInput = {
+        folderId: folderId,
+        name: data.name,
+        type: data.type
+      };
+      
+      const backendFolder = await graphqlService.updateFolder(input);
+      const frontendFolder = folderToFolderRow(backendFolder);
+
+      setFolders(prevFolders => 
+        prevFolders.map(folder => 
+          folder.id === folderId ? frontendFolder : folder
+        )
+      );
+      
+      // Console.log for tracking
+      console.log('📝 Carpeta actualizada', {
+        id: folderId,
+        newName: data.name,
+        newType: data.type,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      throw error;
+    }
   };
 
   /**
@@ -179,6 +232,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     filteredFolders,
     searchTerm,
     currentFolderId,
+    isLoading,
     createFolder,
     deleteFolder,
     updateFolder,

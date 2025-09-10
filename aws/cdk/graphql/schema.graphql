@@ -122,6 +122,22 @@ type Query {
   
   # ADMIN ONLY: Get forms statistics
   getFormsStats: FormsStats
+  
+  # FOLDERS QUERIES
+  # ADMIN ONLY: Get all folders
+  getAllFolders(parentId: String, limit: Int): [Folder!]!
+  
+  # ADMIN ONLY: Get specific folder
+  getFolder(folderId: String!): Folder
+  
+  # ADMIN ONLY: Get folder children (subfolders)
+  getFolderChildren(parentId: String!): [Folder!]!
+  
+  # ADMIN ONLY: Get folder hierarchy path (breadcrumbs)
+  getFolderPath(folderId: String!): [Folder!]!
+  
+  # ADMIN ONLY: Get folders statistics
+  getFoldersStats: FoldersStats
 }
 
 # MUTATIONS  
@@ -181,6 +197,16 @@ type Mutation {
   
   # ADMIN ONLY: Review form submission
   reviewSubmission(input: ReviewSubmissionInput!): FormSubmission!
+  
+  # FOLDERS MUTATIONS
+  # ADMIN ONLY: Create folder
+  createFolder(input: CreateFolderInput!): Folder!
+  
+  # ADMIN ONLY: Update folder
+  updateFolder(input: UpdateFolderInput!): Folder!
+  
+  # ADMIN ONLY: Delete folder
+  deleteFolder(folderId: String!): Boolean!
 }
 
 # SUBSCRIPTIONS (Real-time updates)
@@ -497,6 +523,44 @@ type FormPerformance {
   submissionCount: Int!
   completionRate: Float!
   averageScore: Float
+}
+
+# FOLDERS SYSTEM
+type Folder {
+  userId: String!
+  folderId: String!
+  name: String!
+  type: String!
+  parentId: String
+  createdAt: String!
+  updatedAt: String!
+  childrenCount: Int
+}
+
+# FOLDERS INPUT TYPES
+input CreateFolderInput {
+  name: String!
+  type: String!
+  parentId: String
+}
+
+input UpdateFolderInput {
+  folderId: String!
+  name: String
+  type: String
+}
+
+# FOLDERS STATISTICS
+type FoldersStats {
+  totalFolders: Int!
+  rootFolders: Int!
+  averageDepth: Float
+  mostUsedTypes: [FolderTypeStats!]!
+}
+
+type FolderTypeStats {
+  type: String!
+  count: Int!
 }
 
 # DIRECTIVES

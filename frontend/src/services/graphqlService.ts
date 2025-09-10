@@ -261,6 +261,40 @@ interface ReviewSubmissionInput {
   score?: number;
 }
 
+// FOLDERS INTERFACES
+interface Folder {
+  userId: string;
+  folderId: string;
+  name: string;
+  type: string;
+  parentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  childrenCount?: number;
+}
+
+interface CreateFolderInput {
+  name: string;
+  type: string;
+  parentId?: string;
+}
+
+interface UpdateFolderInput {
+  folderId: string;
+  name?: string;
+  type?: string;
+}
+
+interface FoldersStats {
+  totalFolders: number;
+  rootFolders: number;
+  averageDepth?: number;
+  mostUsedTypes: Array<{
+    type: string;
+    count: number;
+  }>;
+}
+
 interface FormsStats {
   totalForms: number;
   activeForms: number;
@@ -960,6 +994,119 @@ const REVIEW_SUBMISSION = `
   }
 `;
 
+// ========== FOLDERS GRAPHQL OPERATIONS ==========
+
+// Folders GraphQL Queries
+const GET_ALL_FOLDERS = `
+  query GetAllFolders($parentId: String, $limit: Int) {
+    getAllFolders(parentId: $parentId, limit: $limit) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+      childrenCount
+    }
+  }
+`;
+
+const GET_FOLDER = `
+  query GetFolder($folderId: String!) {
+    getFolder(folderId: $folderId) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+      childrenCount
+    }
+  }
+`;
+
+const GET_FOLDER_CHILDREN = `
+  query GetFolderChildren($parentId: String!) {
+    getFolderChildren(parentId: $parentId) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+      childrenCount
+    }
+  }
+`;
+
+const GET_FOLDER_PATH = `
+  query GetFolderPath($folderId: String!) {
+    getFolderPath(folderId: $folderId) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const GET_FOLDERS_STATS = `
+  query GetFoldersStats {
+    getFoldersStats {
+      totalFolders
+      rootFolders
+      averageDepth
+      mostUsedTypes {
+        type
+        count
+      }
+    }
+  }
+`;
+
+// Folders GraphQL Mutations
+const CREATE_FOLDER = `
+  mutation CreateFolder($input: CreateFolderInput!) {
+    createFolder(input: $input) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+      childrenCount
+    }
+  }
+`;
+
+const UPDATE_FOLDER = `
+  mutation UpdateFolder($input: UpdateFolderInput!) {
+    updateFolder(input: $input) {
+      userId
+      folderId
+      name
+      type
+      parentId
+      createdAt
+      updatedAt
+      childrenCount
+    }
+  }
+`;
+
+const DELETE_FOLDER = `
+  mutation DeleteFolder($folderId: String!) {
+    deleteFolder(folderId: $folderId)
+  }
+`;
+
 class GraphQLService {
   // Using a more flexible type to avoid complex Amplify type issues
   private client: { graphql: (options: { query: string; variables?: Record<string, unknown>; authMode?: string }) => Promise<{ data?: unknown; errors?: unknown[] }> } | null = null;
@@ -1615,6 +1762,148 @@ class GraphQLService {
     return result.reviewSubmission;
   }
 
+  // ========== FOLDERS METHODS ==========
+
+  /**
+   * ADMIN ONLY: Get all folders
+   */
+  async getAllFolders(parentId?: string, limit?: number): Promise<Folder[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access folders');
+    }
+
+    try {
+      const result = await this.executeQuery<{ getAllFolders: Folder[] | null }>(
+        GET_ALL_FOLDERS,
+        { parentId, limit }
+      );
+      return result.getAllFolders || [];
+    } catch (error) {
+      console.warn('GraphQL getAllFolders returned null, using empty array:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ADMIN ONLY: Get specific folder
+   */
+  async getFolder(folderId: string): Promise<Folder | null> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access folders');
+    }
+
+    const result = await this.executeQuery<{ getFolder: Folder | null }>(
+      GET_FOLDER,
+      { folderId }
+    );
+    return result.getFolder;
+  }
+
+  /**
+   * ADMIN ONLY: Get folder children (subfolders)
+   */
+  async getFolderChildren(parentId: string): Promise<Folder[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access folders');
+    }
+
+    try {
+      const result = await this.executeQuery<{ getFolderChildren: Folder[] | null }>(
+        GET_FOLDER_CHILDREN,
+        { parentId }
+      );
+      return result.getFolderChildren || [];
+    } catch (error) {
+      console.warn('GraphQL getFolderChildren returned null, using empty array:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ADMIN ONLY: Get folder hierarchy path (breadcrumbs)
+   */
+  async getFolderPath(folderId: string): Promise<Folder[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access folders');
+    }
+
+    try {
+      const result = await this.executeQuery<{ getFolderPath: Folder[] | null }>(
+        GET_FOLDER_PATH,
+        { folderId }
+      );
+      return result.getFolderPath || [];
+    } catch (error) {
+      console.warn('GraphQL getFolderPath returned null, using empty array:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ADMIN ONLY: Get folders statistics
+   */
+  async getFoldersStats(): Promise<FoldersStats> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can access folder statistics');
+    }
+
+    const result = await this.executeQuery<{ getFoldersStats: FoldersStats }>(GET_FOLDERS_STATS);
+    return result.getFoldersStats;
+  }
+
+  /**
+   * ADMIN ONLY: Create folder
+   */
+  async createFolder(input: CreateFolderInput): Promise<Folder> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can create folders');
+    }
+
+    const result = await this.executeMutation<{ createFolder: Folder }>(
+      CREATE_FOLDER,
+      { input }
+    );
+    return result.createFolder;
+  }
+
+  /**
+   * ADMIN ONLY: Update folder
+   */
+  async updateFolder(input: UpdateFolderInput): Promise<Folder> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can update folders');
+    }
+
+    const result = await this.executeMutation<{ updateFolder: Folder }>(
+      UPDATE_FOLDER,
+      { input }
+    );
+    return result.updateFolder;
+  }
+
+  /**
+   * ADMIN ONLY: Delete folder
+   */
+  async deleteFolder(folderId: string): Promise<boolean> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can delete folders');
+    }
+
+    const result = await this.executeMutation<{ deleteFolder: boolean }>(
+      DELETE_FOLDER,
+      { folderId }
+    );
+    return result.deleteFolder;
+  }
+
   // ========== SUBSCRIPTIONS ==========
 
   /**
@@ -1680,5 +1969,9 @@ export type {
   UpdateFormFieldInput,
   SubmitFormInput,
   SubmitFieldResponseInput,
-  ReviewSubmissionInput
+  ReviewSubmissionInput,
+  Folder,
+  CreateFolderInput,
+  UpdateFolderInput,
+  FoldersStats
 };

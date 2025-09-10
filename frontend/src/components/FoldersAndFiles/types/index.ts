@@ -121,9 +121,10 @@ export interface UseFoldersStateReturn {
   filteredFolders: FolderRow[];
   searchTerm: string;
   currentFolderId: string | null;
-  createFolder: (data: CreateFolderData, parentId?: string | null) => void;
-  deleteFolder: (folderId: string) => void;
-  updateFolder: (folderId: string, data: CreateFolderData) => void;
+  isLoading: boolean;
+  createFolder: (data: CreateFolderData, parentId?: string | null) => Promise<void>;
+  deleteFolder: (folderId: string) => Promise<void>;
+  updateFolder: (folderId: string, data: CreateFolderData) => Promise<void>;
   getFolderById: (folderId: string) => FolderRow | undefined;
   getSubfolders: (parentId: string) => FolderRow[];
   navigateToFolder: (folderId: string) => void;

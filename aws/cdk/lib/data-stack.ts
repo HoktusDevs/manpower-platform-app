@@ -17,6 +17,7 @@ export class DataStack extends cdk.Stack {
   public readonly formsTable: dynamodb.Table;
   public readonly formSubmissionsTable: dynamodb.Table;
   public readonly jobPostingsTable: dynamodb.Table;
+  public readonly foldersTable: dynamodb.Table;
   public readonly graphqlApi: appsync.GraphqlApi;
   public readonly graphqlUrl: string;
 
@@ -167,6 +168,39 @@ export class DataStack extends cdk.Stack {
       sortKey: { name: 'submittedAt', type: dynamodb.AttributeType.STRING },
     });
 
+    // FOLDERS TABLE - Hierarchical folder structure
+    this.foldersTable = new dynamodb.Table(this, 'FoldersTable', {
+      tableName: `manpower-folders-${environment}`,
+      partitionKey: { 
+        name: 'userId', 
+        type: dynamodb.AttributeType.STRING 
+      },
+      sortKey: { 
+        name: 'folderId', 
+        type: dynamodb.AttributeType.STRING 
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: environment === 'prod',
+      removalPolicy: environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Add GSI for parent-child relationships (hierarchical navigation)
+    this.foldersTable.addGlobalSecondaryIndex({
+      indexName: 'ParentFolderIndex',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'parentId', type: dynamodb.AttributeType.STRING },
+    });
+
+    // Add GSI for folder type queries
+    this.foldersTable.addGlobalSecondaryIndex({
+      indexName: 'FolderTypeIndex',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'type', type: dynamodb.AttributeType.STRING },
+    });
+
     // APPSYNC GRAPHQL API - AWS Native data access
     this.graphqlApi = new appsync.GraphqlApi(this, 'ManpowerGraphQL', {
       name: `manpower-api-${environment}`,
@@ -214,6 +248,11 @@ export class DataStack extends cdk.Stack {
     const formsDataSource = this.graphqlApi.addDynamoDbDataSource(
       'FormsDataSource',
       this.formsTable
+    );
+
+    const foldersDataSource = this.graphqlApi.addDynamoDbDataSource(
+      'FoldersDataSource',
+      this.foldersTable
     );
 
     // RESOLVERS - No Lambda needed!
@@ -571,6 +610,188 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
+    // FOLDERS RESOLVERS
+
+    // Query: Get all folders for current user
+    foldersDataSource.createResolver('GetAllFoldersResolver', {
+      typeName: 'Query',
+      fieldName: 'getAllFolders',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "Query",
+          "query": {
+            "expression": "userId = :userId",
+            "expressionValues": {
+              ":userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub)
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result.items)
+      `),
+    });
+
+    // Query: Get specific folder
+    foldersDataSource.createResolver('GetFolderResolver', {
+      typeName: 'Query',
+      fieldName: 'getFolder',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "GetItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "folderId": $util.dynamodb.toDynamoDBJson($ctx.args.folderId)
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Query: Get folder children (subfolders)
+    foldersDataSource.createResolver('GetFolderChildrenResolver', {
+      typeName: 'Query',
+      fieldName: 'getFolderChildren',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "Query",
+          "index": "ParentFolderIndex",
+          "query": {
+            "expression": "userId = :userId AND parentId = :parentId",
+            "expressionValues": {
+              ":userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+              ":parentId": $util.dynamodb.toDynamoDBJson($ctx.args.parentId)
+            }
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result.items)
+      `),
+    });
+
+    // Mutation: Create folder
+    foldersDataSource.createResolver('CreateFolderResolver', {
+      typeName: 'Mutation',
+      fieldName: 'createFolder',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($folderId = $util.autoId())
+        #set($now = $util.time.nowISO8601())
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "folderId": $util.dynamodb.toDynamoDBJson($folderId)
+          },
+          "attributeValues": {
+            "folderId": $util.dynamodb.toDynamoDBJson($folderId),
+            "name": $util.dynamodb.toDynamoDBJson($ctx.args.input.name),
+            "type": $util.dynamodb.toDynamoDBJson($ctx.args.input.type),
+            "createdAt": $util.dynamodb.toDynamoDBJson($now),
+            "updatedAt": $util.dynamodb.toDynamoDBJson($now),
+            "childrenCount": $util.dynamodb.toDynamoDBJson(0)
+            #if($ctx.args.input.parentId)
+              ,"parentId": $util.dynamodb.toDynamoDBJson($ctx.args.input.parentId)
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Update folder
+    foldersDataSource.createResolver('UpdateFolderResolver', {
+      typeName: 'Mutation',
+      fieldName: 'updateFolder',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        #set($now = $util.time.nowISO8601())
+        #set($updateExpression = "SET updatedAt = :updatedAt")
+        #set($expressionAttributeValues = { ":updatedAt": { "S": "$now" } })
+        
+        #if($ctx.args.input.name)
+          #set($updateExpression = "$updateExpression, #name = :name")
+          #set($expressionAttributeValues[":name"] = { "S": "$ctx.args.input.name" })
+        #end
+        
+        #if($ctx.args.input.type)
+          #set($updateExpression = "$updateExpression, #type = :type")
+          #set($expressionAttributeValues[":type"] = { "S": "$ctx.args.input.type" })
+        #end
+        
+        {
+          "version": "2017-02-28",
+          "operation": "UpdateItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "folderId": $util.dynamodb.toDynamoDBJson($ctx.args.input.folderId)
+          },
+          "update": {
+            "expression": "$updateExpression",
+            "expressionValues": $util.toJson($expressionAttributeValues)
+            #if($ctx.args.input.name || $ctx.args.input.type)
+              ,"expressionNames": {
+                #if($ctx.args.input.name) "#name": "name" #end
+                #if($ctx.args.input.name && $ctx.args.input.type), #end
+                #if($ctx.args.input.type) "#type": "type" #end
+              }
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // Mutation: Delete folder
+    foldersDataSource.createResolver('DeleteFolderResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteFolder',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.identity.claims["custom:role"] != "admin")
+          $util.unauthorized()
+        #end
+        {
+          "version": "2017-02-28",
+          "operation": "DeleteItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "folderId": $util.dynamodb.toDynamoDBJson($ctx.args.folderId)
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if($ctx.result)
+          true
+        #else
+          false
+        #end
+      `),
+    });
+
     // IMPORTANT: The Identity Pool Role Attachment is handled in CognitoAuthStack
     // We DO NOT create another one here to avoid the "already exists" error
     // Instead, we create a managed policy that can be attached manually to the role
@@ -600,7 +821,9 @@ export class DataStack extends cdk.Stack {
             this.jobPostingsTable.tableArn,
             `${this.jobPostingsTable.tableArn}/*`,
             this.formSubmissionsTable.tableArn,
-            `${this.formSubmissionsTable.tableArn}/*`
+            `${this.formSubmissionsTable.tableArn}/*`,
+            this.foldersTable.tableArn,
+            `${this.foldersTable.tableArn}/*`
           ]
         }),
         // GraphQL permissions
@@ -663,6 +886,12 @@ export class DataStack extends cdk.Stack {
       value: this.jobPostingsTable.tableName,
       description: 'Job Postings DynamoDB Table Name',
       exportName: `ManpowerJobPostingsTable-${environment}`
+    });
+
+    new cdk.CfnOutput(this, 'FoldersTableName', {
+      value: this.foldersTable.tableName,
+      description: 'Folders DynamoDB Table Name',
+      exportName: `ManpowerFoldersTable-${environment}`
     });
   }
 }
