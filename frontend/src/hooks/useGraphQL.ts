@@ -108,17 +108,15 @@ export const useGraphQL = (): UseGraphQLReturn => {
     
     const isAvailable = isServiceInitialized && hasGraphQLUrl && isUserAuthenticated && hasValidToken && currentUser !== null;
     
-    console.log('🔍 GraphQL availability check:', {
-      isServiceInitialized,
-      hasGraphQLUrl,
-      isUserAuthenticated,
-      hasValidToken,
-      hasCurrentUser: !!currentUser,
-      result: isAvailable
-    });
-    
+    // Only log when GraphQL is actually unavailable for debugging
     if (!isAvailable) {
-      console.warn('❌ GraphQL service not available - skipping operation');
+      console.debug('🔍 GraphQL not available:', {
+        isServiceInitialized,
+        hasGraphQLUrl,
+        isUserAuthenticated,
+        hasValidToken,
+        hasCurrentUser: !!currentUser
+      });
     }
     
     return isAvailable;

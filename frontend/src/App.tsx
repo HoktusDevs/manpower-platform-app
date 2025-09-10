@@ -123,14 +123,6 @@ function AppContent() {
               <FoldersAndFilesPage />
             </RoleGuard>
           } />
-          <Route path="users" element={
-            <RoleGuard requiredRole="admin">
-              <div className="p-6">
-                <h1 className="text-2xl font-bold mb-6">Administrar Usuarios</h1>
-                <p className="text-gray-600">Panel de administración de usuarios próximamente disponible.</p>
-              </div>
-            </RoleGuard>
-          } />
         </Route>
         
         {/* SECURITY: Postulante routes with STRICT limitations */}

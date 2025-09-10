@@ -54,13 +54,10 @@ export const ApplicationsManagementPage: React.FC = () => {
 
 
   useEffect(() => {
-    // SKIP GraphQL fetch - just show empty applications interface
-    console.log('⚠️ Skipping GraphQL applications fetch - showing empty interface');
-    // TODO: Re-enable when GraphQL is properly configured
-    // if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
-    //   const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-    //   fetchAllApplications(statusFilter);
-    // }
+    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
+      const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+      fetchAllApplications(statusFilter);
+    }
   }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllApplications]);
 
   const handleStatusChange = async (

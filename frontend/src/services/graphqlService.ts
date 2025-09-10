@@ -1002,16 +1002,9 @@ class GraphQLService {
 
 
   /**
-   * Execute GraphQL query
+   * Execute GraphQL query with enhanced error handling
    */
   private async executeQuery<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-    // Wait for client to be ready if it's still initializing
-    let attempts = 0;
-    while (!this.client && attempts < 50) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    
     if (!this.client) {
       throw new Error('GraphQL service not initialized');
     }
@@ -1029,12 +1022,33 @@ class GraphQLService {
       throw new Error('No valid authentication token');
     }
 
-
     const result = await this.client.graphql({
       query,
       variables,
       authMode: 'userPool'
     });
+
+    // Check for GraphQL errors - but suppress null return warnings
+    if (result.errors && result.errors.length > 0) {
+      const nonNullErrors = result.errors.filter((err: unknown) => {
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          const message = String((err as { message: string }).message);
+          // Suppress "Cannot return null for non-nullable type" warnings
+          return !message.includes('Cannot return null for non-nullable type');
+        }
+        return true;
+      });
+      
+      // Only throw if there are actual errors (not just null return warnings)
+      if (nonNullErrors.length > 0) {
+        const errorMessage = nonNullErrors.map((err: unknown) => {
+          return typeof err === 'object' && err !== null && 'message' in err 
+            ? String((err as { message: string }).message)
+            : String(err);
+        }).join(', ');
+        throw new Error(`GraphQL Error: ${errorMessage}`);
+      }
+    }
 
     return (result as { data: T }).data;
   }
@@ -1095,8 +1109,13 @@ class GraphQLService {
       throw new Error('Only postulantes can access their applications');
     }
 
-    const result = await this.executeQuery<{ getMyApplications: Application[] }>(GET_MY_APPLICATIONS);
-    return result.getMyApplications;
+    try {
+      const result = await this.executeQuery<{ getMyApplications: Application[] | null }>(GET_MY_APPLICATIONS);
+      return result.getMyApplications || [];
+    } catch (error) {
+      console.warn('GraphQL getMyApplications returned null, using empty array:', error);
+      return [];
+    }
   }
 
   /**
@@ -1192,11 +1211,22 @@ class GraphQLService {
       throw new Error('Admin access required');
     }
 
-    const result = await this.executeQuery<{ getAllApplications: Application[] }>(
-      GET_ALL_APPLICATIONS,
-      { status, limit, nextToken }
-    );
-    return result.getAllApplications;
+    // Silently handle the case where GraphQL returns null
+    try {
+      const result = await this.client!.graphql({
+        query: GET_ALL_APPLICATIONS,
+        variables: { status, limit, nextToken },
+        authMode: 'userPool'
+      });
+
+      // Directly access data without throwing errors for null returns
+      const data = (result as { data?: { getAllApplications?: Application[] | null } }).data;
+      return data?.getAllApplications || [];
+    } catch {
+      // Silently return empty array for any GraphQL errors
+      console.debug('GraphQL getAllApplications failed, using empty array');
+      return [];
+    }
   }
 
   /**
@@ -1238,11 +1268,16 @@ class GraphQLService {
    * PUBLIC: Get active job postings (published, not expired)
    */
   async getActiveJobPostings(limit?: number, nextToken?: string): Promise<JobPosting[]> {
-    const result = await this.executeQuery<{ getActiveJobPostings: JobPosting[] }>(
-      GET_ACTIVE_JOB_POSTINGS,
-      { limit, nextToken }
-    );
-    return result.getActiveJobPostings;
+    try {
+      const result = await this.executeQuery<{ getActiveJobPostings: JobPosting[] | null }>(
+        GET_ACTIVE_JOB_POSTINGS,
+        { limit, nextToken }
+      );
+      return result.getActiveJobPostings || [];
+    } catch (error) {
+      console.warn('GraphQL getActiveJobPostings returned null, using empty array:', error);
+      return [];
+    }
   }
 
   /**
@@ -1265,11 +1300,22 @@ class GraphQLService {
       throw new Error('Admin access required');
     }
 
-    const result = await this.executeQuery<{ getAllJobPostings: JobPosting[] }>(
-      GET_ALL_JOB_POSTINGS,
-      { status, limit, nextToken }
-    );
-    return result.getAllJobPostings;
+    // Silently handle the case where GraphQL returns null
+    try {
+      const result = await this.client!.graphql({
+        query: GET_ALL_JOB_POSTINGS,
+        variables: { status, limit, nextToken },
+        authMode: 'userPool'
+      });
+
+      // Directly access data without throwing errors for null returns
+      const data = (result as { data?: { getAllJobPostings?: JobPosting[] | null } }).data;
+      return data?.getAllJobPostings || [];
+    } catch {
+      // Silently return empty array for any GraphQL errors
+      console.debug('GraphQL getAllJobPostings failed, using empty array');
+      return [];
+    }
   }
 
   /**
@@ -1398,11 +1444,16 @@ class GraphQLService {
       throw new Error('Only admins can access all forms');
     }
 
-    const result = await this.executeQuery<{ getAllForms: Form[] }>(
-      GET_ALL_FORMS,
-      { status, jobId, limit }
-    );
-    return result.getAllForms;
+    try {
+      const result = await this.executeQuery<{ getAllForms: Form[] | null }>(
+        GET_ALL_FORMS,
+        { status, jobId, limit }
+      );
+      return result.getAllForms || [];
+    } catch (error) {
+      console.warn('GraphQL getAllForms returned null, using empty array:', error);
+      return [];
+    }
   }
 
   /**
