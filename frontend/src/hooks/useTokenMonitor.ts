@@ -15,7 +15,7 @@ interface UseTokenMonitorReturn extends TokenMonitorState {
 const TOKEN_WARNING_TIME = 5 * 60; // 5 minutes before expiration
 const CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
 
-export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn => {
+export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const [state, setState] = useState<TokenMonitorState>({
     showRenewalModal: false,
     timeRemaining: 0,
@@ -43,16 +43,18 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
 
 
   const checkTokenExpiration = useCallback(() => {
-    if (!isAuthenticated) {
+    // Check if we have tokens stored (even if expired)
+    const accessToken = localStorage.getItem('cognito_access_token');
+    const idToken = localStorage.getItem('cognito_id_token');
+    const refreshToken = localStorage.getItem('cognito_refresh_token');
+    
+    // If no tokens at all, user is not authenticated
+    if (!accessToken && !idToken && !refreshToken) {
       setState(prev => ({ ...prev, showRenewalModal: false }));
       warningShownRef.current = false;
       userDismissedRef.current = false;
       return;
     }
-
-    // Get token expiration time inline to avoid dependency issues
-    const accessToken = localStorage.getItem('cognito_access_token');
-    const idToken = localStorage.getItem('cognito_id_token');
     const token = idToken || accessToken;
     
     let expirationTime: number | null = null;
@@ -66,8 +68,9 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
     const now = Math.floor(Date.now() / 1000);
     const timeRemaining = expirationTime - now;
 
-    // Token has already expired
+    // Token has already expired - show modal immediately
     if (timeRemaining <= 0) {
+      console.log('🚨 Token expired, showing renewal modal');
       if (!warningShownRef.current) {
         setState(prev => ({ ...prev, showRenewalModal: true, timeRemaining: 0 }));
         warningShownRef.current = true;
@@ -87,7 +90,7 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
       // Update time remaining if warning is already shown and not dismissed
       setState(prev => ({ ...prev, timeRemaining }));
     }
-  }, [isAuthenticated]);
+  }, []);
 
   const renewSession = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isRenewing: true }));
@@ -104,16 +107,16 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
       const validToken = await cognitoAuthService.getValidAccessToken();
       
       if (validToken) {
-        // Successfully renewed - close modal and reset state
-        setState(prev => ({ 
-          ...prev, 
+        // Successfully renewed - close modal and reset state immediately
+        console.log('✅ Token renewed successfully, closing modal');
+        setState({
           showRenewalModal: false, 
           isRenewing: false,
           timeRemaining: 0 
-        }));
+        });
         warningShownRef.current = false;
         userDismissedRef.current = false; // Reset dismiss flag after successful renewal
-        console.log('✅ Token renewed successfully');
+        console.log('✅ Modal should be closed now');
         
         // NO reload - just close modal and continue
       } else {
@@ -158,35 +161,20 @@ export const useTokenMonitor = (isAuthenticated: boolean): UseTokenMonitorReturn
     userDismissedRef.current = true; // User manually dismissed, don't show again
   }, []);
 
-  // Start/stop monitoring based on authentication status
+  // Start monitoring on mount
   useEffect(() => {
-    if (isAuthenticated) {
-      // Initial check
-      checkTokenExpiration();
-      
-      // Set up periodic checking
-      intervalRef.current = setInterval(checkTokenExpiration, CHECK_INTERVAL);
-    } else {
-      // Clear interval when not authenticated
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setState({
-        showRenewalModal: false,
-        timeRemaining: 0,
-        isRenewing: false
-      });
-      warningShownRef.current = false;
-      userDismissedRef.current = false;
-    }
+    // Initial check
+    checkTokenExpiration();
+    
+    // Set up periodic checking
+    intervalRef.current = setInterval(checkTokenExpiration, CHECK_INTERVAL);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isAuthenticated, checkTokenExpiration]);
+  }, [checkTokenExpiration]);
 
   return {
     showRenewalModal: state.showRenewalModal,

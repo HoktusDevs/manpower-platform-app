@@ -30,15 +30,14 @@ function AppContent() {
   
   // Remove unused auth state - authentication handled by RoleGuard
 
-  // Token expiration monitoring
-  const isAuthenticated = cognitoAuthService.isAuthenticated();
+  // Token expiration monitoring with reactive authentication state
   const { 
     showRenewalModal, 
     timeRemaining, 
     isRenewing, 
     renewSession, 
     dismissModal 
-  } = useTokenMonitor(isAuthenticated);
+  } = useTokenMonitor();
 
   const handleLogout = () => {
     dismissModal();
