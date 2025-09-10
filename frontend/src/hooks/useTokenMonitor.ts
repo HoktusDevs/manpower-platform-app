@@ -68,10 +68,10 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     const now = Math.floor(Date.now() / 1000);
     const timeRemaining = expirationTime - now;
 
-    // Token has already expired - show modal immediately
+    // Token has already expired - show modal immediately (but only once)
     if (timeRemaining <= 0) {
       console.log('🚨 Token expired, showing renewal modal');
-      if (!warningShownRef.current) {
+      if (!warningShownRef.current && !userDismissedRef.current) {
         setState(prev => ({ ...prev, showRenewalModal: true, timeRemaining: 0 }));
         warningShownRef.current = true;
       }
@@ -125,32 +125,25 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     } catch (error) {
       console.error('❌ Failed to renew session:', error);
       
-      // Check if the error is due to expired refresh token
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const isRefreshTokenExpired = errorMessage.includes('Refresh Token has expired') || 
-                                    errorMessage.includes('NotAuthorizedException') ||
-                                    errorMessage.includes('authentication expired');
+      // Close modal and force logout immediately
+      setState({
+        showRenewalModal: false,
+        isRenewing: false,
+        timeRemaining: 0 
+      });
+      warningShownRef.current = false;
+      userDismissedRef.current = false;
       
-      // Show error state but don't close modal immediately
-      setState(prev => ({ ...prev, isRenewing: false }));
-      
-      if (isRefreshTokenExpired) {
-        console.log('🚀 Refresh token expired - redirecting to login immediately');
-        // Immediate redirect for expired refresh tokens
+      console.log('🚀 Session renewal failed - redirecting to login');
+      setTimeout(() => {
         cognitoAuthService.logout();
         window.location.href = '/login';
-      } else {
-        // For other errors, wait a moment to show the error
-        setTimeout(() => {
-          console.log('🚀 Redirecting to login due to session renewal failure');
-          cognitoAuthService.logout();
-          window.location.href = '/login';
-        }, 2000);
-      }
+      }, 500);
     }
   }, []);
 
   const dismissModal = useCallback(() => {
+    console.log('🔴 Modal dismissed by user');
     setState(prev => ({ 
       ...prev, 
       showRenewalModal: false,
@@ -159,6 +152,13 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     }));
     warningShownRef.current = false;
     userDismissedRef.current = true; // User manually dismissed, don't show again
+    
+    // Force logout when modal is dismissed
+    setTimeout(() => {
+      console.log('🚀 Forcing logout after modal dismissal');
+      localStorage.clear();
+      window.location.href = '/login';
+    }, 100);
   }, []);
 
   // Start monitoring on mount
