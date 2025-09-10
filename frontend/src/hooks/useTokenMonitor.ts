@@ -25,6 +25,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
   const userDismissedRef = useRef<boolean>(false);
+  const isLoggedOutRef = useRef<boolean>(false);
 
   const parseJWT = (token: string) => {
     try {
@@ -43,6 +44,11 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
 
 
   const checkTokenExpiration = useCallback(() => {
+    // If already logged out, stop all monitoring
+    if (isLoggedOutRef.current) {
+      return;
+    }
+
     // Check if we have tokens stored (even if expired)
     const accessToken = localStorage.getItem('cognito_access_token');
     const idToken = localStorage.getItem('cognito_id_token');
@@ -125,6 +131,13 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     } catch (error) {
       console.error('❌ Failed to renew session:', error);
       
+      // Stop all monitoring immediately
+      isLoggedOutRef.current = true;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
       // Close modal and force logout immediately
       setState({
         showRenewalModal: false,
@@ -135,43 +148,51 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       userDismissedRef.current = false;
       
       console.log('🚀 Session renewal failed - redirecting to login');
-      setTimeout(() => {
-        cognitoAuthService.logout();
-        window.location.href = '/login';
-      }, 500);
+      cognitoAuthService.logout();
+      localStorage.clear();
+      window.location.href = '/login';
     }
   }, []);
 
   const dismissModal = useCallback(() => {
     console.log('🔴 Modal dismissed by user');
-    setState(prev => ({ 
-      ...prev, 
+    
+    // Stop all monitoring immediately
+    isLoggedOutRef.current = true;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    setState({
       showRenewalModal: false,
       isRenewing: false,
       timeRemaining: 0 
-    }));
+    });
     warningShownRef.current = false;
-    userDismissedRef.current = true; // User manually dismissed, don't show again
+    userDismissedRef.current = true;
     
     // Force logout when modal is dismissed
-    setTimeout(() => {
-      console.log('🚀 Forcing logout after modal dismissal');
-      localStorage.clear();
-      window.location.href = '/login';
-    }, 100);
+    console.log('🚀 Forcing logout after modal dismissal');
+    localStorage.clear();
+    window.location.href = '/login';
   }, []);
 
   // Start monitoring on mount
   useEffect(() => {
-    // Initial check
-    checkTokenExpiration();
-    
-    // Set up periodic checking
-    intervalRef.current = setInterval(checkTokenExpiration, CHECK_INTERVAL);
+    // Only start monitoring if not already logged out
+    if (!isLoggedOutRef.current) {
+      // Initial check
+      checkTokenExpiration();
+      
+      // Set up periodic checking
+      intervalRef.current = setInterval(checkTokenExpiration, CHECK_INTERVAL);
+    }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [checkTokenExpiration]);
