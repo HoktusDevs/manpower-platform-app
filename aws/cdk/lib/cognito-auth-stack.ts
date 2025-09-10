@@ -94,9 +94,13 @@ export class CognitoAuthStack extends cdk.Stack {
         preSignUp: this.createPreSignUpTrigger(environment),
         // Set custom attributes after registration
         postConfirmation: this.createPostConfirmationTrigger(environment),
+        // CRITICAL: Include custom:role in JWT tokens
+        preTokenGeneration: this.createPreTokenGenerationTrigger(environment),
       } : {
         // Auto-confirm users in development
         preSignUp: this.createAutoConfirmTrigger(environment),
+        // CRITICAL: Include custom:role in JWT tokens (dev)
+        preTokenGeneration: this.createPreTokenGenerationTrigger(environment),
       },
 
       // Deletion protection for production
@@ -144,12 +148,13 @@ export class CognitoAuthStack extends cdk.Stack {
       preventUserExistenceErrors: true,
       generateSecret: false, // For web apps
       
-      // Attributes
+      // Attributes - CRITICAL: Include custom:role in tokens
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
           givenName: true,
           familyName: true,
+          emailVerified: true,
         })
         .withCustomAttributes('role'),
         
@@ -353,6 +358,70 @@ export class CognitoAuthStack extends cdk.Stack {
       environment: {
         ENVIRONMENT: environment,
       },
+      timeout: cdk.Duration.seconds(30),
+    });
+  }
+
+  /**
+   * CRITICAL: Lambda trigger to include custom:role in JWT tokens
+   * This ensures GraphQL resolvers can access the role claim
+   */
+  private createPreTokenGenerationTrigger(environment: string): lambda.Function {
+    return new lambda.Function(this, 'PreTokenGenerationTrigger', {
+      functionName: `manpower-pre-token-generation-${environment}`,
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          console.log('PreTokenGeneration trigger:', JSON.stringify(event, null, 2));
+          
+          try {
+            // Get custom:role from user attributes
+            const role = event.request.userAttributes['custom:role'];
+            
+            if (role) {
+              // Add custom:role to both ID and Access tokens
+              if (event.request.groupConfiguration) {
+                event.request.groupConfiguration.groupsToOverride = [];
+                event.request.groupConfiguration.iamRolesToOverride = [];
+                event.request.groupConfiguration.preferredRole = null;
+              }
+              
+              // Add custom:role claim to ID token
+              if (!event.response.claimsOverride) {
+                event.response.claimsOverride = {};
+              }
+              if (!event.response.claimsOverride.idTokenGeneration) {
+                event.response.claimsOverride.idTokenGeneration = {};
+              }
+              if (!event.response.claimsOverride.idTokenGeneration.claimsToAddOrOverride) {
+                event.response.claimsOverride.idTokenGeneration.claimsToAddOrOverride = {};
+              }
+              
+              // Add the role claim to ID token (this is what GraphQL reads)
+              event.response.claimsOverride.idTokenGeneration.claimsToAddOrOverride['custom:role'] = role;
+              
+              // Also add to Access token for good measure
+              if (!event.response.claimsOverride.accessTokenGeneration) {
+                event.response.claimsOverride.accessTokenGeneration = {};
+              }
+              if (!event.response.claimsOverride.accessTokenGeneration.claimsToAddOrOverride) {
+                event.response.claimsOverride.accessTokenGeneration.claimsToAddOrOverride = {};
+              }
+              event.response.claimsOverride.accessTokenGeneration.claimsToAddOrOverride['custom:role'] = role;
+              
+              console.log(\`✅ Added custom:role="\${role}" to JWT tokens\`);
+            } else {
+              console.warn('⚠️ No custom:role found in user attributes');
+            }
+            
+            return event;
+          } catch (error) {
+            console.error('❌ Error in PreTokenGeneration:', error);
+            throw error;
+          }
+        };
+      `),
       timeout: cdk.Duration.seconds(30),
     });
   }
