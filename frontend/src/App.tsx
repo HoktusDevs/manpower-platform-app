@@ -15,8 +15,11 @@ import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
+import { SessionRenewalModal } from './components/SessionRenewalModal';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
+import { cognitoAuthService } from './services/cognitoAuthService';
+import { useTokenMonitor } from './hooks/useTokenMonitor';
 import { useEffect } from 'react';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
@@ -26,6 +29,22 @@ function AppContent() {
   // useRouteProtection();
   
   // Remove unused auth state - authentication handled by RoleGuard
+
+  // Token expiration monitoring
+  const isAuthenticated = cognitoAuthService.isAuthenticated();
+  const { 
+    showRenewalModal, 
+    timeRemaining, 
+    isRenewing, 
+    renewSession, 
+    dismissModal 
+  } = useTokenMonitor(isAuthenticated);
+
+  const handleLogout = () => {
+    dismissModal();
+    cognitoAuthService.logout();
+    window.location.href = '/login';
+  };
 
   // Initialize GraphQL service
   useEffect(() => {
@@ -53,6 +72,15 @@ function AppContent() {
 
   return (
     <ToastProvider>
+      {/* Session Renewal Modal */}
+      <SessionRenewalModal
+        show={showRenewalModal}
+        onRenew={renewSession}
+        onLogout={handleLogout}
+        isRenewing={isRenewing}
+        timeRemaining={timeRemaining}
+      />
+      
       {/* <SecurityBoundary> DISABLED TEMPORARILY FOR DEBUG */}
         <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
