@@ -6,12 +6,12 @@ interface ToolbarSectionProps {
   onSearchChange: (value: string) => void;
   showActionsMenu: boolean;
   selectedCount: number;
-  viewMode: 'table' | 'grid';
+  viewMode: 'table' | 'grid' | 'accordion';
   onToggleActionsMenu: () => void;
   onCreateFolder: () => void;
   onDeleteSelected: () => void;
   onCloseActionsMenu: () => void;
-  onViewModeChange: (mode: 'table' | 'grid') => void;
+  onViewModeChange: (mode: 'table' | 'grid' | 'accordion') => void;
   actionsMenuRef: React.RefObject<HTMLDivElement | null>;
 }
 

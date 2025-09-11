@@ -14,9 +14,11 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   isLastRow = false,
   subfolderCount,
   documentCount = 0,
+  isExpanded = false,
   onSelect,
   onAction,
   onToggleActionsMenu,
+  onToggleExpanded,
   onNavigateToFolder
 }) => {
   const handleSelect = (): void => {
@@ -33,6 +35,12 @@ export const FolderRow: React.FC<FolderRowProps> = ({
     }
   };
 
+  const handleToggleExpanded = (): void => {
+    if (onToggleExpanded) {
+      onToggleExpanded(folder.id);
+    }
+  };
+
   const rowClassName = `px-6 py-4 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''} ${!isLastRow ? 'border-b border-gray-200' : ''}`;
 
   return (
@@ -46,6 +54,28 @@ export const FolderRow: React.FC<FolderRowProps> = ({
             onChange={handleSelect}
             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-4"
           />
+          
+          {/* Expand/Collapse Arrow */}
+          <div className="w-4 mr-2">
+            {subfolderCount > 0 ? (
+              <button
+                onClick={handleToggleExpanded}
+                className="p-0.5 rounded hover:bg-gray-200 transition-colors"
+                aria-label={isExpanded ? 'Contraer' : 'Expandir'}
+              >
+                <svg 
+                  className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : (
+              <div className="w-4 h-4"></div>
+            )}
+          </div>
           
           {/* Folder Icon */}
           <FolderIcon />

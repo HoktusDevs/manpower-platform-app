@@ -78,9 +78,11 @@ export interface FolderRowProps {
   isLastRow?: boolean;
   subfolderCount: number;
   documentCount?: number;
+  isExpanded?: boolean;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
+  onToggleExpanded?: (folderId: string) => void;
   onNavigateToFolder?: (folderId: string) => void;
 }
 

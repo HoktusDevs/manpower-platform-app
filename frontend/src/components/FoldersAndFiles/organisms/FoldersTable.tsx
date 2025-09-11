@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { TableHeader, FolderRow, EmptyState } from '../molecules';
 import type { 
   FolderRow as FolderRowType, 
@@ -37,7 +38,58 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
   onNavigateToFolder,
   getSubfolders
 }) => {
-  // Simple folder rendering - no hierarchy needed for Windows-style navigation
+  // State to track expanded folders
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  
+  const handleToggleExpanded = (folderId: string): void => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+  
+  // Function to render folder and its expanded subfolders recursively
+  const renderFolderWithSubfolders = (folder: FolderRowType, level = 0): React.JSX.Element[] => {
+    const isExpanded = expandedFolders.has(folder.id);
+    const subfolders = getSubfolders(folder.id);
+    const elements: React.JSX.Element[] = [];
+    
+    // Main folder row
+    elements.push(
+      <div 
+        key={folder.id} 
+        ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
+        style={{ marginLeft: `${level * 20}px` }}
+      >
+        <FolderRow
+          folder={folder}
+          isSelected={selectedRows.has(folder.id)}
+          showActionsMenu={showRowActionsMenu === folder.id}
+          isExpanded={isExpanded}
+          subfolderCount={subfolders.length}
+          onSelect={onSelectRow}
+          onAction={onRowAction}
+          onToggleActionsMenu={onToggleRowActionsMenu}
+          onToggleExpanded={handleToggleExpanded}
+          onNavigateToFolder={onNavigateToFolder}
+        />
+      </div>
+    );
+    
+    // Expanded subfolders
+    if (isExpanded && subfolders.length > 0) {
+      subfolders.forEach(subfolder => {
+        elements.push(...renderFolderWithSubfolders(subfolder, level + 1));
+      });
+    }
+    
+    return elements;
+  };
 
   // Empty state
   if (folders.length === 0) {
@@ -61,24 +113,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       
       {/* Table Rows */}
       <ul>
-        {folders.map((folder, index) => (
-          <div 
-            key={folder.id} 
-            ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
-          >
-            <FolderRow
-              folder={folder}
-              isSelected={selectedRows.has(folder.id)}
-              showActionsMenu={showRowActionsMenu === folder.id}
-              isLastRow={index === folders.length - 1}
-              subfolderCount={getSubfolders(folder.id).length}
-              onSelect={onSelectRow}
-              onAction={onRowAction}
-              onToggleActionsMenu={onToggleRowActionsMenu}
-              onNavigateToFolder={onNavigateToFolder}
-            />
-          </div>
-        ))}
+        {folders.map((folder) => renderFolderWithSubfolders(folder)).flat()}
       </ul>
     </div>
   );

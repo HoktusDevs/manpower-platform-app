@@ -13,7 +13,7 @@ export const useModalState = (): UseModalStateReturn => {
   const [showActionsMenu, setShowActionsMenu] = useState<boolean>(false);
   const [showRowActionsMenu, setShowRowActionsMenu] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'accordion'>('table');
   const [confirmModalData, setConfirmModalData] = useState<{
     title: string;
     message: string;
