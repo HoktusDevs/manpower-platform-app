@@ -12,28 +12,28 @@ export function DashboardMetrics(): ReactNode {
     >
       <MetricCard
         title="Total Postulantes"
-        value="-"
+        value="Sin datos"
         colorScheme="blue"
         iconName="users"
       />
 
       <MetricCard
-        title="Postulaciones aprobadas"
-        value="-"
+        title="Postulaciones Aprobadas"
+        value="Sin datos"
         colorScheme="green"
         iconName="check-circle"
       />
 
       <MetricCard
         title="Pendientes"
-        value="-"
+        value="Sin datos"
         colorScheme="yellow"
         iconName="clock"
       />
 
       <MetricCard
-        title="Postulaciones activas"
-        value="-"
+        title="Postulaciones Activas"
+        value="Sin datos"
         colorScheme="purple"
         iconName="chart-bar"
       />
