@@ -537,6 +537,65 @@ class CognitoAuthService {
     });
   }
 
+  /**
+   * Change password for authenticated user
+   */
+  async changePassword(oldPassword: string, newPassword: string): Promise<AuthResponse> {
+    if (!this.userPool) {
+      throw new Error('Cognito not initialized');
+    }
+
+    return new Promise((resolve) => {
+      // Get current user from pool
+      let cognitoUser = this.userPool!.getCurrentUser();
+      
+      // If no current user in pool, try to reconstruct from stored data
+      if (!cognitoUser) {
+        const currentUser = this.getCurrentUser();
+        if (!currentUser) {
+          resolve({
+            success: false,
+            message: 'No user logged in',
+          });
+          return;
+        }
+
+        cognitoUser = new CognitoUser({
+          Username: currentUser.email,
+          Pool: this.userPool!,
+        });
+      }
+
+      // First get a valid session
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session || !session.isValid()) {
+          resolve({
+            success: false,
+            message: 'Session expired. Please login again.',
+          });
+          return;
+        }
+
+        // Now change password
+        cognitoUser!.changePassword(oldPassword, newPassword, (err) => {
+          if (err) {
+            console.error('Change password error:', err);
+            resolve({
+              success: false,
+              message: this.translateCognitoError(err.message),
+            });
+            return;
+          }
+
+          resolve({
+            success: true,
+            message: 'Password changed successfully',
+          });
+        });
+      });
+    });
+  }
+
   // Private helper methods
   private async getUserFromSession(session: CognitoUserSession, cognitoUser: CognitoUser): Promise<User> {
     const idTokenPayload = session.getIdToken().decodePayload();
@@ -597,6 +656,9 @@ class CognitoAuthService {
       'Password attempts exceeded': 'Demasiados intentos. Intenta más tarde.',
       'UsernameExistsException': 'Un usuario con este email ya existe',
       'InvalidPasswordException': 'La contraseña no cumple con los requisitos',
+      'NotAuthorizedException': 'Contraseña actual incorrecta',
+      'LimitExceededException': 'Demasiados intentos. Intenta más tarde.',
+      'InvalidParameterException': 'Parámetros inválidos',
     };
 
     return errorMap[error] || 'Error de autenticación';
