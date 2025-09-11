@@ -1,6 +1,7 @@
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
+import { FoldersAccordion } from './FoldersAccordion';
 import { 
   useFoldersState, 
   useSelectionState, 
@@ -244,7 +245,7 @@ export const FoldersManager: React.FC = () => {
             onNavigateToFolder={navigateToFolder}
             getSubfolders={getSubfolders}
           />
-        ) : (
+        ) : viewMode === 'grid' ? (
           <FoldersGrid
             folders={filteredFolders}
             selectedRows={selectedRows}
@@ -253,6 +254,17 @@ export const FoldersManager: React.FC = () => {
             onRowAction={handleRowAction}
             onToggleRowActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
+            onNavigateToFolder={navigateToFolder}
+            getSubfolders={getSubfolders}
+          />
+        ) : (
+          <FoldersAccordion
+            folders={filteredFolders}
+            selectedRows={selectedRows}
+            showRowActionsMenu={showRowActionsMenu}
+            onSelectRow={selectRow}
+            onAction={handleRowAction}
+            onToggleRowActionsMenu={setRowActionsMenu}
             onNavigateToFolder={navigateToFolder}
             getSubfolders={getSubfolders}
           />
