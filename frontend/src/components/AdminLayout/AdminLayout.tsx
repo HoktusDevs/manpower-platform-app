@@ -37,7 +37,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="h-screen bg-gray-100 overflow-hidden">
       <DashboardHeader />
       
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-[calc(100vh-4rem)] overflow-visible">
         <Sidebar onNavigate={navigate} />
         
         <main className="flex-1 overflow-y-auto">

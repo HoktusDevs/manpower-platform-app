@@ -6,6 +6,7 @@ import {
   validateJobPostingBasic, 
   formatZodErrors
 } from '../../schemas/jobPostingSchema';
+import { CompanySelector } from '../../components/CompanySelector';
 
 const getStatusColor = (status: JobPosting['status']) => {
   switch (status) {
@@ -144,6 +145,7 @@ export const JobPostingsManagementPage: React.FC = () => {
     benefits: '',
     expiresAt: ''
   });
+  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
@@ -271,6 +273,7 @@ export const JobPostingsManagementPage: React.FC = () => {
       benefits: '',
       expiresAt: ''
     });
+    setSelectedFolderId(undefined);
     setSelectedFields(new Set());
     setFieldValues({});
     setSelectedFormId(null);
@@ -279,6 +282,12 @@ export const JobPostingsManagementPage: React.FC = () => {
     setFieldErrors({});
     setShowFieldConfigModal(false);
     setHasAttemptedSubmit(false);
+  };
+
+  // Handle company selection from folder system
+  const handleCompanySelection = (companyName: string, folderId?: string) => {
+    setJobData(prev => ({ ...prev, companyName }));
+    setSelectedFolderId(folderId);
   };
 
   // Map fieldValues to API format
@@ -412,6 +421,7 @@ export const JobPostingsManagementPage: React.FC = () => {
         ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
         ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
         ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
+        ...(selectedFolderId && { folderId: selectedFolderId }),
       };
 
       // Call the GraphQL service
@@ -781,21 +791,24 @@ export const JobPostingsManagementPage: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Nombre de la Empresa *
                       </label>
-                      <input
-                        type="text"
+                      <CompanySelector
                         value={jobData.companyName}
-                        onChange={(e) => setJobData(prev => ({ ...prev, companyName: e.target.value }))}
+                        onChange={handleCompanySelection}
                         onBlur={handleFieldBlur}
                         onFocus={() => handleFieldFocus('companyName')}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                          hasAttemptedSubmit && fieldErrors.companyName 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                            : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
-                        }`}
-                        placeholder="Ej: Tech Solutions Inc"
+                        placeholder="Buscar empresa en carpetas o escribir nombre..."
+                        hasError={hasAttemptedSubmit && !!fieldErrors.companyName}
                       />
                       {hasAttemptedSubmit && fieldErrors.companyName && (
                         <p className="mt-1 text-sm text-red-600">{fieldErrors.companyName}</p>
+                      )}
+                      {selectedFolderId && (
+                        <p className="mt-1 text-sm text-green-600 flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+                          </svg>
+                          Empresa vinculada con carpeta del sistema
+                        </p>
                       )}
                     </div>
 

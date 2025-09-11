@@ -82,6 +82,7 @@ interface JobPosting {
   status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'EXPIRED' | 'CLOSED';
   companyName: string;
   companyId?: string;
+  folderId?: string; // Link to company folder in directory system
   benefits?: string;
   experienceLevel: 'ENTRY_LEVEL' | 'MID_LEVEL' | 'SENIOR_LEVEL' | 'EXECUTIVE' | 'INTERNSHIP';
   createdAt: string;
@@ -99,6 +100,7 @@ interface CreateJobPostingInput {
   employmentType: JobPosting['employmentType'];
   companyName: string;
   companyId?: string;
+  folderId?: string; // Link to company folder in directory system
   benefits?: string;
   experienceLevel: JobPosting['experienceLevel'];
   expiresAt?: string;
@@ -114,6 +116,7 @@ interface UpdateJobPostingInput {
   employmentType?: JobPosting['employmentType'];
   companyName?: string;
   companyId?: string;
+  folderId?: string; // Link to company folder in directory system
   benefits?: string;
   experienceLevel?: JobPosting['experienceLevel'];
   status?: JobPosting['status'];

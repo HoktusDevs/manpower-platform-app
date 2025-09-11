@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../core-ui';
 import type { SelectOption } from '../../core-ui';
+import { graphqlService } from '../../services/graphqlService';
+import type { Application } from '../../services/graphqlService';
 
 type ActivityFilter = 'postulaciones' | 'usuarios' | 'sistema';
 type TimeGranularity = 'daily' | 'weekly' | 'quarterly';
@@ -26,107 +28,184 @@ const TIME_GRANULARITY_OPTIONS: readonly SelectOption<TimeGranularity>[] = [
   { value: 'quarterly', label: 'Cuatrimestral', description: 'Ver por cuatrimestres' }
 ] as const;
 
-// Generar datos según granularidad temporal
-const generateMockData = (filter: ActivityFilter, granularity: TimeGranularity): ActivityData[] => {
-  if (filter === 'usuarios') {
-    // Datos de formularios actualizados según granularidad
-    const today = new Date();
-    const data: ActivityData[] = [];
-
-    switch (granularity) {
-      case 'daily': {
-        // Datos diarios (lunes a viernes)
-        const currentDay = today.getDay();
-        const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
-        
-        for (let i = 0; i < 5; i++) {
-          const date = new Date(today);
-          date.setDate(date.getDate() - mondayOffset + i);
-          const count = Math.floor(Math.random() * 15) + 2; // Entre 2-17 formularios
-          
-          data.push({
-            date: date.toISOString().split('T')[0],
-            count,
-            type: 'usuarios',
-            details: `${count} formularios actualizados`,
-            period: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()
-          });
-        }
-        break;
-      }
-
-      case 'weekly': {
-        // Datos semanales (4 semanas del mes actual)
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-        
-        for (let week = 1; week <= 4; week++) {
-          const count = Math.floor(Math.random() * 50) + 10; // Entre 10-60 formularios por semana
-          const weekStart = new Date(currentYear, currentMonth, (week - 1) * 7 + 1);
-          
-          data.push({
-            date: weekStart.toISOString().split('T')[0],
-            count,
-            type: 'usuarios',
-            details: `${count} formularios en semana ${week}`,
-            period: `S${week}`
-          });
-        }
-        break;
-      }
-
-      case 'quarterly': {
-        // Datos cuatrimestrales (3 cuatrimestres del año)
-        const quarters = [
-          { months: [0, 1, 2, 3], label: 'Q1', name: 'Ene-Abr' },
-          { months: [4, 5, 6, 7], label: 'Q2', name: 'May-Ago' },
-          { months: [8, 9, 10, 11], label: 'Q3', name: 'Sep-Dic' }
-        ];
-        
-        quarters.forEach((quarter) => {
-          const count = Math.floor(Math.random() * 200) + 50; // Entre 50-250 formularios por cuatrimestre
-          const quarterStart = new Date(today.getFullYear(), quarter.months[0], 1);
-          
-          data.push({
-            date: quarterStart.toISOString().split('T')[0],
-            count,
-            type: 'usuarios',
-            details: `${count} formularios en ${quarter.name}`,
-            period: quarter.label
-          });
-        });
-        break;
-      }
-    }
-
-    return data;
-  }
-
-  if (filter !== 'postulaciones') {
-    // Datos mock simples para sistema (pendientes de revisión)
-    const mockData: ActivityData[] = [
-      { date: '2025-01-13', count: 5, type: 'sistema', details: 'Pendientes de revisión' },
-      { date: '2025-01-12', count: 3, type: 'sistema', details: 'En proceso de validación' }
-    ];
-    return mockData.filter(item => item.type === filter);
-  }
-
-  const today = new Date();
+// Función para generar estructura de datos vacía para filtros sin datos reales
+const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity): ActivityData[] => {
+  const now = new Date();
   const data: ActivityData[] = [];
-
+  
   switch (granularity) {
     case 'daily': {
-      // Datos diarios (lunes a viernes)
-      const currentDay = today.getDay();
+      // Estructura para 5 días laborables de la semana
+      const currentDay = now.getDay();
       const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
       
       for (let i = 0; i < 5; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - mondayOffset + i);
-        const count = Math.floor(Math.random() * 20) + 5;
+        const date = new Date(now);
+        date.setDate(now.getDate() - mondayOffset + i);
         
         data.push({
           date: date.toISOString().split('T')[0],
+          count: 0,
+          type: filter,
+          details: getEmptyDetails(filter),
+          period: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()
+        });
+      }
+      break;
+    }
+    
+    case 'weekly': {
+      // Estructura para 4 semanas del mes
+      for (let week = 1; week <= 4; week++) {
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), (week - 1) * 7 + 1);
+        
+        data.push({
+          date: weekStart.toISOString().split('T')[0],
+          count: 0,
+          type: filter,
+          details: getEmptyDetails(filter),
+          period: `S${week}`
+        });
+      }
+      break;
+    }
+    
+    case 'quarterly': {
+      // Estructura para 3 cuatrimestres del año
+      const quarters = [
+        { months: [0, 1, 2, 3], label: 'Q1', name: 'Ene-Abr' },
+        { months: [4, 5, 6, 7], label: 'Q2', name: 'May-Ago' },
+        { months: [8, 9, 10, 11], label: 'Q3', name: 'Sep-Dic' }
+      ];
+      
+      quarters.forEach((quarter) => {
+        const quarterStart = new Date(now.getFullYear(), quarter.months[0], 1);
+        
+        data.push({
+          date: quarterStart.toISOString().split('T')[0],
+          count: 0,
+          type: filter,
+          details: getEmptyDetails(filter),
+          period: quarter.label
+        });
+      });
+      break;
+    }
+  }
+  
+  return data;
+};
+
+// Función helper para obtener mensajes de datos vacíos
+const getEmptyDetails = (filter: ActivityFilter): string => {
+  switch (filter) {
+    case 'postulaciones': return 'Sin aplicaciones';
+    case 'usuarios': return 'Sin formularios';
+    case 'sistema': return 'Sin pendientes';
+    default: return 'Sin datos';
+  }
+};
+
+// Función para obtener datos reales de aplicaciones
+const fetchActivityData = async (filter: ActivityFilter, granularity: TimeGranularity = 'daily'): Promise<ActivityData[]> => {
+  try {
+    if (filter === 'postulaciones') {
+      // Obtener todas las aplicaciones reales
+      const applications = await graphqlService.getAllApplications();
+      
+      // Procesar las aplicaciones según la granularidad temporal
+      return processApplicationsData(applications, granularity);
+    }
+    
+    // Para filtros sin implementación de API real, mostrar estructura vacía
+    // TODO: Implementar datos reales para formularios cuando esté disponible el endpoint
+    if (filter === 'usuarios') {
+      console.warn('Filtro "usuarios" no implementado - mostrando datos vacíos');
+      return generateEmptyData(filter, granularity);
+    }
+    
+    // TODO: Implementar datos reales para sistema cuando esté disponible el endpoint
+    if (filter === 'sistema') {
+      console.warn('Filtro "sistema" no implementado - mostrando datos vacíos');
+      return generateEmptyData(filter, granularity);
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching activity data:', error);
+    // Fallback a datos vacíos en caso de error (NO MOCK)
+    return generateEmptyData(filter, granularity);
+  }
+};
+
+// Función para procesar datos reales de aplicaciones según granularidad
+const processApplicationsData = (applications: Application[], granularity: TimeGranularity): ActivityData[] => {
+  if (!applications.length) return [];
+  
+  const now = new Date();
+  const data: ActivityData[] = [];
+  
+  // Agrupar aplicaciones por fecha de creación
+  const groupedByDate = new Map<string, number>();
+  
+  applications.forEach(app => {
+    const createdDate = new Date(app.createdAt);
+    let groupKey = '';
+    
+    switch (granularity) {
+      case 'daily': {
+        // Agrupar por día de la semana de esta semana
+        const currentWeekStart = new Date(now);
+        const currentDay = now.getDay();
+        const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
+        currentWeekStart.setDate(now.getDate() - mondayOffset);
+        currentWeekStart.setHours(0, 0, 0, 0);
+        
+        if (createdDate >= currentWeekStart) {
+          groupKey = createdDate.toISOString().split('T')[0];
+        }
+        break;
+      }
+      case 'weekly': {
+        // Agrupar por semana de este mes
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        if (createdDate >= currentMonthStart) {
+          const weekOfMonth = Math.ceil(createdDate.getDate() / 7);
+          groupKey = `${now.getFullYear()}-${now.getMonth()}-W${weekOfMonth}`;
+        }
+        break;
+      }
+      case 'quarterly': {
+        // Agrupar por cuatrimestre de este año
+        const currentYearStart = new Date(now.getFullYear(), 0, 1);
+        if (createdDate >= currentYearStart) {
+          const quarter = Math.floor(createdDate.getMonth() / 4) + 1;
+          groupKey = `${now.getFullYear()}-Q${quarter}`;
+        }
+        break;
+      }
+    }
+    
+    if (groupKey) {
+      groupedByDate.set(groupKey, (groupedByDate.get(groupKey) || 0) + 1);
+    }
+  });
+  
+  // Convertir los datos agrupados al formato requerido
+  switch (granularity) {
+    case 'daily': {
+      // Generar datos para los 5 días laborables de esta semana
+      const currentDay = now.getDay();
+      const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
+      
+      for (let i = 0; i < 5; i++) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - mondayOffset + i);
+        const dateKey = date.toISOString().split('T')[0];
+        const count = groupedByDate.get(dateKey) || 0;
+        
+        data.push({
+          date: dateKey,
           count,
           type: 'postulaciones',
           details: `${count} aplicaciones recibidas`,
@@ -135,15 +214,13 @@ const generateMockData = (filter: ActivityFilter, granularity: TimeGranularity):
       }
       break;
     }
-
+    
     case 'weekly': {
-      // Datos semanales (4 semanas del mes actual)
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
-      
+      // Generar datos para las 4 semanas de este mes
       for (let week = 1; week <= 4; week++) {
-        const count = Math.floor(Math.random() * 80) + 20; // Entre 20-100 aplicaciones por semana
-        const weekStart = new Date(currentYear, currentMonth, (week - 1) * 7 + 1);
+        const weekKey = `${now.getFullYear()}-${now.getMonth()}-W${week}`;
+        const count = groupedByDate.get(weekKey) || 0;
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), (week - 1) * 7 + 1);
         
         data.push({
           date: weekStart.toISOString().split('T')[0],
@@ -155,18 +232,19 @@ const generateMockData = (filter: ActivityFilter, granularity: TimeGranularity):
       }
       break;
     }
-
+    
     case 'quarterly': {
-      // Datos cuatrimestrales (3 cuatrimestres del año)
+      // Generar datos para los 3 cuatrimestres del año
       const quarters = [
         { months: [0, 1, 2, 3], label: 'Q1', name: 'Ene-Abr' },
         { months: [4, 5, 6, 7], label: 'Q2', name: 'May-Ago' },
         { months: [8, 9, 10, 11], label: 'Q3', name: 'Sep-Dic' }
       ];
       
-      quarters.forEach((quarter) => {
-        const count = Math.floor(Math.random() * 300) + 100; // Entre 100-400 aplicaciones por cuatrimestre
-        const quarterStart = new Date(today.getFullYear(), quarter.months[0], 1);
+      quarters.forEach((quarter, index) => {
+        const quarterKey = `${now.getFullYear()}-Q${index + 1}`;
+        const count = groupedByDate.get(quarterKey) || 0;
+        const quarterStart = new Date(now.getFullYear(), quarter.months[0], 1);
         
         data.push({
           date: quarterStart.toISOString().split('T')[0],
@@ -179,16 +257,8 @@ const generateMockData = (filter: ActivityFilter, granularity: TimeGranularity):
       break;
     }
   }
-
-  return data;
-};
-
-// Placeholder para datos reales - conectar con AWS/API
-const fetchActivityData = async (filter: ActivityFilter, granularity: TimeGranularity = 'daily'): Promise<ActivityData[]> => {
-  // TODO: Reemplazar con llamada real a AWS/API
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simular carga
   
-  return generateMockData(filter, granularity);
+  return data;
 };
 
 const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], granularity: TimeGranularity, filter: ActivityFilter }) => {

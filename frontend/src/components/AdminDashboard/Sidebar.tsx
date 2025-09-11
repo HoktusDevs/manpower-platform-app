@@ -90,13 +90,13 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
       className={`
         bg-white shadow-lg transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-64'}
-        h-full relative overflow-hidden
+        h-full relative overflow-visible
       `}
     >
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-8 bg-white border border-gray-200 rounded-full p-1.5 shadow-md hover:shadow-lg transition-shadow z-10"
+        className="absolute -right-3 top-8 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 z-20 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         aria-label={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
       >
         <svg 
