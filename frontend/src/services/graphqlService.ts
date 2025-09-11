@@ -1321,6 +1321,12 @@ class GraphQLService {
       const result = await this.executeQuery<{ getMyApplications: Application[] | null }>(GET_MY_APPLICATIONS);
       return result.getMyApplications || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getMyApplications returned null, using empty array:', error);
       return [];
     }
@@ -1483,6 +1489,12 @@ class GraphQLService {
       );
       return result.getActiveJobPostings || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getActiveJobPostings returned null, using empty array:', error);
       return [];
     }
@@ -1659,6 +1671,12 @@ class GraphQLService {
       );
       return result.getAllForms || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getAllForms returned null, using empty array:', error);
       return [];
     }
@@ -1841,6 +1859,12 @@ class GraphQLService {
       );
       return result.getAllFolders || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getAllFolders returned null, using empty array:', error);
       return [];
     }
@@ -1878,6 +1902,12 @@ class GraphQLService {
       );
       return result.getFolderChildren || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getFolderChildren returned null, using empty array:', error);
       return [];
     }
@@ -1899,6 +1929,12 @@ class GraphQLService {
       );
       return result.getFolderPath || [];
     } catch (error) {
+      // Re-throw authentication errors to trigger auto-logout
+      if (error instanceof Error && 
+          (error.message.includes('No valid authentication token') || 
+           error.message.includes('Authorization failed'))) {
+        throw error;
+      }
       console.warn('GraphQL getFolderPath returned null, using empty array:', error);
       return [];
     }
