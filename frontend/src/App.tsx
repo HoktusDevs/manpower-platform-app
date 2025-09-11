@@ -10,6 +10,7 @@ import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
 import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
+import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
@@ -144,6 +145,11 @@ function AppContent() {
           <Route path="folders&files" element={
             <RoleGuard requiredRole="admin">
               <FoldersAndFilesPage />
+            </RoleGuard>
+          } />
+          <Route path="settings" element={
+            <RoleGuard requiredRole="admin">
+              <SettingsPage />
             </RoleGuard>
           } />
         </Route>

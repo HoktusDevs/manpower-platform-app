@@ -14,21 +14,27 @@ export function DashboardHeader(): ReactNode {
 
   return (
     <div className="bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between">
-        <Flex align="center" gap="md">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-6">
+        <Flex align="center" gap="sm">
+          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
           <Typography variant="caption">
-            {user?.fullName || 'Administrador'}
+            {user?.fullName || ''}
           </Typography>
         </Flex>
-        <Flex justify="between" align="center" className="py-6">
-          <Flex align="center" gap="md">
-            <Button
-              variant="danger"
-              onClick={handleLogout}
-            >
-              Cerrar Sesión
-            </Button>
-          </Flex>
+
+        {/* Logout Button - Right Side */}
+        <Flex align="center">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLogout}
+          >
+            Cerrar Sesión
+          </Button>
         </Flex>
       </div>
     </div>
