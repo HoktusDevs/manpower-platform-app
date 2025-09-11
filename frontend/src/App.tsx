@@ -20,7 +20,7 @@ import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
 import { cognitoAuthService } from './services/cognitoAuthService';
 import { useTokenMonitor } from './hooks/useTokenMonitor';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 // import { migrationService } from './services/migrationService'; // Not used in component
 
 function AppContent() {
@@ -28,7 +28,8 @@ function AppContent() {
   // TEMPORARY: Disabled for debugging redirect loop
   // useRouteProtection();
   
-  // Remove unused auth state - authentication handled by RoleGuard
+  // State to track GraphQL initialization
+  const [isGraphQLInitialized, setIsGraphQLInitialized] = useState(false);
 
   // Token expiration monitoring with reactive authentication state
   const { 
@@ -66,6 +67,9 @@ function AppContent() {
 
         console.log('🛠️ Initializing GraphQL with config:', config);
         await graphqlService.initialize(config);
+        setIsGraphQLInitialized(true);
+      } else {
+        setIsGraphQLInitialized(true);
       }
     };
 
@@ -74,6 +78,20 @@ function AppContent() {
   
   // Simple approach - just redirect everyone to login initially
   // This should stop any bouncing issues
+
+  // Show loading screen while GraphQL initializes
+  if (!isGraphQLInitialized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div>🔄 Inicializando servicios...</div>
+          <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+            Configurando GraphQL...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ToastProvider>

@@ -929,9 +929,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getFolder',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
           "operation": "GetItem",
@@ -951,9 +948,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getFolderChildren',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
           "operation": "Query",
@@ -977,9 +971,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'createFolder',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($folderId = $util.autoId())
         #set($now = $util.time.nowISO8601())
         {
@@ -1012,9 +1003,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'updateFolder',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($now = $util.time.nowISO8601())
         #set($updateExpression = "SET updatedAt = :updatedAt")
         #set($expressionAttributeValues = { ":updatedAt": { "S": "$now" } })
@@ -1059,9 +1047,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'deleteFolder',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
           "operation": "DeleteItem",

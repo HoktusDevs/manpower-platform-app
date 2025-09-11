@@ -24,6 +24,7 @@ export const FoldersManager: React.FC = () => {
     folders,
     filteredFolders,
     searchTerm,
+    isLoading,
     createFolder,
     deleteFolder,
     updateFolder,
@@ -192,7 +193,44 @@ export const FoldersManager: React.FC = () => {
 
       {/* Content View (Table or Grid) */}
       <div className="overflow-visible">
-        {viewMode === 'table' ? (
+        {isLoading ? (
+          // Loading Skeleton
+          <div className="space-y-4">
+            <div className="animate-pulse">
+              {/* Table Header Skeleton */}
+              <div className="bg-gray-50 p-4 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                    <div className="w-32 h-4 bg-gray-300 rounded"></div>
+                  </div>
+                  <div className="w-20 h-4 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+              
+              {/* Table Rows Skeleton */}
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="border-b border-gray-200 p-4 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                      <div className="w-8 h-8 bg-blue-200 rounded"></div>
+                      <div>
+                        <div className="w-40 h-4 bg-gray-300 rounded mb-2"></div>
+                        <div className="w-24 h-3 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                      <div className="w-8 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : viewMode === 'table' ? (
           <FoldersTable
             folders={filteredFolders}
             selectedRows={selectedRows}
