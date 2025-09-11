@@ -321,22 +321,36 @@ class CognitoAuthService {
    */
   async getValidAccessToken(): Promise<string | null> {
     const accessToken = localStorage.getItem('cognito_access_token');
+    const idToken = localStorage.getItem('cognito_id_token');
     const refreshToken = localStorage.getItem('cognito_refresh_token');
 
     if (!accessToken || !refreshToken) {
       return null;
     }
 
-    // Check if token is expired
+    // Check if token is expired OR if it doesn't have custom:role claim
     try {
       const payload = JSON.parse(atob(accessToken.split('.')[1]));
       const now = Math.floor(Date.now() / 1000);
       
-      if (payload.exp > now + 300) { // 5 minutes buffer
+      // Check ID token for custom:role claim
+      let hasRoleClaim = false;
+      if (idToken) {
+        try {
+          const idPayload = JSON.parse(atob(idToken.split('.')[1]));
+          hasRoleClaim = Boolean(idPayload['custom:role']);
+        } catch (e) {
+          console.warn('Could not parse ID token for role check');
+        }
+      }
+      
+      // Force refresh if token is expired OR missing role claim
+      if (payload.exp > now + 300 && hasRoleClaim) {
         return accessToken;
       }
 
-      // Token is expired, try to refresh
+      // Token is expired OR missing role claim, try to refresh
+      console.log(hasRoleClaim ? '🔄 Token expired, refreshing...' : '🔄 Token missing role claim, refreshing...');
       return await this.refreshAccessToken();
     } catch (error) {
       console.error('Error checking token validity:', error);
