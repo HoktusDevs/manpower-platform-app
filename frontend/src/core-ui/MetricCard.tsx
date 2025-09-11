@@ -31,13 +31,19 @@ export function MetricCard({
 
   return (
     <Container variant="surface" className={className}>
-      <div className="flex items-center">
-        <div className={`p-2 rounded-lg ${colorClasses} flex-shrink-0`}>
+      <div className="flex items-start gap-4">
+        <div className={`p-3 rounded-lg ${colorClasses} flex-shrink-0`}>
           <Icon name={iconName} size="lg" />
         </div>
-        <div className="ml-4 flex-1 min-w-0">
-          <Typography variant="label" color="muted" className="block leading-tight">{title}</Typography>
-          <Typography variant="value" className="block mt-1">{value}</Typography>
+        <div className="flex-1 min-w-0 pt-1">
+          <Typography variant="label" color="muted" className="block leading-tight mb-2">{title}</Typography>
+          <Typography 
+            variant={typeof value === 'string' && (value === 'Sin datos' || value === '-' || value === '...') ? 'caption' : 'value'} 
+            color={typeof value === 'string' && (value === 'Sin datos' || value === '-') ? 'muted' : undefined}
+            className="block"
+          >
+            {value}
+          </Typography>
         </div>
       </div>
     </Container>
