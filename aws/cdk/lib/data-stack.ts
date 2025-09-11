@@ -913,18 +913,10 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getAllFolders',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
-          "operation": "Query",
-          "query": {
-            "expression": "userId = :userId",
-            "expressionValues": {
-              ":userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub)
-            }
-          }
+          "operation": "Scan",
+          "limit": #if($ctx.args.limit) $ctx.args.limit #else 50 #end
         }
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`

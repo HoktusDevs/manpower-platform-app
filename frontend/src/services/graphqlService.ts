@@ -1163,11 +1163,32 @@ class GraphQLService {
       throw new Error('NoSignedUser: No current user');
     }
 
-    // Ensure we have a valid token with role claims (refreshes if needed)
-    const validAccessToken = await cognitoAuthService.getValidAccessToken();
-    
-    if (!validAccessToken) {
-      throw new Error('No valid authentication token - please re-login');
+    // Check for token and role claim directly
+    const idToken = cognitoAuthService.getIdToken();
+    if (!idToken) {
+      console.error('🚨 No ID token found - forcing logout');
+      cognitoAuthService.logout();
+      localStorage.clear();
+      window.location.href = '/login?reason=no_token';
+      throw new Error('No authentication token');
+    }
+
+    // Check if token has custom:role claim
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      if (!payload['custom:role']) {
+        console.error('🚨 Token missing custom:role claim - forcing logout');
+        cognitoAuthService.logout();
+        localStorage.clear();
+        window.location.href = '/login?reason=missing_role';
+        throw new Error('Token missing role claim');
+      }
+    } catch {
+      console.error('🚨 Invalid token format - forcing logout');
+      cognitoAuthService.logout();
+      localStorage.clear();
+      window.location.href = '/login?reason=invalid_token';
+      throw new Error('Invalid token format');
     }
 
     const result = await this.client.graphql({
@@ -1233,11 +1254,32 @@ class GraphQLService {
       throw new Error('User not authenticated');
     }
 
-    // Ensure we have a valid token with role claims (refreshes if needed)
-    const validAccessToken = await cognitoAuthService.getValidAccessToken();
-    
-    if (!validAccessToken) {
-      throw new Error('No valid authentication token - please re-login');
+    // Check for token and role claim directly
+    const idToken = cognitoAuthService.getIdToken();
+    if (!idToken) {
+      console.error('🚨 No ID token found - forcing logout');
+      cognitoAuthService.logout();
+      localStorage.clear();
+      window.location.href = '/login?reason=no_token';
+      throw new Error('No authentication token');
+    }
+
+    // Check if token has custom:role claim
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      if (!payload['custom:role']) {
+        console.error('🚨 Token missing custom:role claim - forcing logout');
+        cognitoAuthService.logout();
+        localStorage.clear();
+        window.location.href = '/login?reason=missing_role';
+        throw new Error('Token missing role claim');
+      }
+    } catch {
+      console.error('🚨 Invalid token format - forcing logout');
+      cognitoAuthService.logout();
+      localStorage.clear();
+      window.location.href = '/login?reason=invalid_token';
+      throw new Error('Invalid token format');
     }
 
     const result = await this.client.graphql({

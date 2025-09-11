@@ -339,19 +339,27 @@ class CognitoAuthService {
         try {
           const idPayload = JSON.parse(atob(idToken.split('.')[1]));
           hasRoleClaim = Boolean(idPayload['custom:role']);
-        } catch (e) {
+        } catch {
           console.warn('Could not parse ID token for role check');
         }
       }
       
-      // Force refresh if token is expired OR missing role claim
-      if (payload.exp > now + 300 && hasRoleClaim) {
-        return accessToken;
+      // If missing role claim, force logout immediately
+      if (!hasRoleClaim) {
+        console.error('🚨 Token missing custom:role claim - forcing logout');
+        this.logout();
+        localStorage.clear();
+        window.location.href = '/login?reason=missing_role';
+        return null;
+      }
+      
+      // If token is expired, try to refresh
+      if (payload.exp <= now + 300) {
+        console.log('🔄 Token expired, refreshing...');
+        return await this.refreshAccessToken();
       }
 
-      // Token is expired OR missing role claim, try to refresh
-      console.log(hasRoleClaim ? '🔄 Token expired, refreshing...' : '🔄 Token missing role claim, refreshing...');
-      return await this.refreshAccessToken();
+      return accessToken;
     } catch (error) {
       console.error('Error checking token validity:', error);
       return null;
