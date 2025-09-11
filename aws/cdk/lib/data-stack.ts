@@ -288,9 +288,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getAllApplications',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version" : "2017-02-28",
           "operation" : "Scan"
@@ -671,9 +668,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getAllJobPostings',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
           "operation": "Scan"
@@ -692,9 +686,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'createJobPosting',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($jobId = $util.autoId())
         #set($now = $util.time.nowISO8601())
         {
@@ -719,6 +710,9 @@ export class DataStack extends cdk.Stack {
             #if($ctx.args.input.salary)
               ,"salary": $util.dynamodb.toDynamoDBJson($ctx.args.input.salary)
             #end
+            #if($ctx.args.input.folderId)
+              ,"folderId": $util.dynamodb.toDynamoDBJson($ctx.args.input.folderId)
+            #end
             #if($ctx.args.input.companyId)
               ,"companyId": $util.dynamodb.toDynamoDBJson($ctx.args.input.companyId)
             #end
@@ -741,9 +735,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'updateJobPosting',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($now = $util.time.nowISO8601())
         #set($updateExpression = "SET updatedAt = :updatedAt")
         #set($expressionAttributeValues = { ":updatedAt": { "S": "$now" } })
@@ -788,6 +779,11 @@ export class DataStack extends cdk.Stack {
           #set($expressionAttributeValues[":experienceLevel"] = { "S": "$ctx.args.input.experienceLevel" })
         #end
         
+        #if($ctx.args.input.folderId)
+          #set($updateExpression = "$updateExpression, folderId = :folderId")
+          #set($expressionAttributeValues[":folderId"] = { "S": "$ctx.args.input.folderId" })
+        #end
+        
         #if($ctx.args.input.status)
           #set($updateExpression = "$updateExpression, #status = :status")
           #set($expressionAttributeValues[":status"] = { "S": "$ctx.args.input.status" })
@@ -822,9 +818,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'deleteJobPosting',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         {
           "version": "2017-02-28",
           "operation": "DeleteItem",
@@ -847,9 +840,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'publishJobPosting',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($now = $util.time.nowISO8601())
         {
           "version": "2017-02-28",
@@ -879,9 +869,6 @@ export class DataStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'pauseJobPosting',
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #if($ctx.identity.claims["custom:role"] != "admin")
-          $util.unauthorized()
-        #end
         #set($now = $util.time.nowISO8601())
         {
           "version": "2017-02-28",

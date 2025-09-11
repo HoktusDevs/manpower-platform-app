@@ -255,6 +255,7 @@ type JobPosting {
   status: JobStatus!
   companyName: String!
   companyId: String
+  folderId: String  # Link to company folder in directory system
   benefits: String
   experienceLevel: ExperienceLevel!
   createdAt: String!
@@ -299,6 +300,7 @@ input CreateJobPostingInput {
   employmentType: EmploymentType!
   companyName: String!
   companyId: String
+  folderId: String  # Link to company folder in directory system
   benefits: String
   experienceLevel: ExperienceLevel!
   expiresAt: String
@@ -314,6 +316,7 @@ input UpdateJobPostingInput {
   employmentType: EmploymentType
   companyName: String
   companyId: String
+  folderId: String  # Link to company folder in directory system
   benefits: String
   experienceLevel: ExperienceLevel
   status: JobStatus
