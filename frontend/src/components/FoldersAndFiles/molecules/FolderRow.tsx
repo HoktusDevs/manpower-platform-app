@@ -15,6 +15,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   subfolderCount,
   documentCount = 0,
   isExpanded = false,
+  indentLevel = 0,
   onSelect,
   onAction,
   onToggleActionsMenu,
@@ -46,15 +47,17 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   return (
     <li className={rowClassName} onDoubleClick={handleDoubleClick}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          
-          {/* Selection Checkbox */}
+        {/* Fixed Checkbox Column */}
+        <div className="w-6 flex-shrink-0">
           <Checkbox
             checked={isSelected}
             onChange={handleSelect}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-4"
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
           />
-          
+        </div>
+
+        {/* Content Area (indentable) */}
+        <div className="flex items-center flex-1 ml-4" style={{ marginLeft: `${16 + (indentLevel * 20)}px` }}>
           {/* Expand/Collapse Arrow */}
           <div className="w-4 mr-2">
             {subfolderCount > 0 ? (
@@ -81,7 +84,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
           <FolderIcon />
           
           {/* Folder Information */}
-          <div>
+          <div className="ml-3">
             <p className="text-sm font-medium text-gray-900">{folder.name}</p>
             <div className="text-sm text-gray-500 space-y-0.5">
               <div className="flex items-center gap-4">
@@ -100,7 +103,8 @@ export const FolderRow: React.FC<FolderRowProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        {/* Actions Column */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {/* Type Badge */}
           <TypeBadge type={folder.type} />
           

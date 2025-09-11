@@ -64,7 +64,6 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       <div 
         key={folder.id} 
         ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
-        style={{ marginLeft: `${level * 20}px` }}
       >
         <FolderRow
           folder={folder}
@@ -72,6 +71,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
           showActionsMenu={showRowActionsMenu === folder.id}
           isExpanded={isExpanded}
           subfolderCount={subfolders.length}
+          indentLevel={level}
           onSelect={onSelectRow}
           onAction={onRowAction}
           onToggleActionsMenu={onToggleRowActionsMenu}

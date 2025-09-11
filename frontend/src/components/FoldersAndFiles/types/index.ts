@@ -79,6 +79,7 @@ export interface FolderRowProps {
   subfolderCount: number;
   documentCount?: number;
   isExpanded?: boolean;
+  indentLevel?: number;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
