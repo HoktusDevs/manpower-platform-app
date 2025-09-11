@@ -1233,9 +1233,11 @@ class GraphQLService {
       throw new Error('User not authenticated');
     }
 
-    const idToken = cognitoAuthService.getIdToken();
-    if (!idToken) {
-      throw new Error('No valid authentication token');
+    // Ensure we have a valid token with role claims (refreshes if needed)
+    const validAccessToken = await cognitoAuthService.getValidAccessToken();
+    
+    if (!validAccessToken) {
+      throw new Error('No valid authentication token - please re-login');
     }
 
     const result = await this.client.graphql({
@@ -1243,6 +1245,46 @@ class GraphQLService {
       variables,
       authMode: 'userPool'
     });
+
+    // Check for GraphQL errors - including authorization errors
+    if (result.errors && result.errors.length > 0) {
+      const nonNullErrors = result.errors.filter((err: unknown) => {
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          const message = String((err as { message: string }).message);
+          // Suppress "Cannot return null for non-nullable type" warnings
+          return !message.includes('Cannot return null for non-nullable type');
+        }
+        return true;
+      });
+      
+      // Check for authorization errors that might indicate missing role claim
+      const authErrors = nonNullErrors.filter((err: unknown) => {
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          const message = String((err as { message: string }).message);
+          return message.includes('Not Authorized to access') && message.includes('on type');
+        }
+        return false;
+      });
+      
+      // If authorization error, force logout to get fresh tokens
+      if (authErrors.length > 0) {
+        console.error('🚨 AUTHORIZATION ERROR - Token missing role claim. Forcing logout...');
+        cognitoAuthService.logout();
+        localStorage.clear();
+        window.location.href = '/login?reason=auth_expired';
+        throw new Error('Authorization failed - please log in again');
+      }
+      
+      // Only throw if there are actual errors (not just null return warnings)
+      if (nonNullErrors.length > 0) {
+        const errorMessage = nonNullErrors.map((err: unknown) => {
+          return typeof err === 'object' && err !== null && 'message' in err 
+            ? String((err as { message: string }).message)
+            : String(err);
+        }).join(', ');
+        throw new Error(`GraphQL Error: ${errorMessage}`);
+      }
+    }
 
     return (result as { data: T }).data;
   }
