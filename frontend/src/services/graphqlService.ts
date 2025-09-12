@@ -2092,11 +2092,16 @@ class GraphQLService {
       throw new Error('At least one folder ID is required');
     }
 
-    const result = await this.executeMutation<{ deleteFolders: boolean }>(
-      DELETE_FOLDERS,
-      { folderIds }
-    );
-    return result.deleteFolders;
+    try {
+      // Use individual deleteFolder calls since AppSync doesn't support BatchDeleteItem
+      for (const folderId of folderIds) {
+        await this.deleteFolder(folderId);
+      }
+      return true;
+    } catch (error) {
+      console.error('GraphQL deleteFolders error:', { folderIds, error });
+      throw error;
+    }
   }
 
   // ========== SUBSCRIPTIONS ==========

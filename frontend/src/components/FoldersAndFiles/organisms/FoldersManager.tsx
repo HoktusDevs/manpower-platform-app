@@ -42,11 +42,12 @@ export const FoldersManager: React.FC = () => {
   const {
     selectedRows,
     selectedCount,
+    totalSelectedCount,
     isAllSelected,
     selectRow,
     selectAll,
     deleteSelected,
-  } = useSelectionState(filteredFolders);
+  } = useSelectionState(filteredFolders, folders);
 
   const {
     showCreateModal,
@@ -92,17 +93,17 @@ export const FoldersManager: React.FC = () => {
   };
 
   const handleDeleteSelected = (): void => {
-    if (selectedCount === 0) {
+    if (totalSelectedCount === 0) {
       alert(FOLDER_OPERATION_MESSAGES.NO_SELECTION);
       return;
     }
 
     openConfirmModal({
       title: 'Confirmar eliminación',
-      message: `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${selectedCount} carpeta(s) seleccionada(s)?`,
+      message: `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${totalSelectedCount} carpeta(s) seleccionada(s)?`,
       variant: 'danger',
       onConfirm: async () => {
-        const deletedIds = deleteSelected(folders);
+        const deletedIds = deleteSelected();
         // Use bulk delete instead of individual deletes
         try {
           await deleteFolders(deletedIds);
@@ -242,6 +243,7 @@ export const FoldersManager: React.FC = () => {
           <FoldersTable
             folders={filteredFolders}
             selectedRows={selectedRows}
+            selectedCount={selectedCount}
             isAllSelected={isAllSelected}
             showRowActionsMenu={showRowActionsMenu}
             onSelectRow={selectRow}

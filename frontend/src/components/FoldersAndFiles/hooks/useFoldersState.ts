@@ -129,20 +129,43 @@ export const useFoldersState = (): UseFoldersStateReturn => {
    * Delete multiple folders by IDs
    */
   const deleteFolders = async (folderIds: string[]): Promise<void> => {
+    if (!Array.isArray(folderIds) || folderIds.length === 0) {
+      return;
+    }
+
     const foldersToDelete = folders.filter(f => folderIds.includes(f.id));
-    if (foldersToDelete.length === 0) return;
+    if (foldersToDelete.length === 0) {
+      return;
+    }
+
+    // Find all descendants for each folder to delete (cascade deletion)
+    const getAllDescendants = (parentId: string): string[] => {
+      const children = folders.filter(f => f.parentId === parentId);
+      let descendants = children.map(c => c.id);
+      
+      children.forEach(child => {
+        descendants = [...descendants, ...getAllDescendants(child.id)];
+      });
+      
+      return descendants;
+    };
+
+    // Build complete list including all descendants
+    const allFoldersToDelete = new Set(folderIds);
+    folderIds.forEach(folderId => {
+      const descendants = getAllDescendants(folderId);
+      descendants.forEach(id => allFoldersToDelete.add(id));
+    });
+
+    const allIdsToDelete = Array.from(allFoldersToDelete);
 
     try {
-      await graphqlService.deleteFolders(folderIds);
+      if (allIdsToDelete.length === 0) {
+        throw new Error('No folders to delete');
+      }
       
-      // Reload all folders from backend to ensure consistency
+      await graphqlService.deleteFolders(allIdsToDelete);
       await loadFolders();
-      
-      // Console.log for tracking
-      console.log(`${FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS} (${foldersToDelete.length} carpetas)`, {
-        deletedFolders: foldersToDelete.map(f => ({ id: f.id, name: f.name, type: f.type })),
-        count: foldersToDelete.length
-      });
     } catch (error) {
       console.error('Error deleting folders:', error);
       throw error;

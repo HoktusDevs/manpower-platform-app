@@ -144,11 +144,12 @@ export interface UseFoldersStateReturn {
 export interface UseSelectionStateReturn {
   selectedRows: Set<string>;
   selectedCount: number;
+  totalSelectedCount: number;
   isAllSelected: boolean;
   selectRow: (rowId: string) => void;
   selectAll: (rowIds: string[]) => void;
   clearSelection: () => void;
-  deleteSelected: (folders: FolderRow[]) => string[];
+  deleteSelected: () => string[];
 }
 
 export interface UseModalStateReturn {

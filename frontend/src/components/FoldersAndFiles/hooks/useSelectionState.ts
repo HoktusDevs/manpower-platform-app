@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { FOLDER_OPERATION_MESSAGES } from '../types';
 import type { 
   FolderRow, 
   UseSelectionStateReturn
@@ -9,25 +8,64 @@ import type {
  * Custom hook to manage selection state
  * Follows Single Responsibility Principle - only handles selection logic
  */
-export const useSelectionState = (filteredFolders: FolderRow[]): UseSelectionStateReturn => {
+export const useSelectionState = (filteredFolders: FolderRow[], allFolders: FolderRow[]): UseSelectionStateReturn => {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
-  // Memoized computed values for performance
-  const selectedCount = selectedRows.size;
+  /**
+   * Get all descendant IDs for a folder
+   */
+  const getAllDescendants = (folderId: string): string[] => {
+    const children = allFolders.filter(f => f.parentId === folderId);
+    let descendants = children.map(c => c.id);
+    
+    children.forEach(child => {
+      descendants = [...descendants, ...getAllDescendants(child.id)];
+    });
+    
+    return descendants;
+  };
+
+  // Count of visible folders that are selected (not including hidden descendants)
+  const visibleSelectedCount = useMemo(() => {
+    return filteredFolders.filter(folder => selectedRows.has(folder.id)).length;
+  }, [filteredFolders, selectedRows]);
   const isAllSelected = useMemo(() => {
-    return filteredFolders.length > 0 && selectedRows.size === filteredFolders.length;
-  }, [filteredFolders.length, selectedRows.size]);
+    if (filteredFolders.length === 0) return false;
+    
+    // Check if all visible folders (and their descendants) are selected
+    const allRequiredIds = new Set<string>();
+    filteredFolders.forEach(folder => {
+      allRequiredIds.add(folder.id);
+      const descendants = getAllDescendants(folder.id);
+      descendants.forEach(id => allRequiredIds.add(id));
+    });
+    
+    // Check if all required IDs are in selectedRows
+    for (const id of allRequiredIds) {
+      if (!selectedRows.has(id)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }, [filteredFolders, selectedRows, allFolders]);
 
   /**
-   * Toggle selection for a single row
+   * Toggle selection for a single row (with cascade)
    */
   const selectRow = (rowId: string): void => {
     setSelectedRows(prev => {
       const newSet = new Set(prev);
+      const descendants = getAllDescendants(rowId);
+      
       if (newSet.has(rowId)) {
+        // Deselect folder and all its descendants
         newSet.delete(rowId);
+        descendants.forEach(id => newSet.delete(id));
       } else {
+        // Select folder and all its descendants
         newSet.add(rowId);
+        descendants.forEach(id => newSet.add(id));
       }
       return newSet;
     });
@@ -40,7 +78,16 @@ export const useSelectionState = (filteredFolders: FolderRow[]): UseSelectionSta
     if (isAllSelected) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(rowIds));
+      // Include all descendants when selecting all
+      const allIdsToSelect = new Set<string>();
+      
+      rowIds.forEach(folderId => {
+        allIdsToSelect.add(folderId);
+        const descendants = getAllDescendants(folderId);
+        descendants.forEach(id => allIdsToSelect.add(id));
+      });
+      
+      setSelectedRows(allIdsToSelect);
     }
   };
 
@@ -54,31 +101,23 @@ export const useSelectionState = (filteredFolders: FolderRow[]): UseSelectionSta
   /**
    * Delete selected folders and return deleted IDs
    */
-  const deleteSelected = (folders: FolderRow[]): string[] => {
+  const deleteSelected = (): string[] => {
     if (selectedRows.size === 0) {
       return [];
     }
 
     const deletedIds = Array.from(selectedRows);
-    const deletedCount = selectedRows.size;
-    const remainingCount = folders.length - selectedRows.size;
     
     // Clear selection after deletion
     clearSelection();
     
-    // Console.log for tracking
-    console.log(FOLDER_OPERATION_MESSAGES.DELETE_MULTIPLE_SUCCESS, {
-      deletedCount,
-      deletedIds,
-      remainingFolders: remainingCount
-    });
-
     return deletedIds;
   };
 
   return {
     selectedRows,
-    selectedCount,
+    selectedCount: visibleSelectedCount, // Use visible count for UI display
+    totalSelectedCount: selectedRows.size, // Keep total for deletion operations
     isAllSelected,
     selectRow,
     selectAll,

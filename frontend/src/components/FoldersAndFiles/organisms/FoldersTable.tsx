@@ -9,6 +9,7 @@ import type {
 interface FoldersTableProps {
   folders: FolderRowType[];
   selectedRows: Set<string>;
+  selectedCount: number;
   isAllSelected: boolean;
   showRowActionsMenu: string | null;
   onSelectRow: SelectionEventHandlers['onRowSelect'];
@@ -28,6 +29,7 @@ interface FoldersTableProps {
 export const FoldersTable: React.FC<FoldersTableProps> = ({
   folders,
   selectedRows,
+  selectedCount,
   isAllSelected,
   showRowActionsMenu,
   onSelectRow,
@@ -106,7 +108,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       {/* Table Header */}
       <TableHeader
         isAllSelected={isAllSelected}
-        selectedCount={selectedRows.size}
+        selectedCount={selectedCount}
         totalCount={folders.length}
         onSelectAll={onSelectAll}
       />
