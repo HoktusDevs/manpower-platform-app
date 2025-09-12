@@ -53,3 +53,6 @@ export { ToastProvider } from './ToastProvider';
 export type { ToastData, ToastContextValue } from './ToastContext';
 
 export { useToast } from './useToast';
+
+export { ConfirmModal } from './ConfirmModal';
+export type { ConfirmModalProps } from './ConfirmModal';

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
+import { useToast } from '../../core-ui/useToast';
+import { ConfirmModal } from '../../core-ui/ConfirmModal';
 import type { JobPosting, CreateJobPostingInput } from '../../services/graphqlService';
 import { 
   validateJobPostingBasic, 
   formatZodErrors
 } from '../../schemas/jobPostingSchema';
 import { CompanySelector } from '../../components/CompanySelector';
+import { FoldersProvider } from '../../components/FoldersAndFiles';
+import { UniversalTableManager } from '../../components/UniversalTable/UniversalTableManager';
+import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable/UniversalTableManager';
 
 const getStatusColor = (status: JobPosting['status']) => {
   switch (status) {
@@ -113,7 +117,7 @@ const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
 ];
 
 export const JobPostingsManagementPage: React.FC = () => {
-  const { user: authUser, isAuthenticated } = useAuth();
+  const { showSuccess, showError } = useToast();
   const {
     jobPostings,
     forms,
@@ -122,6 +126,8 @@ export const JobPostingsManagementPage: React.FC = () => {
     fetchAllJobPostings,
     fetchAllForms,
     createJobPosting,
+    updateJobPosting,
+    deleteJobPosting,
     clearError,
     isGraphQLAvailable
   } = useGraphQL();
@@ -129,8 +135,32 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Selection and bulk actions states
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
+  const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  
+  // Confirmation modal states
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+    isLoading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger',
+    isLoading: false
+  });
+  
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'basic' | 'fields' | 'forms'>('basic');
   const [jobData, setJobData] = useState({
     title: '',
@@ -154,12 +184,12 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   useEffect(() => {
-    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
+    if (isGraphQLAvailable()) {
       const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
       fetchAllJobPostings(statusFilter);
       fetchAllForms(); // Load forms for the modal
     }
-  }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllJobPostings, fetchAllForms]);
+  }, [selectedStatus]); // Removed functions from dependencies to prevent infinite loops
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job => 
@@ -168,11 +198,11 @@ export const JobPostingsManagementPage: React.FC = () => {
     job.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group job postings by status for summary
-  const statusSummary = jobPostings.reduce((acc, job) => {
-    acc[job.status] = (acc[job.status] || 0) + 1;
-    return acc;
-  }, {} as Record<JobPosting['status'], number>);
+  // Group job postings by status for summary (currently unused but may be needed later)
+  // const statusSummary = jobPostings.reduce((acc, job) => {
+  //   acc[job.status] = (acc[job.status] || 0) + 1;
+  //   return acc;
+  // }, {} as Record<JobPosting['status'], number>);
 
   // Field validation errors state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -282,12 +312,178 @@ export const JobPostingsManagementPage: React.FC = () => {
     setFieldErrors({});
     setShowFieldConfigModal(false);
     setHasAttemptedSubmit(false);
+    
+    // Reset edit mode states
+    setIsEditMode(false);
+    setEditingJobId(null);
   };
 
   // Handle company selection from folder system
   const handleCompanySelection = (companyName: string, folderId?: string) => {
     setJobData(prev => ({ ...prev, companyName }));
     setSelectedFolderId(folderId);
+  };
+
+  // Helper function to show confirmation modal
+  const showConfirmModal = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    variant: 'danger' | 'warning' | 'info' = 'danger'
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      variant,
+      isLoading: false
+    });
+  };
+
+  // Helper function to close confirmation modal
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Helper function to set modal loading state
+  const setModalLoading = (loading: boolean) => {
+    setConfirmModal(prev => ({ ...prev, isLoading: loading }));
+  };
+
+  // Helper function to load job data for editing
+  const loadJobForEdit = (job: JobPosting) => {
+    setIsEditMode(true);
+    setEditingJobId(job.jobId);
+    setJobData({
+      title: job.title,
+      description: job.description,
+      companyName: job.companyName,
+      location: job.location,
+      salary: job.salary || '',
+      experienceLevel: job.experienceLevel,
+      employmentType: job.employmentType,
+      requirements: job.requirements,
+      benefits: job.benefits || '',
+      expiresAt: job.expiresAt || ''
+    });
+    
+    // If the job has a folderId, set it
+    if (job.folderId) {
+      setSelectedFolderId(job.folderId);
+    }
+    
+    // Reset other states
+    setActiveTab('basic');
+    setFieldErrors({});
+    setHasAttemptedSubmit(false);
+    
+    // Show the modal
+    setShowCreateModal(true);
+  };
+
+
+  const handleBulkDelete = () => {
+    if (selectedJobs.size === 0) return;
+    
+    showConfirmModal(
+      'Eliminar ofertas seleccionadas',
+      `¿Estás seguro de que quieres eliminar ${selectedJobs.size} oferta${selectedJobs.size !== 1 ? 's' : ''} de trabajo? Esta acción no se puede deshacer.`,
+      async () => {
+        setModalLoading(true);
+        setIsBulkDeleting(true);
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const jobIds = Array.from(selectedJobs);
+
+        for (const jobId of jobIds) {
+          try {
+            const success = await deleteJobPosting(jobId);
+            if (success) {
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          } catch (error) {
+            console.error(`Error deleting job ${jobId}:`, error);
+            errorCount++;
+          }
+        }
+
+        // Show results
+        if (successCount > 0) {
+          showSuccess(
+            `${successCount} ofertas eliminadas`,
+            errorCount > 0 ? `${errorCount} ofertas no pudieron eliminarse` : undefined
+          );
+        }
+        
+        if (errorCount > 0 && successCount === 0) {
+          showError('Error al eliminar ofertas', 'No se pudieron eliminar las ofertas seleccionadas');
+        }
+
+        // Refresh the list
+        const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+        await fetchAllJobPostings(statusFilter);
+        
+        // Clear selection and close modal
+        setSelectedJobs(new Set());
+        setIsBulkDeleting(false);
+        setModalLoading(false);
+        closeConfirmModal();
+      },
+      'danger'
+    );
+  };
+
+  const handleEditJob = (jobId: string) => {
+    const job = jobPostings.find(j => j.jobId === jobId);
+    if (job) {
+      loadJobForEdit(job);
+    } else {
+      showError('Error', 'No se encontró la oferta de trabajo');
+    }
+  };
+
+  const handleDeleteJob = (jobId: string) => {
+    showConfirmModal(
+      'Eliminar oferta de trabajo',
+      '¿Estás seguro de que quieres eliminar esta oferta de trabajo? Esta acción no se puede deshacer.',
+      async () => {
+        setModalLoading(true);
+        
+        // Add job to deleting set
+        setDeletingJobs(prev => new Set([...prev, jobId]));
+
+        try {
+          const success = await deleteJobPosting(jobId);
+          
+          if (success) {
+            showSuccess('Oferta eliminada', 'La oferta de trabajo se eliminó correctamente');
+            
+            // Refresh the list
+            const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+            await fetchAllJobPostings(statusFilter);
+          } else {
+            showError('Error al eliminar', 'No se pudo eliminar la oferta de trabajo');
+          }
+        } catch (error) {
+          console.error('Error deleting job:', error);
+          showError('Error al eliminar', 'Ocurrió un error al eliminar la oferta de trabajo');
+        } finally {
+          // Remove job from deleting set
+          setDeletingJobs(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(jobId);
+            return newSet;
+          });
+          setModalLoading(false);
+          closeConfirmModal();
+        }
+      },
+      'danger'
+    );
   };
 
   // Map fieldValues to API format
@@ -393,7 +589,7 @@ export const JobPostingsManagementPage: React.FC = () => {
     return 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
   };
 
-  // Handle job creation
+  // Handle job creation and update
   const handleCreateJob = async () => {
     setHasAttemptedSubmit(true);
     if (!validateAndShowErrors()) {
@@ -407,52 +603,70 @@ export const JobPostingsManagementPage: React.FC = () => {
       // Map additional field values to API format
       const mappedFieldData = mapFieldValuesToAPI();
       
-      // Prepare the job posting data with defaults
-      const jobPostingData: CreateJobPostingInput = {
-        title: jobData.title.trim(),
-        description: jobData.description.trim(),
-        requirements: jobData.requirements.trim(),
-        companyName: jobData.companyName.trim(),
-        // Use mapped field values or defaults
-        location: mappedFieldData.location || 'Por definir',
-        employmentType: mappedFieldData.employmentType || 'FULL_TIME',
-        experienceLevel: mappedFieldData.experienceLevel || 'ENTRY_LEVEL',
-        // Optional fields
-        ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
-        ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
-        ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
-        ...(selectedFolderId && { folderId: selectedFolderId }),
-      };
+      if (isEditMode && editingJobId) {
+        // Update existing job
+        const updateJobData = {
+          jobId: editingJobId,
+          title: jobData.title.trim(),
+          description: jobData.description.trim(),
+          requirements: jobData.requirements.trim(),
+          companyName: jobData.companyName.trim(),
+          // Use mapped field values or defaults
+          location: mappedFieldData.location || 'Por definir',
+          employmentType: mappedFieldData.employmentType || 'FULL_TIME',
+          experienceLevel: mappedFieldData.experienceLevel || 'ENTRY_LEVEL',
+          // Optional fields
+          ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
+          ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
+          ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
+          ...(selectedFolderId && { folderId: selectedFolderId }),
+        };
 
-      // Call the GraphQL service
-      const success = await createJobPosting(jobPostingData);
-      
-      if (success) {
-        // Clear any previous errors
-        setFieldErrors({});
-        clearError();
-        
-        // Close modal and reset form
-        setShowCreateModal(false);
-        resetModalState();
-        
-        // Refresh the job postings list
-        const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-        await fetchAllJobPostings(statusFilter);
-        
-        // Optional: Show success message (you could add a toast notification here)
-        console.log('✅ Oferta de trabajo creada exitosamente');
+        const success = await updateJobPosting(updateJobData);
+        if (success) {
+          showSuccess('Oferta actualizada', 'La oferta de trabajo se actualizó correctamente');
+          setShowCreateModal(false);
+          resetModalState();
+          
+          // Refresh the job postings list
+          const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+          await fetchAllJobPostings(statusFilter);
+        }
       } else {
-        // If success is false but no exception, show generic error
-        console.error('❌ No se pudo crear la oferta de trabajo');
+        // Create new job
+        const jobPostingData: CreateJobPostingInput = {
+          title: jobData.title.trim(),
+          description: jobData.description.trim(),
+          requirements: jobData.requirements.trim(),
+          companyName: jobData.companyName.trim(),
+          // Use mapped field values or defaults
+          location: mappedFieldData.location || 'Por definir',
+          employmentType: mappedFieldData.employmentType || 'FULL_TIME',
+          experienceLevel: mappedFieldData.experienceLevel || 'ENTRY_LEVEL',
+          // Optional fields
+          ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
+          ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
+          ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
+          ...(selectedFolderId && { folderId: selectedFolderId }),
+        };
+
+        // Call the GraphQL service
+        const success = await createJobPosting(jobPostingData);
+        
+        if (success) {
+          showSuccess('Oferta creada', 'La oferta de trabajo se creó correctamente');
+          setShowCreateModal(false);
+          resetModalState();
+          
+          // Refresh the job postings list
+          const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
+          await fetchAllJobPostings(statusFilter);
+        }
       }
     } catch (err) {
-      console.error('Error creating job posting:', err);
-      
-      // The error is already handled by the hook and shown in the UI,
-      // but we can also log a user-friendly message
+      console.error('Error handling job posting:', err);
       const friendlyMessage = getUserFriendlyErrorMessage(err);
-      console.error('User-friendly error:', friendlyMessage);
+      showError('Error', friendlyMessage);
       
       // Optional: You could show a more specific error in a toast or modal
       // For now, the error from the GraphQL hook will be displayed
@@ -460,17 +674,6 @@ export const JobPostingsManagementPage: React.FC = () => {
       setIsCreating(false);
     }
   };
-
-  if (authUser?.role !== 'admin') {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <h3 className="text-red-800 font-medium">Acceso Denegado</h3>
-          <p className="text-red-600 mt-1">Solo los administradores pueden ver esta página.</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!isGraphQLAvailable()) {
     return (
@@ -485,220 +688,122 @@ export const JobPostingsManagementPage: React.FC = () => {
     );
   }
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Gestión de Ofertas de Trabajo</h1>
+  // Define columns for UniversalTableManager
+  const columns: TableColumn<JobPosting>[] = [
+    {
+      key: 'title',
+      label: 'Título / Empresa',
+      render: (job) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{job.title}</div>
+          <div className="text-sm text-gray-500">{job.companyName}</div>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="block rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-          >
-            + Crear Empleo
-          </button>
+      )
+    },
+    {
+      key: 'location',
+      label: 'Ubicación / Tipo',
+      render: (job) => (
+        <div>
+          <div className="text-sm text-gray-900">{job.location}</div>
+          <div className="text-sm text-gray-500">{getEmploymentTypeText(job.employmentType)}</div>
         </div>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {Object.entries(statusSummary).map(([status, count]) => (
-          <div
-            key={status}
-            className={`relative rounded-lg border-2 p-4 ${getStatusColor(status as JobPosting['status'])}`}
-          >
-            <div className="text-center">
-              <div className="text-2xl font-bold">{count}</div>
-              <div className="text-xs font-medium uppercase tracking-wide">
-                {getStatusText(status as JobPosting['status'])}
-              </div>
-            </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (job) => (
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(job.status)}`}>
+          {getStatusText(job.status)}
+        </span>
+      )
+    },
+    {
+      key: 'details',
+      label: 'Detalles',
+      render: (job) => (
+        <div>
+          <div className="text-sm text-gray-500">
+            Experiencia: {getExperienceLevelText(job.experienceLevel)}
           </div>
-        ))}
-      </div>
-
-      {/* Main Content Card */}
-      <div className="mt-6 bg-white shadow rounded-lg">
-        <div className="p-6">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Buscar por título, empresa o ubicación..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div className="sm:w-48">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as JobPosting['status'] | 'ALL')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="ALL">Todos los Estados</option>
-                {statusOptions.map(status => (
-                  <option key={status} value={status}>
-                    {getStatusText(status)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                  <button
-                    onClick={clearError}
-                    className="mt-2 text-sm text-red-600 hover:text-red-500"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
+          {job.salary && (
+            <div className="text-sm text-gray-500">Salario: {job.salary}</div>
           )}
-
-          {/* Job Postings Table */}
-          <div className="mt-6">
-            {loading && !jobPostings.length ? (
-              <div className="space-y-4">
-                {/* Skeleton for table */}
-                <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Título / Empresa
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ubicación / Tipo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Detalles
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {[...Array(5)].map((_, i) => (
-                        <tr key={i} className="animate-pulse">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-32"></div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-4 bg-gray-200 rounded w-36 mb-2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-32"></div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="h-3 bg-gray-200 rounded w-36 mb-1"></div>
-                            <div className="h-3 bg-gray-200 rounded w-28 mb-1"></div>
-                            <div className="h-3 bg-gray-200 rounded w-32"></div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : filteredJobPostings.length === 0 ? (
-              <div className="text-center py-12">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0h8m-8 0a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V8a2 2 0 00-2-2z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron ofertas de trabajo</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'Intenta con diferentes términos de búsqueda.' : 'No hay ofertas de trabajo con el filtro seleccionado.'}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Título / Empresa
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ubicación / Tipo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Detalles
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredJobPostings.map((job) => (
-                      <tr key={job.jobId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{job.title}</div>
-                            <div className="text-sm text-gray-500">{job.companyName}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{job.location}</div>
-                          <div className="text-sm text-gray-500">{getEmploymentTypeText(job.employmentType)}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(job.status)}`}>
-                            {getStatusText(job.status)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              Experiencia: {getExperienceLevelText(job.experienceLevel)}
-                            </div>
-                            {job.salary && (
-                              <div className="text-sm text-gray-500">Salario: {job.salary}</div>
-                            )}
-                            <div className="text-xs text-gray-400 mt-1">
-                              Creado: {new Date(job.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div className="text-xs text-gray-400 mt-1">
+            Creado: {new Date(job.createdAt).toLocaleDateString()}
           </div>
         </div>
-      </div>
+      )
+    }
+  ];
+
+  // Define row actions for UniversalTableManager
+  const rowActions: TableAction<JobPosting>[] = [
+    {
+      key: 'edit',
+      label: 'Editar',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      variant: 'primary',
+      onClick: (job) => handleEditJob(job.jobId)
+    },
+    {
+      key: 'delete',
+      label: 'Eliminar',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+      variant: 'danger',
+      onClick: (job) => handleDeleteJob(job.jobId)
+    }
+  ];
+
+  // Define bulk actions for UniversalTableManager
+  const bulkActions: BulkAction<JobPosting>[] = [
+    {
+      key: 'delete',
+      label: 'Eliminar Seleccionadas',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+      variant: 'danger',
+      onClick: (jobs) => {
+        const jobIds = new Set(jobs.map(job => job.jobId));
+        setSelectedJobs(jobIds);
+        handleBulkDelete();
+      }
+    }
+  ];
+
+  return (
+    <FoldersProvider>
+      <div className="p-6">
+        <UniversalTableManager
+          title="Gestión de Ofertas de Trabajo"
+          data={filteredJobPostings}
+          columns={columns}
+          loading={loading}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          rowActions={rowActions}
+          bulkActions={bulkActions}
+          selectable={true}
+          selectedItems={selectedJobs}
+          onSelectionChange={setSelectedJobs}
+          getItemId={(job) => job.jobId}
+          createButton={{
+            label: '+ Crear Empleo',
+            onClick: () => setShowCreateModal(true)
+          }}
+        />
 
       {/* Create Job Posting Modal */}
       {showCreateModal && (
@@ -707,7 +812,9 @@ export const JobPostingsManagementPage: React.FC = () => {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Crear Nueva Oferta de Trabajo</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  {isEditMode ? 'Editar Oferta de Trabajo' : 'Crear Nueva Oferta de Trabajo'}
+                </h3>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
@@ -1051,7 +1158,10 @@ export const JobPostingsManagementPage: React.FC = () => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   )}
-                  {isCreating ? 'Creando...' : 'Crear Empleo'}
+                  {isCreating 
+                    ? (isEditMode ? 'Actualizando...' : 'Creando...') 
+                    : (isEditMode ? 'Actualizar Empleo' : 'Crear Empleo')
+                  }
                 </button>
               </div>
             </div>
@@ -1133,7 +1243,21 @@ export const JobPostingsManagementPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
+      </div>
+    </FoldersProvider>
   );
 };
 

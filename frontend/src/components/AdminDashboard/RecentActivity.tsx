@@ -106,37 +106,7 @@ const getEmptyDetails = (filter: ActivityFilter): string => {
   }
 };
 
-// Función para obtener datos reales de aplicaciones
-const fetchActivityData = async (filter: ActivityFilter, granularity: TimeGranularity = 'daily'): Promise<ActivityData[]> => {
-  try {
-    if (filter === 'postulaciones') {
-      // Obtener todas las aplicaciones reales
-      const applications = await graphqlService.getAllApplications();
-      
-      // Procesar las aplicaciones según la granularidad temporal
-      return processApplicationsData(applications, granularity);
-    }
-    
-    // Para filtros sin implementación de API real, mostrar estructura vacía
-    // TODO: Implementar datos reales para formularios cuando esté disponible el endpoint
-    if (filter === 'usuarios') {
-      console.warn('Filtro "usuarios" no implementado - mostrando datos vacíos');
-      return generateEmptyData(filter, granularity);
-    }
-    
-    // TODO: Implementar datos reales para sistema cuando esté disponible el endpoint
-    if (filter === 'sistema') {
-      console.warn('Filtro "sistema" no implementado - mostrando datos vacíos');
-      return generateEmptyData(filter, granularity);
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Error fetching activity data:', error);
-    // Fallback a datos vacíos en caso de error (NO MOCK)
-    return generateEmptyData(filter, granularity);
-  }
-};
+// FUNCIÓN ELIMINADA - YA NO SE USA - CAUSABA LLAMADAS DUPLICADAS
 
 // Función para procesar datos reales de aplicaciones según granularidad
 const processApplicationsData = (applications: Application[], granularity: TimeGranularity): ActivityData[] => {
@@ -480,32 +450,46 @@ export function RecentActivity(): ReactNode {
   const [selectedActivityFilter, setSelectedActivityFilter] = useState<ActivityFilter>('postulaciones');
   const [selectedGranularity, setSelectedGranularity] = useState<TimeGranularity>('daily');
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
 
-  // Cargar datos cuando cambia el filtro o granularidad
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchActivityData(selectedActivityFilter, selectedGranularity);
-        setActivityData(data);
-      } catch (error) {
-        console.error('Error loading activity data:', error);
-        setActivityData([]);
-      } finally {
-        setIsLoading(false);
+  // Función para cargar datos SOLO cuando el usuario lo solicite
+  const loadActivityData = async (filter: ActivityFilter, granularity: TimeGranularity) => {
+    setIsLoading(true);
+    try {
+      if (filter === 'postulaciones') {
+        const applications = await graphqlService.getAllApplications();
+        const processedData = processApplicationsData(applications, granularity);
+        setActivityData(processedData);
+      } else {
+        setActivityData(generateEmptyData(filter, granularity));
       }
-    };
-    
-    loadData();
-  }, [selectedActivityFilter, selectedGranularity]);
+      setHasLoadedData(true);
+    } catch (error) {
+      console.error('Error loading activity data:', error);
+      setActivityData(generateEmptyData(filter, granularity));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Cargar datos UNA SOLA VEZ al montar el componente
+  useEffect(() => {
+    loadActivityData(selectedActivityFilter, selectedGranularity);
+  }, []); // Solo al montar, sin dependencias que causen re-renders
 
   const handleActivityFilterChange = (newFilter: ActivityFilter): void => {
     setSelectedActivityFilter(newFilter);
+    loadActivityData(newFilter, selectedGranularity);
   };
 
   const handleGranularityChange = (newGranularity: TimeGranularity): void => {
     setSelectedGranularity(newGranularity);
+    loadActivityData(selectedActivityFilter, newGranularity);
+  };
+
+  const handleLoadData = () => {
+    loadActivityData(selectedActivityFilter, selectedGranularity);
   };
 
   return (

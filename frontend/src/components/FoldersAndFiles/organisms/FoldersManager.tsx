@@ -3,11 +3,11 @@ import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
 import { FoldersAccordion } from './FoldersAccordion';
 import { 
-  useFoldersState, 
   useSelectionState, 
   useModalState, 
   useClickOutside 
 } from '../hooks';
+import { useFoldersContext } from '../context/FoldersContext';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 import type { 
   FolderAction, 
@@ -36,7 +36,7 @@ export const FoldersManager: React.FC = () => {
     navigateToRoot,
     getBreadcrumbPath,
     setSearchTerm,
-  } = useFoldersState();
+  } = useFoldersContext();
 
   const {
     selectedRows,
@@ -195,11 +195,11 @@ export const FoldersManager: React.FC = () => {
       {/* Content View (Table or Grid) */}
       <div className="overflow-visible">
         {isLoading ? (
-          // Loading Skeleton
-          <div className="space-y-4">
+          // Loading Skeleton - Fixed height container with table structure
+          <div className="bg-white overflow-visible py-12">
             <div className="animate-pulse">
               {/* Table Header Skeleton */}
-              <div className="bg-gray-50 p-4 rounded-t-lg">
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-4 h-4 bg-gray-300 rounded"></div>
@@ -209,26 +209,26 @@ export const FoldersManager: React.FC = () => {
                 </div>
               </div>
               
-              {/* Table Rows Skeleton */}
-              {[...Array(6)].map((_, index) => (
-                <div key={index} className="border-b border-gray-200 p-4 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                      <div className="w-8 h-8 bg-blue-200 rounded"></div>
-                      <div>
-                        <div className="w-40 h-4 bg-gray-300 rounded mb-2"></div>
-                        <div className="w-24 h-3 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-3 bg-gray-200 rounded"></div>
-                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
-                      <div className="w-8 h-4 bg-gray-200 rounded"></div>
+              {/* Single skeleton row to maintain fixed height */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="w-6 flex-shrink-0">
+                    <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="flex items-center flex-1 ml-4">
+                    <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
+                    <div className="w-8 h-8 bg-blue-200 rounded mr-3"></div>
+                    <div>
+                      <div className="w-40 h-4 bg-gray-300 rounded mb-2"></div>
+                      <div className="w-24 h-3 bg-gray-200 rounded"></div>
                     </div>
                   </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <div className="w-16 h-5 bg-gray-200 rounded"></div>
+                    <div className="w-8 h-8 bg-gray-200 rounded"></div>
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         ) : viewMode === 'table' ? (

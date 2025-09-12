@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 interface MetricCardProps {
   readonly title: string;
   readonly value: string | number;
-  readonly iconName: string;
+  readonly iconName?: string;
   readonly colorScheme: 'blue' | 'green' | 'yellow' | 'purple' | 'red' | 'gray';
   readonly className?: string;
 }
@@ -32,9 +32,11 @@ export function MetricCard({
   return (
     <Container variant="surface" className={className}>
       <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-lg ${colorClasses} flex-shrink-0`}>
-          <Icon name={iconName} size="lg" />
-        </div>
+        {iconName && (
+          <div className={`p-3 rounded-lg ${colorClasses} flex-shrink-0`}>
+            <Icon name={iconName} size="lg" />
+          </div>
+        )}
         <div className="flex-1 min-w-0 pt-1">
           <Typography variant="label" color="muted" className="block leading-tight mb-2">{title}</Typography>
           <Typography 

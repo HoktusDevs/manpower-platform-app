@@ -14,28 +14,24 @@ export function DashboardMetrics(): ReactNode {
         title="Total Postulantes"
         value="Sin datos"
         colorScheme="blue"
-        iconName="users"
       />
 
       <MetricCard
         title="Postulaciones Aprobadas"
         value="Sin datos"
         colorScheme="green"
-        iconName="check-circle"
       />
 
       <MetricCard
         title="Pendientes"
         value="Sin datos"
         colorScheme="yellow"
-        iconName="clock"
       />
 
       <MetricCard
         title="Postulaciones Activas"
         value="Sin datos"
         colorScheme="purple"
-        iconName="chart-bar"
       />
     </Grid>
   );

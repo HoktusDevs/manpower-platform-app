@@ -603,6 +603,7 @@ const CREATE_JOB_POSTING = `
       status
       companyName
       companyId
+      folderId
       benefits
       experienceLevel
       createdAt
@@ -1575,7 +1576,14 @@ class GraphQLService {
 
       // Directly access data without throwing errors for null returns
       const data = (result as { data?: { getAllJobPostings?: JobPosting[] | null } }).data;
-      return data?.getAllJobPostings || [];
+      const jobPostings = data?.getAllJobPostings || [];
+      
+      // Run migration on first load (one-time sync)
+      if (jobPostings.length > 0) {
+        this.migrateExistingJobPostings(jobPostings);
+      }
+      
+      return jobPostings;
     } catch {
       // Silently return empty array for any GraphQL errors
       console.debug('GraphQL getAllJobPostings failed, using empty array');
@@ -1605,11 +1613,30 @@ class GraphQLService {
       throw new Error('Admin access required');
     }
 
+    // Create the job posting first
     const result = await this.executeMutation<{ createJobPosting: JobPosting }>(
       CREATE_JOB_POSTING,
       { input }
     );
-    return result.createJobPosting;
+
+    const jobPosting = result.createJobPosting;
+
+    // If a folderId is specified (company folder), automatically create a "Cargo" folder
+    if (input.folderId) {
+      try {
+        await this.createFolder({
+          name: input.title, // Use job title as folder name
+          type: 'Cargo', // Set type as "Cargo"
+          parentId: input.folderId // Create under the specified company folder
+        });
+        console.log(`✅ Created "Cargo" folder for job: ${input.title} under company folder: ${input.folderId}`);
+      } catch (error) {
+        // Log error but don't fail the job creation if folder creation fails
+        console.warn(`⚠️ Failed to create "Cargo" folder for job: ${input.title}`, error);
+      }
+    }
+
+    return jobPosting;
   }
 
   /**
@@ -2084,6 +2111,85 @@ class GraphQLService {
    */
   getConfig(): GraphQLConfig | null {
     return this.config;
+  }
+
+  /**
+   * MIGRATION: Create missing "Cargo" folders for existing job postings
+   * This runs automatically once when job postings are loaded
+   */
+  private async migrateExistingJobPostings(jobPostings: JobPosting[]): Promise<void> {
+    // Check if migration was already run
+    const migrationKey = 'job_folders_migration_completed';
+    if (localStorage.getItem(migrationKey)) {
+      console.log('🔄 Migration already completed, skipping...');
+      return; // Migration already completed
+    }
+
+    console.log('🔄 Starting job postings folder migration...');
+    console.log(`📊 Found ${jobPostings.length} job postings to analyze`);
+    
+    let createdCount = 0;
+    let errorCount = 0;
+    let jobsWithFolderId = 0;
+    let jobsMatched = 0;
+
+    // Get all folders to match by company name
+    let allFolders: Folder[] = [];
+    try {
+      allFolders = await this.getAllFolders();
+      console.log(`📁 Loaded ${allFolders.length} folders for matching`);
+    } catch (error) {
+      console.warn('⚠️ Could not load folders for matching:', error);
+    }
+
+    for (const job of jobPostings) {
+      console.log(`🔍 Analyzing job: ${job.title}, folderId: ${job.folderId || 'NONE'}, company: ${job.companyName}`);
+      
+      let targetFolderId = job.folderId;
+      
+      // If no folderId, try to find company folder by name
+      if (!targetFolderId && job.companyName && allFolders.length > 0) {
+        // Look for a folder with matching company name (case insensitive)
+        const companyFolder = allFolders.find(folder => 
+          folder.name.toLowerCase().includes(job.companyName.toLowerCase()) ||
+          job.companyName.toLowerCase().includes(folder.name.toLowerCase())
+        );
+        
+        if (companyFolder) {
+          targetFolderId = companyFolder.folderId;
+          jobsMatched++;
+          console.log(`🎯 Matched ${job.companyName} with folder: ${companyFolder.name} (${targetFolderId})`);
+        } else {
+          console.log(`❌ No folder found for company: ${job.companyName}`);
+        }
+      }
+      
+      if (targetFolderId) {
+        jobsWithFolderId++;
+        try {
+          // Try to create the "Cargo" folder for this job
+          await this.createFolder({
+            name: job.title,
+            type: 'Cargo',
+            parentId: targetFolderId
+          });
+          createdCount++;
+          console.log(`✅ Created "Cargo" folder: ${job.title} under ${targetFolderId}`);
+        } catch (error) {
+          // Folder might already exist or other error - continue with next
+          errorCount++;
+          console.log(`⚠️ Skipped folder for ${job.title}:`, error);
+        }
+      } else {
+        console.log(`⚠️ Job ${job.title} has no matching folder - skipping`);
+      }
+    }
+
+    console.log(`📈 Summary: ${jobsWithFolderId} jobs processed (${jobsMatched} matched by name), out of ${jobPostings.length} total`);
+    
+    // Mark migration as completed
+    localStorage.setItem(migrationKey, 'true');
+    console.log(`🎉 Migration completed: ${createdCount} folders created, ${errorCount} skipped`);
   }
 }
 

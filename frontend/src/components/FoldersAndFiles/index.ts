@@ -17,3 +17,6 @@ export {
   useSelectionState, 
   useClickOutside 
 } from './hooks';
+
+// Context for shared folder state
+export { FoldersProvider, useFoldersContext } from './context/FoldersContext';

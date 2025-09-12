@@ -126,13 +126,6 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
         </svg>
       </button>
 
-      {/* Header */}
-      <div className="p-4 border-b">
-        <h3 className={`font-semibold text-gray-800 transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-          {!isCollapsed && 'Acciones Rápidas'}
-        </h3>
-      </div>
-
       {/* Menu Items */}
       <nav className="p-4 space-y-3">
         {menuItems.map((item) => (

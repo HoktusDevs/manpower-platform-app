@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useFoldersState } from '../FoldersAndFiles/hooks/useFoldersState';
+import { useFoldersContext } from '../FoldersAndFiles';
 import type { FolderRow } from '../FoldersAndFiles/types';
 
 interface CompanySelectorProps {
@@ -29,7 +29,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   placeholder = 'Buscar empresa...',
   hasError = false
 }) => {
-  const { folders, isLoading } = useFoldersState();
+  const { folders, isLoading } = useFoldersContext();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const [filteredCompanies, setFilteredCompanies] = useState<CompanyOption[]>([]);

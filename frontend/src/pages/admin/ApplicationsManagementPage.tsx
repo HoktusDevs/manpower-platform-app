@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { useGraphQL } from '../../hooks/useGraphQL';
+import { UniversalTableManager } from '../../components/UniversalTable';
+import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable';
 import type { Application } from '../../services/graphqlService';
 
 const getStatusColor = (status: Application['status']) => {
@@ -27,17 +28,7 @@ const getStatusText = (status: Application['status']) => {
   }
 };
 
-const statusOptions: Application['status'][] = [
-  'PENDING',
-  'IN_REVIEW', 
-  'APPROVED',
-  'INTERVIEW_SCHEDULED',
-  'HIRED',
-  'REJECTED'
-];
-
 export const ApplicationsManagementPage: React.FC = () => {
-  const { user: authUser, isAuthenticated } = useAuth();
   const {
     applications,
     loading,
@@ -48,32 +39,15 @@ export const ApplicationsManagementPage: React.FC = () => {
     isGraphQLAvailable
   } = useGraphQL();
 
-  const [selectedStatus, setSelectedStatus] = useState<Application['status'] | 'ALL'>('ALL');
-  const [editingApplication, setEditingApplication] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'accordion'>('table');
 
   useEffect(() => {
-    if (authUser?.role === 'admin' && isAuthenticated && isGraphQLAvailable()) {
-      const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-      fetchAllApplications(statusFilter);
+    if (isGraphQLAvailable()) {
+      fetchAllApplications();
     }
-  }, [authUser, isAuthenticated, isGraphQLAvailable, selectedStatus, fetchAllApplications]);
-
-  const handleStatusChange = async (
-    userId: string,
-    applicationId: string,
-    newStatus: Application['status']
-  ) => {
-    const success = await updateApplicationStatus(userId, applicationId, newStatus);
-    
-    if (success) {
-      setEditingApplication(null);
-      // Refresh the list
-      const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-      fetchAllApplications(statusFilter);
-    }
-  };
+  }, []); // Empty dependency array - only run once on mount
 
   // Filter applications by search term
   const filteredApplications = applications.filter(app => 
@@ -82,335 +56,242 @@ export const ApplicationsManagementPage: React.FC = () => {
     app.userId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group applications by status for summary
-  const statusSummary = applications.reduce((acc, app) => {
-    acc[app.status] = (acc[app.status] || 0) + 1;
-    return acc;
-  }, {} as Record<Application['status'], number>);
+  // Define table columns
+  const columns: TableColumn<Application>[] = [
+    {
+      key: 'userId',
+      label: 'Usuario',
+      render: (_, value) => (
+        <div className="font-medium text-gray-900">
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'companyName',
+      label: 'Empresa',
+      render: (_, value) => (
+        <div className="text-sm text-gray-900">
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'position',
+      label: 'Posición',
+      render: (_, value) => (
+        <div className="text-sm text-gray-900">
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (_, value) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+          {getStatusText(value)}
+        </span>
+      )
+    },
+    {
+      key: 'submittedAt',
+      label: 'Fecha de Envío',
+      render: (_, value) => (
+        <span className="text-sm text-gray-500">
+          {new Date(value).toLocaleDateString('es-ES')}
+        </span>
+      )
+    }
+  ];
 
-  if (authUser?.role !== 'admin') {
+  // Define row actions
+  const rowActions: TableAction<Application>[] = [
+    {
+      key: 'approve',
+      label: 'Aprobar',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ),
+      onClick: async (app) => {
+        await updateApplicationStatus(app.userId, app.applicationId, 'APPROVED');
+        await fetchAllApplications(); // Refresh list
+      },
+      show: (app) => app.status !== 'APPROVED' && app.status !== 'HIRED'
+    },
+    {
+      key: 'review',
+      label: 'En Revisión',
+      variant: 'secondary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      ),
+      onClick: async (app) => {
+        await updateApplicationStatus(app.userId, app.applicationId, 'IN_REVIEW');
+        await fetchAllApplications(); // Refresh list
+      },
+      show: (app) => app.status === 'PENDING'
+    },
+    {
+      key: 'interview',
+      label: 'Programar Entrevista',
+      variant: 'secondary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4m-1 1v6a1 1 0 01-1 1H9a1 1 0 01-1-1V8h10z" />
+        </svg>
+      ),
+      onClick: async (app) => {
+        await updateApplicationStatus(app.userId, app.applicationId, 'INTERVIEW_SCHEDULED');
+        await fetchAllApplications(); // Refresh list
+      },
+      show: (app) => app.status === 'APPROVED' || app.status === 'IN_REVIEW'
+    },
+    {
+      key: 'hire',
+      label: 'Contratar',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+      onClick: async (app) => {
+        await updateApplicationStatus(app.userId, app.applicationId, 'HIRED');
+        await fetchAllApplications(); // Refresh list
+      },
+      show: (app) => app.status === 'INTERVIEW_SCHEDULED' || app.status === 'APPROVED'
+    },
+    {
+      key: 'reject',
+      label: 'Rechazar',
+      variant: 'danger',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ),
+      onClick: async (app) => {
+        if (window.confirm(`¿Estás seguro de que deseas rechazar la aplicación de ${app.userId}?`)) {
+          await updateApplicationStatus(app.userId, app.applicationId, 'REJECTED');
+          await fetchAllApplications(); // Refresh list
+        }
+      },
+      show: (app) => app.status !== 'REJECTED' && app.status !== 'HIRED'
+    }
+  ];
+
+  // Define bulk actions
+  const bulkActions: BulkAction<Application>[] = [
+    {
+      key: 'approve',
+      label: 'Aprobar Seleccionadas',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ),
+      onClick: async (applications) => {
+        try {
+          await Promise.all(applications.map(app => 
+            updateApplicationStatus(app.userId, app.applicationId, 'APPROVED')
+          ));
+          await fetchAllApplications(); // Refresh list
+          setSelectedItems(new Set()); // Clear selection
+        } catch (error) {
+          console.error('Error approving applications:', error);
+        }
+      }
+    },
+    {
+      key: 'review',
+      label: 'Marcar En Revisión',
+      variant: 'secondary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      onClick: async (applications) => {
+        try {
+          await Promise.all(applications.map(app => 
+            updateApplicationStatus(app.userId, app.applicationId, 'IN_REVIEW')
+          ));
+          await fetchAllApplications(); // Refresh list
+          setSelectedItems(new Set()); // Clear selection
+        } catch (error) {
+          console.error('Error updating applications:', error);
+        }
+      }
+    },
+    {
+      key: 'reject',
+      label: 'Rechazar Seleccionadas',
+      variant: 'danger',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ),
+      onClick: async (applications) => {
+        if (window.confirm(`¿Estás seguro de que deseas rechazar ${applications.length} aplicación(es)?`)) {
+          try {
+            await Promise.all(applications.map(app => 
+              updateApplicationStatus(app.userId, app.applicationId, 'REJECTED')
+            ));
+            await fetchAllApplications(); // Refresh list
+            setSelectedItems(new Set()); // Clear selection
+          } catch (error) {
+            console.error('Error rejecting applications:', error);
+          }
+        }
+      }
+    }
+  ];
+
+
+  if (error) {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <h3 className="text-red-800 font-medium">Acceso Denegado</h3>
-          <p className="text-red-600 mt-1">Solo los administradores pueden ver esta página.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isGraphQLAvailable()) {
-    return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-          <h3 className="text-yellow-800 font-medium">🚀 Sistema de Gestión</h3>
-          <p className="text-yellow-700 mt-1">
-            La gestión de aplicaciones requiere GraphQL. Verifica la configuración.
-          </p>
+          <h3 className="text-red-800 font-medium">Error</h3>
+          <p className="text-red-600 mt-1">{error}</p>
+          <button 
+            onClick={clearError}
+            className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Gestión de Aplicaciones</h1>
-        </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            onClick={() => {
-              const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-              fetchAllApplications(statusFilter);
-            }}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 hover:ring-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            <svg 
-              className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-              />
-            </svg>
-            {loading ? 'Actualizando...' : 'Actualizar'}
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {Object.entries(statusSummary).map(([status, count]) => (
-          <div
-            key={status}
-            className={`relative rounded-lg border-2 p-4 ${getStatusColor(status as Application['status'])}`}
-          >
-            <div className="text-center">
-              <div className="text-2xl font-bold">{count}</div>
-              <div className="text-xs font-medium uppercase tracking-wide">
-                {getStatusText(status as Application['status'])}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Main Content Card */}
-      <div className="mt-6 bg-white shadow rounded-lg">
-        <div className="p-6">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Buscar por empresa, posición o usuario..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div className="sm:w-48">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as Application['status'] | 'ALL')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="ALL">Todos los Estados</option>
-                {statusOptions.map(status => (
-                  <option key={status} value={status}>
-                    {getStatusText(status)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                  <button
-                    onClick={clearError}
-                    className="mt-2 text-sm text-red-600 hover:text-red-500"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Applications Table */}
-          <div className="mt-6">
-        {loading && !applications.length ? (
-          <div className="space-y-4">
-            {/* Skeleton for table */}
-            <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Postulante
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Empresa / Posición
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Detalles
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {[...Array(5)].map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-3 bg-gray-200 rounded w-20 font-mono text-xs"></div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-4 bg-gray-200 rounded w-40 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-28"></div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-3 bg-gray-200 rounded w-24 mb-1"></div>
-                        <div className="h-3 bg-gray-200 rounded w-28 mb-1"></div>
-                        <div className="h-3 bg-gray-200 rounded w-32"></div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-3 bg-gray-200 rounded w-20 mb-1"></div>
-                        <div className="h-3 bg-gray-200 rounded w-24"></div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : filteredApplications.length === 0 ? (
-          <div className="text-center py-12">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron aplicaciones</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm ? 'Intenta con diferentes términos de búsqueda.' : 'No hay aplicaciones con el filtro seleccionado.'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Postulante
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empresa / Posición
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Detalles
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredApplications.map((app) => (
-                  <tr key={app.applicationId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="font-medium text-xs text-gray-500 font-mono">
-                        {app.userId.substring(0, 8)}...
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{app.companyName}</div>
-                      <div className="text-sm text-gray-500">{app.position}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingApplication === app.applicationId ? (
-                        <select
-                          value={app.status}
-                          onChange={(e) => handleStatusChange(app.userId, app.applicationId, e.target.value as Application['status'])}
-                          className="text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        >
-                          {statusOptions.map(status => (
-                            <option key={status} value={status}>
-                              {getStatusText(status)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
-                          {getStatusText(app.status)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      <div className="space-y-1">
-                        {app.salary && (
-                          <div className="text-xs">💰 {app.salary}</div>
-                        )}
-                        {app.location && (
-                          <div className="text-xs">📍 {app.location}</div>
-                        )}
-                        {app.description && (
-                          <div className="text-xs text-gray-400 truncate max-w-xs" title={app.description}>
-                            {app.description}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="text-xs">
-                        Creado: {new Date(app.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-xs">
-                        Actualizado: {new Date(app.updatedAt).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {editingApplication === app.applicationId ? (
-                        <button
-                          onClick={() => setEditingApplication(null)}
-                          className="text-gray-600 hover:text-gray-500 mr-3"
-                        >
-                          Cancelar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setEditingApplication(app.applicationId)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          Cambiar Estado
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          // TODO: Implement view details functionality
-                          alert(`Detalles de aplicación: ${app.applicationId}`);
-                        }}
-                        className="text-gray-600 hover:text-gray-500"
-                      >
-                        Ver Detalles
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-          </div>
-        </div>
-      </div>
+    <div className="p-6">
+      <UniversalTableManager
+        title="Gestionar Postulaciones"
+        data={filteredApplications}
+        columns={columns}
+        loading={loading}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        rowActions={rowActions}
+        bulkActions={bulkActions}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        selectable={true}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        getItemId={(app) => app.applicationId}
+      />
     </div>
   );
 };

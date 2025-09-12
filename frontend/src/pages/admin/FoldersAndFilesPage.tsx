@@ -1,4 +1,4 @@
-import { FoldersManager } from '../../components/FoldersAndFiles';
+import { FoldersManager, FoldersProvider } from '../../components/FoldersAndFiles';
 
 /**
  * FoldersAndFilesPage
@@ -7,9 +7,11 @@ import { FoldersManager } from '../../components/FoldersAndFiles';
  */
 export const FoldersAndFilesPage: React.FC = () => {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Directorios y Archivos</h1>
-      <FoldersManager />
-    </div>
+    <FoldersProvider>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">Directorios y Archivos</h1>
+        <FoldersManager />
+      </div>
+    </FoldersProvider>
   );
 };
