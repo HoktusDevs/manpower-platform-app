@@ -207,6 +207,9 @@ type Mutation {
   
   # ADMIN ONLY: Delete folder
   deleteFolder(folderId: String!): Boolean!
+  
+  # ADMIN ONLY: Delete multiple folders
+  deleteFolders(folderIds: [String!]!): Boolean!
 }
 
 # SUBSCRIPTIONS (Real-time updates)

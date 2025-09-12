@@ -28,6 +28,7 @@ export const FoldersManager: React.FC = () => {
     isLoading,
     createFolder,
     deleteFolder,
+    deleteFolders,
     updateFolder,
     getFolderById,
     getSubfolders,
@@ -100,11 +101,17 @@ export const FoldersManager: React.FC = () => {
       title: 'Confirmar eliminación',
       message: `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${selectedCount} carpeta(s) seleccionada(s)?`,
       variant: 'danger',
-      onConfirm: () => {
+      onConfirm: async () => {
         const deletedIds = deleteSelected(folders);
-        // Remove from folders state
-        deletedIds.forEach(id => deleteFolder(id));
-        closeConfirmModal();
+        // Use bulk delete instead of individual deletes
+        try {
+          await deleteFolders(deletedIds);
+          closeConfirmModal();
+        } catch (error) {
+          console.error('Error deleting folders:', error);
+          alert('Error al eliminar las carpetas seleccionadas');
+          closeConfirmModal();
+        }
       }
     });
   };

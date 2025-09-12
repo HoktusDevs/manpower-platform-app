@@ -451,7 +451,7 @@ export function RecentActivity(): ReactNode {
   const [selectedGranularity, setSelectedGranularity] = useState<TimeGranularity>('daily');
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [, setHasLoadedData] = useState(false);
 
   // Función para cargar datos SOLO cuando el usuario lo solicite
   const loadActivityData = async (filter: ActivityFilter, granularity: TimeGranularity) => {
@@ -488,9 +488,9 @@ export function RecentActivity(): ReactNode {
     loadActivityData(selectedActivityFilter, newGranularity);
   };
 
-  const handleLoadData = () => {
-    loadActivityData(selectedActivityFilter, selectedGranularity);
-  };
+  // const handleLoadData = () => {
+  //   loadActivityData(selectedActivityFilter, selectedGranularity);
+  // };
 
   return (
     <Container variant="surface" padding="none">

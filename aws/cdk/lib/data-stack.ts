@@ -1052,6 +1052,40 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
+    // Mutation: Delete multiple folders
+    foldersDataSource.createResolver('DeleteFoldersResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteFolders',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version": "2017-02-28",
+          "operation": "BatchDeleteItem",
+          "tables": {
+            "\${ctx.stash.tableName}": #foreach($id in $ctx.args.folderIds)
+              {
+                "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+                "folderId": $util.dynamodb.toDynamoDBJson($id)
+              }#if($foreach.hasNext),#end
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($hasErrors = false)
+        #foreach($error in $ctx.result.unprocessedKeys)
+          #if($error.size() > 0)
+            #set($hasErrors = true)
+            #break
+          #end
+        #end
+        #if(!$hasErrors)
+          true
+        #else
+          $util.error("Failed to delete some folders", "BatchDeleteError")
+        #end
+      `),
+    });
+
     // IMPORTANT: The Identity Pool Role Attachment is handled in CognitoAuthStack
     // We DO NOT create another one here to avoid the "already exists" error
     // Instead, we create a managed policy that can be attached manually to the role

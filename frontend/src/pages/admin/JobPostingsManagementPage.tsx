@@ -57,7 +57,7 @@ const getExperienceLevelText = (level: JobPosting['experienceLevel']) => {
   }
 };
 
-const statusOptions: JobPosting['status'][] = ['DRAFT', 'PUBLISHED', 'PAUSED', 'EXPIRED', 'CLOSED'];
+// const statusOptions: JobPosting['status'][] = ['DRAFT', 'PUBLISHED', 'PAUSED', 'EXPIRED', 'CLOSED'];
 
 // Job posting field types that can be configured
 interface JobFieldSpec {
@@ -122,23 +122,23 @@ export const JobPostingsManagementPage: React.FC = () => {
     jobPostings,
     forms,
     loading,
-    error,
+    // error,
     fetchAllJobPostings,
     fetchAllForms,
     createJobPosting,
     updateJobPosting,
     deleteJobPosting,
-    clearError,
+    // clearError,
     isGraphQLAvailable
   } = useGraphQL();
 
-  const [selectedStatus, setSelectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
+  const [selectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Selection and bulk actions states
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
-  const [deletingJobs, setDeletingJobs] = useState<Set<string>>(new Set());
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [, setDeletingJobs] = useState<Set<string>>(new Set());
+  const [, setIsBulkDeleting] = useState(false);
   
   // Confirmation modal states
   const [confirmModal, setConfirmModal] = useState<{

@@ -1111,6 +1111,12 @@ const DELETE_FOLDER = `
   }
 `;
 
+const DELETE_FOLDERS = `
+  mutation DeleteFolders($folderIds: [String!]!) {
+    deleteFolders(folderIds: $folderIds)
+  }
+`;
+
 class GraphQLService {
   // Using a more flexible type to avoid complex Amplify type issues
   private client: { graphql: (options: { query: string; variables?: Record<string, unknown>; authMode?: string }) => Promise<{ data?: unknown; errors?: unknown[] }> } | null = null;
@@ -2071,6 +2077,26 @@ class GraphQLService {
       { folderId }
     );
     return result.deleteFolder;
+  }
+
+  /**
+   * ADMIN ONLY: Delete multiple folders
+   */
+  async deleteFolders(folderIds: string[]): Promise<boolean> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'admin') {
+      throw new Error('Only admins can delete folders');
+    }
+
+    if (!folderIds || folderIds.length === 0) {
+      throw new Error('At least one folder ID is required');
+    }
+
+    const result = await this.executeMutation<{ deleteFolders: boolean }>(
+      DELETE_FOLDERS,
+      { folderIds }
+    );
+    return result.deleteFolders;
   }
 
   // ========== SUBSCRIPTIONS ==========

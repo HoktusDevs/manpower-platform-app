@@ -128,6 +128,7 @@ export interface UseFoldersStateReturn {
   isLoading: boolean;
   createFolder: (data: CreateFolderData, parentId?: string | null) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
+  deleteFolders: (folderIds: string[]) => Promise<void>;
   updateFolder: (folderId: string, data: CreateFolderData) => Promise<void>;
   getFolderById: (folderId: string) => FolderRow | undefined;
   getSubfolders: (parentId: string) => FolderRow[];
@@ -137,6 +138,7 @@ export interface UseFoldersStateReturn {
   getCurrentFolder: () => FolderRow | null;
   getBreadcrumbPath: () => FolderRow[];
   setSearchTerm: (term: string) => void;
+  refreshFolders: () => Promise<void>;
 }
 
 export interface UseSelectionStateReturn {

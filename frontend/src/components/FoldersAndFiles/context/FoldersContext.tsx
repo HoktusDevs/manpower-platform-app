@@ -19,6 +19,7 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({ children }) =>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFoldersContext = (): UseFoldersStateReturn => {
   const context = useContext(FoldersContext);
   if (!context) {

@@ -55,7 +55,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     loadFolders();
   }, []);
 
-  // Memoized filtered folders for performance - show only folders in current directory level
+  // Memoized filtered folders for performance
   const filteredFolders = useMemo(() => {
     // If searching, show all matching folders regardless of hierarchy and location
     if (searchTerm.trim()) {
@@ -66,10 +66,11 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     }
     
     // Show folders in current directory level
-    // If currentFolderId is null, show root folders (no parentId)
+    // If currentFolderId is null, show only root folders (parentId is null)
     // If currentFolderId is set, show folders with that parentId
     if (currentFolderId === null) {
-      return folders.filter(folder => !folder.parentId || folder.parentId === null);
+      // Show only root-level folders (those without a parent)
+      return folders.filter(folder => folder.parentId === null || folder.parentId === undefined);
     }
     return folders.filter(folder => folder.parentId === currentFolderId);
   }, [folders, searchTerm, currentFolderId]);
@@ -82,17 +83,16 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     try {
       const input = createFolderDataToInput(data, parentId);
       const backendFolder = await graphqlService.createFolder(input);
-      const frontendFolder = folderToFolderRow(backendFolder);
-
-      setFolders(prevFolders => [frontendFolder, ...prevFolders]);
+      
+      // Reload all folders from backend to avoid duplicates
+      await loadFolders();
       
       // Console.log for tracking
       console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
-        id: frontendFolder.id,
-        name: frontendFolder.name,
-        type: frontendFolder.type,
-        createdAt: frontendFolder.createdAt,
-        totalFolders: folders.length + 1
+        id: backendFolder.folderId,
+        name: backendFolder.name,
+        type: backendFolder.type,
+        createdAt: backendFolder.createdAt
       });
     } catch (error) {
       console.error('Error creating folder:', error);
@@ -109,7 +109,9 @@ export const useFoldersState = (): UseFoldersStateReturn => {
 
     try {
       await graphqlService.deleteFolder(folderId);
-      setFolders(prevFolders => prevFolders.filter(f => f.id !== folderId));
+      
+      // Reload all folders from backend to ensure consistency
+      await loadFolders();
       
       // Console.log for tracking
       console.log(FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS, {
@@ -119,6 +121,30 @@ export const useFoldersState = (): UseFoldersStateReturn => {
       });
     } catch (error) {
       console.error('Error deleting folder:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Delete multiple folders by IDs
+   */
+  const deleteFolders = async (folderIds: string[]): Promise<void> => {
+    const foldersToDelete = folders.filter(f => folderIds.includes(f.id));
+    if (foldersToDelete.length === 0) return;
+
+    try {
+      await graphqlService.deleteFolders(folderIds);
+      
+      // Reload all folders from backend to ensure consistency
+      await loadFolders();
+      
+      // Console.log for tracking
+      console.log(`${FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS} (${foldersToDelete.length} carpetas)`, {
+        deletedFolders: foldersToDelete.map(f => ({ id: f.id, name: f.name, type: f.type })),
+        count: foldersToDelete.length
+      });
+    } catch (error) {
+      console.error('Error deleting folders:', error);
       throw error;
     }
   };
@@ -138,14 +164,10 @@ export const useFoldersState = (): UseFoldersStateReturn => {
         type: data.type
       };
       
-      const backendFolder = await graphqlService.updateFolder(input);
-      const frontendFolder = folderToFolderRow(backendFolder);
-
-      setFolders(prevFolders => 
-        prevFolders.map(folder => 
-          folder.id === folderId ? frontendFolder : folder
-        )
-      );
+      await graphqlService.updateFolder(input);
+      
+      // Reload all folders from backend to ensure consistency
+      await loadFolders();
       
       // Console.log for tracking
       console.log('📝 Carpeta actualizada', {
@@ -227,6 +249,13 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     return path;
   };
 
+  /**
+   * Force reload all folders from backend
+   */
+  const refreshFolders = async (): Promise<void> => {
+    await loadFolders();
+  };
+
   return {
     folders,
     filteredFolders,
@@ -235,6 +264,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     isLoading,
     createFolder,
     deleteFolder,
+    deleteFolders,
     updateFolder,
     getFolderById,
     getSubfolders,
@@ -244,5 +274,6 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     getCurrentFolder,
     getBreadcrumbPath,
     setSearchTerm,
+    refreshFolders,
   };
 };
