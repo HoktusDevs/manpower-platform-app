@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Container } from '../../core-ui';
 
@@ -77,9 +77,26 @@ export const UniversalTableManager = <T,>({
   getItemId
 }: UniversalTableManagerProps<T>): ReactNode => {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [showRowActionsMenu, setShowRowActionsMenu] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedCount = selectedItems.size;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowActionsMenu(false);
+      }
+    };
+
+    if (showActionsMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionsMenu]);
   const isAllSelected = selectable && data.length > 0 && selectedItems.size === data.length;
 
   const handleSelectAll = () => {
@@ -112,16 +129,6 @@ export const UniversalTableManager = <T,>({
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
         </div>
-        {createButton && (
-          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <button
-              onClick={createButton.onClick}
-              className="block rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-            >
-              {createButton.label}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Table Content */}
@@ -182,7 +189,7 @@ export const UniversalTableManager = <T,>({
 
             {/* Actions Dropdown */}
             {(bulkActions.length > 0 || createButton) && (
-              <div className="relative">
+              <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowActionsMenu(!showActionsMenu)}
                   className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -210,9 +217,9 @@ export const UniversalTableManager = <T,>({
                             action.onClick(selectedData);
                             setShowActionsMenu(false);
                           }}
-                          disabled={selectedCount === 0}
+                          disabled={selectedCount === 0 && action.key !== 'create'}
                           className={`group flex items-center px-4 py-2 text-sm w-full text-left ${
-                            selectedCount === 0 
+                            selectedCount === 0 && action.key !== 'create'
                               ? 'text-gray-400 cursor-not-allowed' 
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
@@ -237,8 +244,28 @@ export const UniversalTableManager = <T,>({
           </div>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+          <div className="py-12 px-6">
+            <div className="space-y-6">
+              {/* Skeleton rows - 3 filas con mayor espaciado para igualar altura */}
+              {[...Array(3)].map((_, rowIndex) => (
+                <div key={rowIndex} className="flex items-center space-x-4">
+                  {selectable && (
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse flex-shrink-0"></div>
+                  )}
+                  <div className="flex-1 grid grid-cols-4 gap-4">
+                    {columns.slice(0, 4).map((_, colIndex) => (
+                      <div key={colIndex} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                  {rowActions.length > 0 && (
+                    <div className="flex space-x-2 flex-shrink-0">
+                      <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ) : data.length === 0 ? (
           <div className="text-center py-12">
@@ -283,7 +310,7 @@ export const UniversalTableManager = <T,>({
               
               {/* Table Body */}
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.map((item, index) => {
+                {data.map((item) => {
                   const itemId = getItemId(item);
                   const isSelected = selectedItems.has(itemId);
                   

@@ -141,7 +141,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchAllApplications = useCallback(async (status?: Application['status']) => {
     if (!isGraphQLAvailable()) return;
@@ -159,7 +159,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchMyDocuments = useCallback(async () => {
     if (!isGraphQLAvailable()) return;
@@ -177,7 +177,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchApplicationStats = useCallback(async () => {
     if (!isGraphQLAvailable()) return;
@@ -195,7 +195,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   // ========== DYNAMIC FORMS QUERIES ==========
 
@@ -215,9 +215,11 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchAllForms = useCallback(async (status?: string, jobId?: string, limit?: number) => {
+    console.log('🔥 fetchAllForms CALLED', { status, jobId, limit, timestamp: new Date().toISOString() });
+    
     if (!isGraphQLAvailable()) {
       console.warn('GraphQL service not available, skipping fetchAllForms');
       return;
@@ -229,14 +231,15 @@ export const useGraphQL = (): UseGraphQLReturn => {
     try {
       const result = await graphqlService.getAllForms(status, jobId, limit);
       setForms(result);
+      console.log('✅ fetchAllForms SUCCESS', result.length, 'forms');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all forms';
       setError(errorMessage);
-      console.error('Error fetching all forms:', err);
+      console.error('❌ fetchAllForms ERROR:', err);
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchForm = useCallback(async (formId: string) => {
     if (!isGraphQLAvailable()) return null;
@@ -255,7 +258,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchFormSubmissions = useCallback(async (formId: string, status?: string, limit?: number) => {
     if (!isGraphQLAvailable()) return;
@@ -273,7 +276,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchMyFormSubmissions = useCallback(async (formId?: string) => {
     if (!isGraphQLAvailable()) return;
@@ -291,7 +294,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchFormsStats = useCallback(async () => {
     if (!isGraphQLAvailable()) return;
@@ -309,7 +312,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   // ========== MUTATIONS ==========
 
@@ -334,7 +337,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const updateMyApplication = useCallback(async (
     applicationId: string, 
@@ -364,7 +367,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const deleteMyApplication = useCallback(async (applicationId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -391,7 +394,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const updateApplicationStatus = useCallback(async (
     userId: string,
@@ -422,7 +425,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const uploadDocument = useCallback(async (input: UploadDocumentInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -445,7 +448,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   // ========== JOB POSTING METHODS ==========
   
@@ -465,7 +468,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchJobPosting = useCallback(async (jobId: string): Promise<JobPosting | null> => {
     if (!isGraphQLAvailable()) return null;
@@ -484,7 +487,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchAllJobPostings = useCallback(async (status?: JobPosting['status']) => {
     if (!isGraphQLAvailable()) return;
@@ -502,7 +505,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const fetchJobPostingStats = useCallback(async () => {
     if (!isGraphQLAvailable()) return;
@@ -520,7 +523,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const createJobPosting = useCallback(async (input: CreateJobPostingInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -543,7 +546,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const updateJobPosting = useCallback(async (input: UpdateJobPostingInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -570,7 +573,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const deleteJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -597,7 +600,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const publishJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -624,7 +627,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const pauseJobPosting = useCallback(async (jobId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -651,7 +654,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   // ========== DYNAMIC FORMS MUTATIONS ==========
 
@@ -676,7 +679,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const updateForm = useCallback(async (input: UpdateFormInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -703,7 +706,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const deleteForm = useCallback(async (formId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -730,7 +733,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const publishForm = useCallback(async (formId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -757,7 +760,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const pauseForm = useCallback(async (formId: string): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -784,7 +787,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const submitForm = useCallback(async (input: SubmitFormInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -807,7 +810,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   const reviewSubmission = useCallback(async (input: ReviewSubmissionInput): Promise<boolean> => {
     if (!isGraphQLAvailable()) return false;
@@ -834,7 +837,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isGraphQLAvailable]);
+  }, []); // FIXED: Remove isGraphQLAvailable dependency to prevent infinite loops
 
   return {
     // State

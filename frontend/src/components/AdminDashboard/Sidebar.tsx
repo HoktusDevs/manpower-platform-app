@@ -134,23 +134,11 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
             onClick={() => handleAction(item.action)}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-              transition-all duration-200 text-left
+              transition-all duration-300 text-left ease-in-out
               ${
                 isActiveRoute(item.action)
-                  ? `
-                    ${item.variant === 'info' && 'bg-blue-100 text-blue-700 border border-blue-200'}
-                    ${item.variant === 'success' && 'bg-green-100 text-green-700 border border-green-200'}
-                    ${item.variant === 'primary' && 'bg-indigo-100 text-indigo-700 border border-indigo-200'}
-                    ${item.variant === 'warning' && 'bg-yellow-100 text-yellow-700 border border-yellow-200'}
-                    shadow-sm
-                  `
-                  : `
-                    hover:bg-gray-50 hover:shadow-sm
-                    ${item.variant === 'info' && 'hover:bg-blue-50 hover:text-blue-600'}
-                    ${item.variant === 'success' && 'hover:bg-green-50 hover:text-green-600'}
-                    ${item.variant === 'primary' && 'hover:bg-indigo-50 hover:text-indigo-600'}
-                    ${item.variant === 'warning' && 'hover:bg-yellow-50 hover:text-yellow-600'}
-                  `
+                  ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-lg shadow-blue-100/50 scale-[1.02] backdrop-blur-sm'
+                  : 'hover:bg-gradient-to-r hover:from-blue-25 hover:to-blue-50 hover:text-blue-600 hover:shadow-md hover:scale-[1.01]'
               }
             `}
             title={isCollapsed ? item.label : undefined}
@@ -162,16 +150,6 @@ export function Sidebar({ onNavigate }: SidebarProps): ReactNode {
               }`}>
                 {item.label}
               </span>
-            )}
-            {/* Active indicator */}
-            {isActiveRoute(item.action) && (
-              <span className={`
-                ml-auto w-1.5 h-1.5 rounded-full
-                ${item.variant === 'info' && 'bg-blue-500'}
-                ${item.variant === 'success' && 'bg-green-500'}
-                ${item.variant === 'primary' && 'bg-indigo-500'}
-                ${item.variant === 'warning' && 'bg-yellow-500'}
-              `} />
             )}
           </button>
         ))}
