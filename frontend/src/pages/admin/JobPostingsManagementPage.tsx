@@ -591,6 +591,11 @@ export const JobPostingsManagementPage: React.FC = () => {
 
   // Handle job creation and update
   const handleCreateJob = async () => {
+    // Prevent double-click/double-submission
+    if (isCreating) {
+      return;
+    }
+
     setHasAttemptedSubmit(true);
     if (!validateAndShowErrors()) {
       // Validation failed and errors are now shown

@@ -1111,11 +1111,12 @@ const DELETE_FOLDER = `
   }
 `;
 
-const DELETE_FOLDERS = `
-  mutation DeleteFolders($folderIds: [String!]!) {
-    deleteFolders(folderIds: $folderIds)
-  }
-`;
+// Mutation for bulk delete - currently not used as we delete folders individually
+// const DELETE_FOLDERS = `
+//   mutation DeleteFolders($folderIds: [String!]!) {
+//     deleteFolders(folderIds: $folderIds)
+//   }
+// `;
 
 class GraphQLService {
   // Using a more flexible type to avoid complex Amplify type issues
@@ -1627,20 +1628,19 @@ class GraphQLService {
 
     const jobPosting = result.createJobPosting;
 
-    // If a folderId is specified (company folder), automatically create a "Cargo" folder
-    if (input.folderId) {
-      try {
-        await this.createFolder({
-          name: input.title, // Use job title as folder name
-          type: 'Cargo', // Set type as "Cargo"
-          parentId: input.folderId // Create under the specified company folder
-        });
-        console.log(`✅ Created "Cargo" folder for job: ${input.title} under company folder: ${input.folderId}`);
-      } catch (error) {
-        // Log error but don't fail the job creation if folder creation fails
-        console.warn(`⚠️ Failed to create "Cargo" folder for job: ${input.title}`, error);
-      }
-    }
+    // Automatic folder creation disabled to prevent duplicates
+    // This should be handled by the backend if needed
+    // if (input.folderId) {
+    //   try {
+    //     await this.createFolder({
+    //       name: input.title,
+    //       type: 'Cargo',
+    //       parentId: input.folderId
+    //     });
+    //   } catch (error) {
+    //     console.warn(`Failed to create "Cargo" folder for job: ${input.title}`, error);
+    //   }
+    // }
 
     return jobPosting;
   }

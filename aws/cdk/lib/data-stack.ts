@@ -1095,7 +1095,7 @@ export class DataStack extends cdk.Stack {
         ## This is a limitation - we can only delete one at a time with direct DynamoDB
         true
       `),
-    });
+      });
 
     // IMPORTANT: The Identity Pool Role Attachment is handled in CognitoAuthStack
     // We DO NOT create another one here to avoid the "already exists" error
