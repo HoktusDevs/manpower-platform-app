@@ -13,6 +13,7 @@ import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
+import { PostulacionPage } from './pages/postulacion/PostulacionPage';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
@@ -119,6 +120,9 @@ function AppContent() {
         
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         
+        {/* Ruta pública para aplicar a trabajos - NO REQUIERE AUTENTICACIÓN */}
+        <Route path="/aplicar" element={<PostulacionPage />} />
+        
         {/* SECURITY: Admin routes with MILITARY-GRADE protection */}
         <Route path="/admin/*" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -160,7 +164,10 @@ function AppContent() {
             <FormRenderer />
           </RoleGuard>
         } />
-        <Route path="/postulante/*" element={<PostulanteDashboard />} />
+        <Route path="/postulante" element={<PostulanteDashboard />} />
+        <Route path="/postulante/dashboard" element={<PostulanteDashboard />} />
+        <Route path="/postulante/profile" element={<PostulanteDashboard />} />
+        <Route path="/postulante/applications" element={<PostulanteDashboard />} />
         
         {/* SECURITY: Catch-all route - redirect based on role */}
         <Route path="*" element={

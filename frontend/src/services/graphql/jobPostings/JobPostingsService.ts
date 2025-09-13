@@ -222,7 +222,7 @@ export class JobPostingsService {
         { limit, nextToken }
       );
       return result.getActiveJobPostings || [];
-    } catch (error) {
+    } catch {
       return [];
     }
   }

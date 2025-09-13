@@ -90,22 +90,35 @@ class GraphQLService {
   async initialize(config: GraphQLConfig): Promise<void> {
     this.config = config;
     
-    // Configure Amplify properly for AppSync with Cognito User Pools
-    const amplifyConfig = {
+    // Configure Amplify based on authentication type
+    const amplifyConfig: Record<string, unknown> = {
       API: {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
           region: config.region,
-          defaultAuthMode: 'userPool' as const
+          defaultAuthMode: config.authenticationType === 'AWS_IAM' ? 'identityPool' : 'userPool'
         }
-      },
-      Auth: {
+      }
+    };
+
+    // Add appropriate auth configuration based on type
+    if (config.authenticationType === 'AWS_IAM' && config.identityPoolId) {
+      amplifyConfig.Auth = {
+        Cognito: {
+          identityPoolId: config.identityPoolId,
+          region: config.region,
+          userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
+          userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
+        }
+      };
+    } else {
+      amplifyConfig.Auth = {
         Cognito: {
           userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
           userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
         }
-      }
-    };
+      };
+    }
     
     Amplify.configure(amplifyConfig);
     this.client = generateClient() as typeof this.client;
@@ -142,40 +155,46 @@ class GraphQLService {
       throw new Error('GraphQL service not initialized');
     }
 
-    // Check authentication and token
-    const currentUser = cognitoAuthService.getCurrentUser();
-    if (!currentUser) {
-      throw new Error('NoSignedUser: No current user');
-    }
+    // Determine auth mode and perform appropriate checks
+    const authMode = this.config?.authenticationType === 'AWS_IAM' ? 'identityPool' : 'userPool';
+    
+    if (authMode === 'userPool') {
+      // Check authentication and token for userPool mode
+      const currentUser = cognitoAuthService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('NoSignedUser: No current user');
+      }
 
-    const idToken = cognitoAuthService.getIdToken();
-    if (!idToken) {
-      cognitoAuthService.logout();
-      localStorage.clear();
-      window.location.href = '/login?reason=no_token';
-      throw new Error('No authentication token');
-    }
-
-    // Validate token has role claim
-    try {
-      const payload = JSON.parse(atob(idToken.split('.')[1]));
-      if (!payload['custom:role']) {
+      const idToken = cognitoAuthService.getIdToken();
+      if (!idToken) {
         cognitoAuthService.logout();
         localStorage.clear();
-        window.location.href = '/login?reason=missing_role';
-        throw new Error('Token missing role claim');
+        window.location.href = '/login?reason=no_token';
+        throw new Error('No authentication token');
       }
-    } catch {
-      cognitoAuthService.logout();
-      localStorage.clear();
-      window.location.href = '/login?reason=invalid_token';
-      throw new Error('Invalid token format');
+
+      // Validate token has role claim
+      try {
+        const payload = JSON.parse(atob(idToken.split('.')[1]));
+        if (!payload['custom:role']) {
+          cognitoAuthService.logout();
+          localStorage.clear();
+          window.location.href = '/login?reason=missing_role';
+          throw new Error('Token missing role claim');
+        }
+      } catch {
+        cognitoAuthService.logout();
+        localStorage.clear();
+        window.location.href = '/login?reason=invalid_token';
+        throw new Error('Invalid token format');
+      }
     }
+    // For AWS_IAM mode (identityPool), no explicit authentication checks needed
 
     const result = await this.client.graphql({
       query,
       variables,
-      authMode: 'userPool'
+      authMode: authMode as 'userPool' | 'identityPool'
     });
 
     // Handle GraphQL errors
@@ -198,9 +217,12 @@ class GraphQLService {
       });
       
       if (authErrors.length > 0) {
-        cognitoAuthService.logout();
-        localStorage.clear();
-        window.location.href = '/login?reason=auth_expired';
+        // Only redirect to login in userPool mode, not in AWS_IAM mode
+        if (authMode === 'userPool') {
+          cognitoAuthService.logout();
+          localStorage.clear();
+          window.location.href = '/login?reason=auth_expired';
+        }
         throw new Error('Authorization failed - please log in again');
       }
       

@@ -53,6 +53,12 @@ class AWSNativeService {
   initialize(config: AWSNativeConfig): void {
     this.config = config;
     
+    // Check if user is authenticated before initializing
+    const token = this.getCognitoAccessToken();
+    if (!token) {
+      return;
+    }
+    
     // Initialize DynamoDB Direct Access
     const dynamoBaseClient = new DynamoDBClient({
       region: config.region,
@@ -60,7 +66,7 @@ class AWSNativeService {
         clientConfig: { region: config.region },
         identityPoolId: config.identityPoolId,
         logins: {
-          [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: this.getCognitoAccessToken()
+          [`cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}`]: token
         },
       }),
     });
@@ -71,15 +77,11 @@ class AWSNativeService {
   /**
    * SECURITY: Get Cognito access token for DynamoDB access
    */
-  private getCognitoAccessToken(): string {
+  private getCognitoAccessToken(): string | null {
     const accessToken = localStorage.getItem('cognito_access_token');
     const idToken = localStorage.getItem('cognito_id_token');
     
-    const token = accessToken || idToken;
-    if (!token) {
-      throw new Error('No Cognito tokens found');
-    }
-    return token;
+    return accessToken || idToken || null;
   }
 
   /**
@@ -300,6 +302,17 @@ class AWSNativeService {
   /**
    * Check if service is initialized
    */
+  /**
+   * Reinitialize service after authentication
+   */
+  reinitialize(): void {
+    if (!this.config) {
+      return;
+    }
+    
+    this.initialize(this.config);
+  }
+
   isInitialized(): boolean {
     return this.config !== null && this.dynamoClient !== null;
   }

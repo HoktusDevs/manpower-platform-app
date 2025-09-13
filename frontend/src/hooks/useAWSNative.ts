@@ -41,7 +41,7 @@ export const useAWSNative = () => {
   useEffect(() => {
     const initializeService = async () => {
       const user = cognitoAuthService.getCurrentUser();
-      if (user && !awsNativeService.isInitialized()) {
+      if (user) {
         try {
           // Get AWS config from environment
           const config = {
@@ -55,8 +55,12 @@ export const useAWSNative = () => {
             documentsTable: import.meta.env.VITE_DOCUMENTS_TABLE || ''
           };
 
-          awsNativeService.initialize(config);
-          console.log('✅ AWS-Native service initialized successfully');
+          // Initialize or reinitialize based on current state
+          if (!awsNativeService.isInitialized()) {
+            awsNativeService.initialize(config);
+          } else {
+            awsNativeService.reinitialize();
+          }
         } catch (error) {
           console.error('❌ Failed to initialize AWS-Native service:', error);
         }
