@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
+import { useGraphQL } from '../../hooks/useGraphQL';
 
 interface JobPosting {
   jobId: string;
@@ -29,7 +30,7 @@ interface JobPosting {
 
 export function PostulacionPage() {
   const navigate = useNavigate();
-  const [showModal] = useState(true);
+  const { fetchActiveJobPostings, jobPostings: graphqlJobPostings } = useGraphQL();
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,13 +55,33 @@ export function PostulacionPage() {
       try {
         setLoading(true);
         console.log('🔄 Iniciando carga de puestos activos...');
-        
-        // SOLUCIÓN TEMPORAL: Mientras se configura el backend para acceso público,
-        // usamos datos de ejemplo que simulan puestos reales
+
+        // Try to load from GraphQL first
+        try {
+          await fetchActiveJobPostings(20); // Fetch up to 20 job postings
+          if (graphqlJobPostings && graphqlJobPostings.length > 0) {
+            console.log('✅ Puestos cargados desde GraphQL:', graphqlJobPostings.length);
+            setJobPostings(graphqlJobPostings.map(job => ({
+              jobId: job.jobId,
+              title: job.title,
+              description: job.description,
+              requirements: job.requirements || '',
+              location: job.location || 'Remoto',
+              employmentType: job.employmentType || 'Tiempo completo',
+              companyName: job.companyName || 'Empresa',
+              salary: job.salary,
+              benefits: job.benefits,
+              experienceLevel: job.experienceLevel || 'Intermedio'
+            })));
+            return;
+          }
+        } catch (gqlError) {
+          console.warn('⚠️ GraphQL falló, usando datos temporales:', gqlError);
+        }
+
+        // Fallback to mock data if GraphQL fails
         console.log('⚠️ Usando datos temporales mientras se configura el acceso público al GraphQL');
-        
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         const mockJobPostings: JobPosting[] = [
           {
@@ -116,33 +137,6 @@ export function PostulacionPage() {
         console.log('✅ Puestos cargados (datos temporales):', mockJobPostings.length, mockJobPostings);
         setJobPostings(mockJobPostings);
         
-        // TODO: Una vez que el backend esté configurado para acceso público, 
-        // reemplazar con la llamada real a GraphQL
-        /*
-        const graphqlEndpoint = import.meta.env.VITE_GRAPHQL_URL;
-        const query = `
-          query GetActiveJobPostings {
-            getActiveJobPostings {
-              jobId title description requirements location 
-              employmentType companyName salary benefits experienceLevel
-            }
-          }
-        `;
-        
-        const response = await fetch(graphqlEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': import.meta.env.VITE_GRAPHQL_API_KEY || ''
-          },
-          body: JSON.stringify({ query })
-        });
-        
-        const result = await response.json();
-        const activeJobs = result.data?.getActiveJobPostings || [];
-        setJobPostings(activeJobs);
-        */
-        
       } catch (error) {
         console.error('❌ Error cargando puestos:', error);
         setJobPostings([]);
@@ -151,10 +145,8 @@ export function PostulacionPage() {
       }
     };
 
-    if (showModal) {
-      loadActiveJobPostings();
-    }
-  }, [showModal]);
+    loadActiveJobPostings();
+  }, [fetchActiveJobPostings, graphqlJobPostings]);
 
   // Verificar autenticación y cargar datos del usuario para reutilización
   useEffect(() => {
@@ -272,13 +264,16 @@ export function PostulacionPage() {
     // Guardar los puestos seleccionados y sus datos completos
     console.log('🔄 Guardando puestos seleccionados:', selectedJobs);
     localStorage.setItem('selectedJobPostings', JSON.stringify(selectedJobs));
-    
+
     // Guardar datos completos de los puestos seleccionados
     const selectedJobsData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
     localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
-    
-    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones'); // Redirigir después del login
-    console.log('🚀 Navegando a login...');
+
+    // Guardar contexto de /aplicar para regresar después del login
+    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones');
+    localStorage.setItem('applicationContext', 'aplicar');
+
+    console.log('🚀 Navegando a login desde /aplicar...');
     navigate('/login');
   };
 
@@ -287,13 +282,16 @@ export function PostulacionPage() {
     // Guardar los puestos seleccionados y sus datos completos
     console.log('🔄 Guardando puestos seleccionados:', selectedJobs);
     localStorage.setItem('selectedJobPostings', JSON.stringify(selectedJobs));
-    
+
     // Guardar datos completos de los puestos seleccionados
     const selectedJobsData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
     localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
-    
-    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones'); // Redirigir después del registro
-    console.log('🚀 Navegando a registro...');
+
+    // Guardar contexto de /aplicar para regresar después del registro
+    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones');
+    localStorage.setItem('applicationContext', 'aplicar');
+
+    console.log('🚀 Navegando a registro desde /aplicar...');
     navigate('/register/postulante');
   };
 
@@ -328,43 +326,61 @@ export function PostulacionPage() {
   //   setShowAuthOptions(false);
   // };
 
-  if (!showModal) {
-    return (
-      <div className="container mt-4">
-        <h2>Formulario de Postulación</h2>
-        <p>Aquí iría el formulario de postulación para los puestos seleccionados.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          {showAuthOptions ? (
-            <h2 className="text-lg text-gray-900 text-center">
-              Autenticación requerida
-            </h2>
-          ) : (
-            <>
-              <h2 className="text-lg text-gray-900 mb-3">
-                Selecciona el o los puestos a los que deseas postular
-              </h2>
-              {/* Input field */}
-              <input
-                type="text"
-                placeholder="Buscar por título, empresa, ubicación, salario..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-            </>
-          )}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center">
+              <Link to="/" className="text-blue-600 hover:text-blue-800 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver al inicio
+              </Link>
+            </div>
+            <h1 className="text-xl font-semibold text-gray-900">Manpower Platform</h1>
+            <div className="w-20"></div> {/* Spacer for center alignment */}
+          </div>
         </div>
-        
-        {/* Body */}
-        <div className="flex-1 overflow-hidden px-6 py-4">
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-sm">
+          {/* Header */}
+          <div className="px-6 py-6 border-b border-gray-200">
+            {showAuthOptions ? (
+              <h2 className="text-2xl font-bold text-gray-900 text-center">
+                Autenticación requerida
+              </h2>
+            ) : (
+              <>
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Ofertas de Trabajo Disponibles
+                  </h2>
+                  <p className="text-gray-600">
+                    Selecciona los puestos a los que deseas postular
+                  </p>
+                </div>
+                {/* Search Input */}
+                <div className="max-w-md mx-auto">
+                  <input
+                    type="text"
+                    placeholder="Buscar por título, empresa, ubicación, salario..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-6">
           {showAuthOptions ? (
             // Mostrar opciones de autenticación
             <div className="flex flex-col items-center justify-center py-8 space-y-6">
@@ -378,25 +394,27 @@ export function PostulacionPage() {
                 </p>
               </div>
               
-              <div className="flex flex-col space-y-3 w-full max-w-sm">
+              <div className="flex flex-col space-y-4 w-full max-w-sm">
                 <Button
                   onClick={handleLogin}
-                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md transition-all"
                 >
-                  Iniciar Sesión
+                  🔑 Iniciar Sesión
                 </Button>
                 <Button
                   onClick={handleRegister}
-                  className="w-full bg-green-600 text-white px-6 py-3 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  className="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md transition-all"
                 >
-                  Registrarse
+                  🆕 Crear Cuenta
                 </Button>
-                <button
-                  onClick={() => setShowAuthOptions(false)}
-                  className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
-                >
-                  Volver a la selección de puestos
-                </button>
+                <div className="text-center">
+                  <button
+                    onClick={() => setShowAuthOptions(false)}
+                    className="text-sm text-gray-600 hover:text-gray-800 underline transition-colors"
+                  >
+                    ← Volver a la selección de puestos
+                  </button>
+                </div>
               </div>
             </div>
           ) : loading ? (
@@ -422,41 +440,54 @@ export function PostulacionPage() {
               )}
             </div>
           ) : (
-            <div className="h-60 overflow-y-auto space-y-3 pr-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
               {filteredJobPostings.map((job) => (
-                <div 
-                  key={job.jobId} 
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                    selectedJobs.includes(job.jobId) 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                <div
+                  key={job.jobId}
+                  className={`p-6 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                    selectedJobs.includes(job.jobId)
+                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-gray-200 hover:border-blue-300'
                   }`}
                   onClick={() => handleJobSelection(job.jobId)}
                 >
-                  <div className="flex items-start space-x-3">
+                  <div className="flex items-start space-x-4">
                     <input
                       type="checkbox"
                       checked={selectedJobs.includes(job.jobId)}
                       onChange={() => handleJobSelection(job.jobId)}
                       onClick={(e) => e.stopPropagation()}
-                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="mt-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 mb-1">{job.title}</h3>
-                      <p className="text-xs text-gray-600 mb-1">
-                        <span className="font-medium">{job.companyName}</span> - {job.location}
-                      </p>
-                      <p className="text-xs text-gray-500 mb-1">
-                        {job.employmentType} | {job.experienceLevel}
-                      </p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
+                      <div className="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-600">
+                        <span className="font-medium">{job.companyName}</span>
+                        <span>•</span>
+                        <span>{job.location}</span>
+                        <span>•</span>
+                        <span>{job.employmentType}</span>
+                        <span>•</span>
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">{job.experienceLevel}</span>
+                      </div>
                       {job.salary && (
-                        <p className="text-xs text-green-600 mb-1">
-                          <span className="font-medium">Salario:</span> {job.salary}
+                        <p className="text-sm text-green-600 font-medium mb-2">
+                          💰 {job.salary}
                         </p>
                       )}
-                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-gray-700 mb-3 leading-relaxed">
                         {job.description}
                       </p>
+                      {job.requirements && (
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Requisitos:</span> {job.requirements}
+                        </p>
+                      )}
+                      {job.benefits && (
+                        <p className="text-xs text-blue-600 mt-2">
+                          <span className="font-medium">Beneficios:</span> {job.benefits}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -464,32 +495,37 @@ export function PostulacionPage() {
             </div>
           )}
         </div>
-        
-        {/* Footer */}
-        {!showAuthOptions && (
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            {selectedJobs.length > 0 ? (
-              `${selectedJobs.length} puesto(s) seleccionado(s)`
-            ) : searchTerm.trim() ? (
-              `${filteredJobPostings.length} de ${jobPostings.length} puestos`
-            ) : (
-              `${jobPostings.length} puestos disponibles`
-            )}
-          </div>
-          <Button
-            onClick={handleProceedToApplication}
-            disabled={loading || selectedJobs.length === 0}
-            className={`px-6 py-2 rounded-md font-medium ${
-              loading || selectedJobs.length === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            Continuar Postulación
-          </Button>
+
+          {/* Footer */}
+          {!showAuthOptions && (
+            <div className="px-6 py-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="text-sm text-gray-600">
+                  {selectedJobs.length > 0 ? (
+                    <span className="font-medium text-blue-600">
+                      ✓ {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''} seleccionado{selectedJobs.length > 1 ? 's' : ''}
+                    </span>
+                  ) : searchTerm.trim() ? (
+                    `${filteredJobPostings.length} de ${jobPostings.length} puestos`
+                  ) : (
+                    `${jobPostings.length} puestos disponibles`
+                  )}
+                </div>
+                <Button
+                  onClick={handleProceedToApplication}
+                  disabled={loading || selectedJobs.length === 0}
+                  className={`px-8 py-3 rounded-lg font-medium transition-colors ${
+                    loading || selectedJobs.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                  }`}
+                >
+                  {loading ? 'Cargando...' : 'Continuar con la Postulación'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-        )}
       </div>
     </div>
   );

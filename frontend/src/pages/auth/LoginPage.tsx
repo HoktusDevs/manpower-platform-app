@@ -23,10 +23,18 @@ export const LoginPage = () => {
       if (user) {
         // Check for pending redirect
         const redirectAfterAuth = localStorage.getItem('redirectAfterAuth');
-        
+        const applicationContext = localStorage.getItem('applicationContext');
+
         if (redirectAfterAuth) {
           // Remove the redirect flag and navigate to saved location
           localStorage.removeItem('redirectAfterAuth');
+
+          // If coming from /aplicar context, show success message
+          if (applicationContext === 'aplicar') {
+            localStorage.removeItem('applicationContext');
+            console.log('✅ Login exitoso desde /aplicar, redirigiendo a completar aplicaciones');
+          }
+
           navigate(redirectAfterAuth, { replace: true });
         } else {
           // Default redirect based on role
