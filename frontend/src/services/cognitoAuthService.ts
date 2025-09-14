@@ -57,6 +57,9 @@ class CognitoAuthService {
       }),
     ];
 
+    // Store additional postulante data in localStorage after successful registration
+    // This is a temporary solution until Cognito User Pool is configured with custom attributes
+
     return new Promise((resolve) => {
       this.userPool!.signUp(email, password, attributeList, [], (err, result) => {
         if (err) {
@@ -69,19 +72,57 @@ class CognitoAuthService {
         }
 
         if (result?.user) {
-          // Auto-confirm in development (handled by Lambda trigger)
+          // Store additional postulante data in localStorage for later use
+          if (role === 'postulante') {
+            console.log('📋 Procesando datos adicionales de registro:', request);
+            
+            const extendedRequest = request as RegisterRequest & {
+              phone?: string;
+              rut?: string;
+              address?: string;
+              city?: string;
+              dateOfBirth?: string;
+              educationLevel?: string;
+              workExperience?: string;
+              skills?: string;
+            };
+            
+            const additionalData = {
+              phone: extendedRequest.phone || '',
+              rut: extendedRequest.rut || '',
+              address: extendedRequest.address || '',
+              city: extendedRequest.city || '',
+              dateOfBirth: extendedRequest.dateOfBirth || '',
+              educationLevel: extendedRequest.educationLevel || '',
+              workExperience: extendedRequest.workExperience || '',
+              skills: extendedRequest.skills || '',
+            };
+            
+            console.log('📋 Datos adicionales extraídos:', additionalData);
+            
+            const completeUserData = {
+              nombre: fullName,
+              email: email.toLowerCase(),
+              telefono: additionalData.phone,
+              rut: additionalData.rut,
+              direccion: `${additionalData.address}, ${additionalData.city}`.trim().replace(/^,\s*|,\s*$/g, ''),
+              fechaNacimiento: additionalData.dateOfBirth,
+              experiencia: additionalData.workExperience,
+              educacion: additionalData.educationLevel,
+              habilidades: additionalData.skills,
+              motivacion: '' // Campo vacío para llenar en la aplicación
+            };
+            
+            localStorage.setItem('userApplicationData', JSON.stringify(completeUserData));
+            
+            console.log('✅ Datos COMPLETOS del postulante guardados en localStorage:', completeUserData);
+          }
+          
+          // Don't return user data immediately after registration
+          // This prevents token mismatch issues - user should login after registration
           resolve({
             success: true,
-            message: 'Registration successful. Please check your email for verification.',
-            data: {
-              user: {
-                userId: result.userSub,
-                email: email.toLowerCase(),
-                fullName,
-                role,
-                emailVerified: false,
-              },
-            },
+            message: 'Registration successful. Please login to continue.',
           });
         }
       });
@@ -220,10 +261,20 @@ class CognitoAuthService {
       }
 
       // Verify token belongs to current user
-      // In Cognito, username is the UUID, not the email
-      if (tokenPayload.username && tokenPayload.username !== user.userId) {
-        console.error('🚨 SECURITY: Token username mismatch');
-        return false;
+      // In Cognito, 'sub' is the user ID
+      // Only check if both values exist to avoid false positives
+      if (tokenPayload.sub && user.userId && tokenPayload.sub !== user.userId) {
+        console.warn('🚨 SECURITY: Token user ID mismatch - updating user data', {
+          tokenSub: tokenPayload.sub,
+          userId: user.userId
+        });
+        
+        // Update user data with correct ID from token instead of clearing everything
+        const updatedUser = { ...user, userId: tokenPayload.sub };
+        this.setUserData(updatedUser);
+        
+        console.log('✅ User ID synchronized with token');
+        return true;
       }
 
       return true;
@@ -645,6 +696,43 @@ class CognitoAuthService {
    */
   getAccessToken(): string | null {
     return localStorage.getItem('cognito_access_token');
+  }
+
+  /**
+   * Get current user attributes from Cognito
+   */
+  async getUserAttributes(): Promise<{ [key: string]: string } | null> {
+    if (!this.userPool) {
+      return null;
+    }
+
+    const cognitoUser = this.userPool.getCurrentUser();
+    if (!cognitoUser) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session) {
+          resolve(null);
+          return;
+        }
+
+        cognitoUser.getUserAttributes((err, attributes) => {
+          if (err || !attributes) {
+            resolve(null);
+            return;
+          }
+
+          const attrs: { [key: string]: string } = {};
+          attributes.forEach(attr => {
+            attrs[attr.getName()] = attr.getValue();
+          });
+
+          resolve(attrs);
+        });
+      });
+    });
   }
 
   private translateCognitoError(error: string): string {

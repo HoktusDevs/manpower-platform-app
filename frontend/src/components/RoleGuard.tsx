@@ -13,24 +13,38 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   requiredRole, 
   allowedRoles 
 }) => {
-  const isAuthenticated = cognitoAuthService.isAuthenticated();
-  const user = cognitoAuthService.getCurrentUser();
   const location = useLocation();
-
-  // SECURITY: Clear any cached admin data if postulante tries to access
+  
+  // Don't check authentication on public routes
+  const publicRoutes = ['/aplicar', '/login', '/register/postulante', '/forgot-password'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
+  
+  // Always call useEffect - move the condition inside
   useEffect(() => {
+    if (isPublicRoute) {
+      return; // Exit early if public route
+    }
+    
+    const user = cognitoAuthService.getCurrentUser();
     if (user?.role === 'postulante' && location.pathname.includes('/admin')) {
       // Clear any potential admin data from browser
       sessionStorage.removeItem('adminCache');
       localStorage.removeItem('adminData');
       
       // Force redirect and clear history
-      window.history.replaceState(null, '', '/postulante');
+      window.history.replaceState(null, '', '/completar-aplicaciones');
       
       // Log security violation attempt
       console.warn(`🚨 SECURITY VIOLATION: User ${user.email} attempted to access admin route: ${location.pathname}`);
     }
-  }, [user, location]);
+  }, [location, isPublicRoute]);
+  
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+  
+  const isAuthenticated = cognitoAuthService.isAuthenticated();
+  const user = cognitoAuthService.getCurrentUser();
 
   // NOT AUTHENTICATED
   if (!isAuthenticated) {
@@ -50,7 +64,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
     console.warn(`🚨 SECURITY: User ${user.email} (role: ${user.role}) attempted to access ${requiredRole} route: ${location.pathname}`);
     
     // Force redirect based on actual role
-    const safePath = user.role === 'admin' ? '/admin' : '/postulante';
+    const safePath = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
     return <Navigate to={safePath} replace />;
   }
 
@@ -58,7 +72,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     console.warn(`🚨 SECURITY: User ${user.email} (role: ${user.role}) not in allowed roles [${allowedRoles.join(', ')}] for route: ${location.pathname}`);
     
-    const safePath = user.role === 'admin' ? '/admin' : '/postulante';
+    const safePath = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
     return <Navigate to={safePath} replace />;
   }
 

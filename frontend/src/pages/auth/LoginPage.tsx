@@ -16,11 +16,24 @@ export const LoginPage = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    const user = cognitoAuthService.getCurrentUser();
-    
-    if (isAuthenticated && user) {
-      const route = user.role === 'admin' ? '/admin' : '/postulante';
-      navigate(route, { replace: true });
+    // Only redirect if authenticated and not already navigating
+    if (isAuthenticated) {
+      const user = cognitoAuthService.getCurrentUser();
+      
+      if (user) {
+        // Check for pending redirect
+        const redirectAfterAuth = localStorage.getItem('redirectAfterAuth');
+        
+        if (redirectAfterAuth) {
+          // Remove the redirect flag and navigate to saved location
+          localStorage.removeItem('redirectAfterAuth');
+          navigate(redirectAfterAuth, { replace: true });
+        } else {
+          // Default redirect based on role
+          const route = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
+          navigate(route, { replace: true });
+        }
+      }
     }
   }, [isAuthenticated, navigate]);
 

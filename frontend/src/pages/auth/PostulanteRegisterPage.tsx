@@ -66,7 +66,9 @@ export const PostulanteRegisterPage = () => {
     });
     
     if (success) {
-      navigate('/postulante');
+      // After successful registration, redirect to login
+      // User will need to login to complete authentication
+      navigate('/login', { replace: true });
     }
   };
 

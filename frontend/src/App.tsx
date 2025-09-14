@@ -12,7 +12,7 @@ import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPa
 import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
-import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
+import { PendingApplicationsView } from './pages/postulante/PendingApplicationsView';
 import { PostulacionPage } from './pages/postulacion/PostulacionPage';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
@@ -158,16 +158,17 @@ function AppContent() {
           } />
         </Route>
         
-        {/* SECURITY: Postulante routes with STRICT limitations */}
+        {/* POSTULANTE: Direct route to complete applications */}
+        <Route path="/completar-aplicaciones" element={
+          <RoleGuard requiredRole="postulante">
+            <PendingApplicationsView onComplete={() => window.location.href = '/aplicar'} />
+          </RoleGuard>
+        } />
         <Route path="/postulante/forms/:formId" element={
           <RoleGuard requiredRole="postulante">
             <FormRenderer />
           </RoleGuard>
         } />
-        <Route path="/postulante" element={<PostulanteDashboard />} />
-        <Route path="/postulante/dashboard" element={<PostulanteDashboard />} />
-        <Route path="/postulante/profile" element={<PostulanteDashboard />} />
-        <Route path="/postulante/applications" element={<PostulanteDashboard />} />
         
         {/* SECURITY: Catch-all route - redirect based on role */}
         <Route path="*" element={

@@ -36,21 +36,34 @@ export const useAuth = (): UseAuthReturn => {
     const initializeAuth = async () => {
       if (!import.meta.env.VITE_USER_POOL_ID || !import.meta.env.VITE_USER_POOL_CLIENT_ID) {
         setError('Authentication configuration error');
+        setIsInitialized(true);
         return;
       }
 
-      // Initialize cognitoAuthService WITHOUT identity pool
-      cognitoAuthService.initialize({
-        userPoolId: import.meta.env.VITE_USER_POOL_ID,
-        userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-        identityPoolId: '', // Empty string instead of undefined to avoid IAM issues
-        region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-      });
+      try {
+        // Initialize cognitoAuthService WITHOUT identity pool
+        cognitoAuthService.initialize({
+          userPoolId: import.meta.env.VITE_USER_POOL_ID,
+          userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
+          identityPoolId: '', // Empty string instead of undefined to avoid IAM issues
+          region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+        });
 
-      setUser(cognitoAuthService.getCurrentUser());
-      setIdToken(localStorage.getItem('cognito_id_token'));
-      
-      setIsInitialized(true);
+        // Only set user if tokens exist
+        const idToken = localStorage.getItem('cognito_id_token');
+        const accessToken = localStorage.getItem('cognito_access_token');
+        
+        if (idToken || accessToken) {
+          const currentUser = cognitoAuthService.getCurrentUser();
+          setUser(currentUser);
+          setIdToken(idToken);
+        }
+        
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setIsInitialized(true);
+      }
     };
 
     initializeAuth();
@@ -199,14 +212,29 @@ export const useAuth = (): UseAuthReturn => {
       const result = await cognitoAuthService.register(userData);
       
       if (result.success) {
-        if (result.data?.user) {
-          setUser(result.data.user);
-          cognitoAuthService.setUserData(result.data.user);
+        // After successful registration, attempt auto-login if possible
+        // This prevents the redirect loop by ensuring user is fully authenticated
+        try {
+          const loginResult = await cognitoAuthService.login({
+            email: userData.email,
+            password: userData.password
+          });
+          
+          if (loginResult.success && loginResult.data?.user) {
+            setUser(loginResult.data.user);
+            cognitoAuthService.setUserData(loginResult.data.user);
+            setIdToken(loginResult.data.idToken || null);
+            return true;
+          }
+        } catch (loginError) {
+          console.warn('Auto-login after registration failed:', loginError);
         }
         
-        // For Cognito, registration might succeed but user needs email verification
-        if (!result.data?.user) {
-          setError('Registration successful. Please check your email for verification.');
+        // Fallback: Set user without full authentication (will need to login)
+        if (result.data?.user) {
+          // Don't set user state immediately - this prevents redirect loops
+          // User will need to manually login
+          console.log('Registration successful, please login');
         }
         
         return true;

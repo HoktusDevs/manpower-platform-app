@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
+import { cognitoAuthService } from '../../services/cognitoAuthService';
 
 interface JobPosting {
   jobId: string;
@@ -14,12 +16,37 @@ interface JobPosting {
   experienceLevel: string;
 }
 
+interface UserApplicationData {
+  nombre: string;
+  rut: string;
+  email: string;
+  telefono: string;
+  direccion?: string;
+  experiencia?: string;
+  educacion?: string;
+  motivacion?: string;
+}
+
 export function PostulacionPage() {
-  const [showModal, setShowModal] = useState(true);
+  const navigate = useNavigate();
+  const [showModal] = useState(true);
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAuthOptions, setShowAuthOptions] = useState(false);
+  // const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [userApplicationData, setUserApplicationData] = useState<UserApplicationData>({
+    nombre: '',
+    rut: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    experiencia: '',
+    educacion: '',
+    motivacion: ''
+  });
+  // const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Cargar puestos activos al montar el componente
   useEffect(() => {
@@ -129,6 +156,72 @@ export function PostulacionPage() {
     }
   }, [showModal]);
 
+  // Verificar autenticación y cargar datos del usuario para reutilización
+  useEffect(() => {
+    console.log('🔄 Verificando estado de autenticación...');
+    
+    try {
+      // Solo verificar autenticación si hay tokens guardados
+      const hasTokens = localStorage.getItem('cognito_id_token') || localStorage.getItem('cognito_access_token');
+      
+      if (hasTokens) {
+        const authenticated = cognitoAuthService.isAuthenticated();
+        console.log('🔍 Estado de autenticación:', authenticated);
+        setIsAuthenticated(authenticated);
+        
+        if (authenticated) {
+          const currentUser = cognitoAuthService.getCurrentUser();
+          console.log('👤 Usuario actual:', currentUser);
+          
+          if (currentUser) {
+            // Preservar datos existentes y solo actualizar los campos básicos
+            const existingData = localStorage.getItem('userApplicationData');
+            let userData = {
+              nombre: '',
+              email: '',
+              rut: '',
+              telefono: '',
+              direccion: '',
+              experiencia: '',
+              educacion: ''
+            };
+            
+            // Si hay datos existentes, preservarlos
+            if (existingData) {
+              try {
+                userData = { ...userData, ...JSON.parse(existingData) };
+                console.log('💾 Datos existentes encontrados:', userData);
+              } catch (e) {
+                console.warn('Error parseando datos existentes:', e);
+              }
+            }
+            
+            // Actualizar solo los campos básicos con datos del usuario actual
+            userData.nombre = currentUser.fullName || userData.nombre;
+            userData.email = currentUser.email || userData.email;
+            
+            localStorage.setItem('userApplicationData', JSON.stringify(userData));
+            console.log('✅ Datos del usuario actualizados preservando datos completos:', userData);
+          }
+        }
+      } else {
+        console.log('❌ No hay tokens - usuario no autenticado');
+        // setIsAuthenticated(false);
+      }
+      
+      // Recuperar puestos seleccionados si los hay (independiente de autenticación)
+      const savedSelectedJobs = localStorage.getItem('selectedJobPostings');
+      if (savedSelectedJobs) {
+        const parsedJobs = JSON.parse(savedSelectedJobs);
+        setSelectedJobs(parsedJobs);
+        console.log('✅ Puestos recuperados:', parsedJobs);
+      }
+    } catch (error) {
+      console.log('⚠️ Error verificando autenticación:', error);
+      setIsAuthenticated(false);
+    }
+  }, []);
+
   // Filtrar puestos basado en el término de búsqueda
   const filteredJobPostings = jobPostings.filter((job) => {
     if (!searchTerm.trim()) return true;
@@ -169,10 +262,71 @@ export function PostulacionPage() {
       return;
     }
     
-    // TODO: Redirigir al formulario de postulación con los puestos seleccionados
     console.log('Puestos seleccionados:', selectedJobs);
-    setShowModal(false);
+    // SIEMPRE mostrar opciones de autenticación (no importa si ya está logueado)
+    setShowAuthOptions(true);
   };
+
+  // Manejar navegación a login
+  const handleLogin = () => {
+    // Guardar los puestos seleccionados y sus datos completos
+    console.log('🔄 Guardando puestos seleccionados:', selectedJobs);
+    localStorage.setItem('selectedJobPostings', JSON.stringify(selectedJobs));
+    
+    // Guardar datos completos de los puestos seleccionados
+    const selectedJobsData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
+    localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
+    
+    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones'); // Redirigir después del login
+    console.log('🚀 Navegando a login...');
+    navigate('/login');
+  };
+
+  // Manejar navegación a registro
+  const handleRegister = () => {
+    // Guardar los puestos seleccionados y sus datos completos
+    console.log('🔄 Guardando puestos seleccionados:', selectedJobs);
+    localStorage.setItem('selectedJobPostings', JSON.stringify(selectedJobs));
+    
+    // Guardar datos completos de los puestos seleccionados
+    const selectedJobsData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
+    localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
+    
+    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones'); // Redirigir después del registro
+    console.log('🚀 Navegando a registro...');
+    navigate('/register/postulante');
+  };
+
+  // Manejar cambios en el formulario de aplicación
+  // const handleApplicationDataChange = (field: keyof UserApplicationData, value: string) => {
+  //   setUserApplicationData(prev => ({
+  //     ...prev,
+  //     [field]: value
+  //   }));
+  // };
+
+  // Enviar la aplicación
+  // const handleSubmitApplication = async () => {
+  //   try {
+  //     console.log('📤 Enviando aplicación con datos:', {
+  //       userData: userApplicationData,
+  //       selectedJobs: selectedJobs
+  //     });
+  //     alert(`¡Aplicación enviada exitosamente para ${selectedJobs.length} puesto(s)!`);
+  //     localStorage.removeItem('selectedJobPostings');
+  //     localStorage.removeItem('redirectAfterAuth');
+  //     navigate('/aplicar');
+  //   } catch (error) {
+  //     console.error('❌ Error enviando aplicación:', error);
+  //     alert('Error al enviar la aplicación. Por favor intenta de nuevo.');
+  //   }
+  // };
+
+  // Volver a la selección de puestos
+  // const handleBackToJobSelection = () => {
+  //   setShowApplicationForm(false);
+  //   setShowAuthOptions(false);
+  // };
 
   if (!showModal) {
     return (
@@ -188,22 +342,64 @@ export function PostulacionPage() {
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg text-gray-900 mb-3">
-            Selecciona el o los puestos a los que deseas postular
-          </h2>
-          {/* Input field */}
-          <input
-            type="text"
-            placeholder="Buscar por título, empresa, ubicación, salario..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-          />
+          {showAuthOptions ? (
+            <h2 className="text-lg text-gray-900 text-center">
+              Autenticación requerida
+            </h2>
+          ) : (
+            <>
+              <h2 className="text-lg text-gray-900 mb-3">
+                Selecciona el o los puestos a los que deseas postular
+              </h2>
+              {/* Input field */}
+              <input
+                type="text"
+                placeholder="Buscar por título, empresa, ubicación, salario..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+            </>
+          )}
         </div>
         
         {/* Body */}
         <div className="flex-1 overflow-hidden px-6 py-4">
-          {loading ? (
+          {showAuthOptions ? (
+            // Mostrar opciones de autenticación
+            <div className="flex flex-col items-center justify-center py-8 space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Antes de continuar, debes registrarte o iniciar sesión
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Has seleccionado {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''}. 
+                  Para continuar con tu postulación, necesitas una cuenta.
+                </p>
+              </div>
+              
+              <div className="flex flex-col space-y-3 w-full max-w-sm">
+                <Button
+                  onClick={handleLogin}
+                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Iniciar Sesión
+                </Button>
+                <Button
+                  onClick={handleRegister}
+                  className="w-full bg-green-600 text-white px-6 py-3 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  Registrarse
+                </Button>
+                <button
+                  onClick={() => setShowAuthOptions(false)}
+                  className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Volver a la selección de puestos
+                </button>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-sm text-gray-600">Cargando puestos...</span>
@@ -270,6 +466,7 @@ export function PostulacionPage() {
         </div>
         
         {/* Footer */}
+        {!showAuthOptions && (
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           <div className="text-sm text-gray-600">
             {selectedJobs.length > 0 ? (
@@ -292,6 +489,7 @@ export function PostulacionPage() {
             Continuar Postulación
           </Button>
         </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAWSNative } from '../../hooks/useAWSNative';
@@ -7,12 +7,26 @@ import { DocumentsPage } from './DocumentsPage';
 import { JobPostingsPage } from './JobPostingsPage';
 import { FormsPage } from './FormsPage';
 import { FeatureFlagControl } from '../../components/FeatureFlagControl';
+import { PendingApplicationsView } from './PendingApplicationsView';
 
 export const PostulanteDashboard = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { applications, getApplicationStats, isAWSNativeAvailable } = useAWSNative();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [hasPendingApplications, setHasPendingApplications] = useState(false);
+
+  // Verificar si hay aplicaciones pendientes al cargar
+  useEffect(() => {
+    const savedSelectedJobs = localStorage.getItem('selectedJobPostings');
+    if (savedSelectedJobs) {
+      const parsedJobs = JSON.parse(savedSelectedJobs);
+      if (parsedJobs.length > 0) {
+        setHasPendingApplications(true);
+        console.log('📋 Aplicaciones pendientes encontradas:', parsedJobs);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -22,6 +36,11 @@ export const PostulanteDashboard = () => {
   // Get real-time stats from AWS-Native
   const stats = getApplicationStats();
   const isAWSNative = isAWSNativeAvailable();
+
+  // Si hay aplicaciones pendientes, mostrar la vista de aplicaciones pendientes
+  if (hasPendingApplications) {
+    return <PendingApplicationsView onComplete={() => setHasPendingApplications(false)} />;
+  }
 
   if (activeTab === 'applications') {
     return <ApplicationsPage />;
