@@ -160,8 +160,8 @@ function AppContent() {
           } />
         </Route>
         
-        {/* POSTULANTE: Direct route to complete applications */}
-        <Route path="/completar-aplicaciones" element={
+        {/* POSTULANTE: All postulant routes under /postulante */}
+        <Route path="/postulante/completar-aplicaciones" element={
           <RoleGuard requiredRole="postulante">
             <PendingApplicationsView onComplete={() => window.location.href = '/aplicar'} />
           </RoleGuard>
@@ -170,6 +170,11 @@ function AppContent() {
           <RoleGuard requiredRole="postulante">
             <FormRenderer />
           </RoleGuard>
+        } />
+
+        {/* LEGACY: Redirect old route for compatibility */}
+        <Route path="/completar-aplicaciones" element={
+          <Navigate to="/postulante/completar-aplicaciones" replace />
         } />
         
         {/* SECURITY: Catch-all route - redirect based on role */}

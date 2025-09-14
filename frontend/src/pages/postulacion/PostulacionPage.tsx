@@ -249,7 +249,7 @@ export function PostulacionPage() {
     localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
 
     // Guardar contexto de /aplicar para regresar después del login
-    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones');
+    localStorage.setItem('redirectAfterAuth', '/postulante/completar-aplicaciones');
     localStorage.setItem('applicationContext', 'aplicar');
 
     console.log('🚀 Navegando a login desde /aplicar...');
@@ -267,7 +267,7 @@ export function PostulacionPage() {
     localStorage.setItem('selectedJobsData', JSON.stringify(selectedJobsData));
 
     // Guardar contexto de /aplicar para regresar después del registro
-    localStorage.setItem('redirectAfterAuth', '/completar-aplicaciones');
+    localStorage.setItem('redirectAfterAuth', '/postulante/completar-aplicaciones');
     localStorage.setItem('applicationContext', 'aplicar');
 
     console.log('🚀 Navegando a registro desde /aplicar...');

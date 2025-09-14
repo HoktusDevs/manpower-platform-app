@@ -38,7 +38,7 @@ export const LoginPage = () => {
           navigate(redirectAfterAuth, { replace: true });
         } else {
           // Default redirect based on role
-          const route = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
+          const route = user.role === 'admin' ? '/admin' : '/postulante/completar-aplicaciones';
           navigate(route, { replace: true });
         }
       }

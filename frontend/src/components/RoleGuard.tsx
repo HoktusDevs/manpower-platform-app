@@ -32,7 +32,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
       localStorage.removeItem('adminData');
       
       // Force redirect and clear history
-      window.history.replaceState(null, '', '/completar-aplicaciones');
+      window.history.replaceState(null, '', '/postulante/completar-aplicaciones');
       
       // Log security violation attempt
       console.warn(`🚨 SECURITY VIOLATION: User ${user.email} attempted to access admin route: ${location.pathname}`);
@@ -64,7 +64,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
     console.warn(`🚨 SECURITY: User ${user.email} (role: ${user.role}) attempted to access ${requiredRole} route: ${location.pathname}`);
     
     // Force redirect based on actual role
-    const safePath = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
+    const safePath = user.role === 'admin' ? '/admin' : '/postulante/completar-aplicaciones';
     return <Navigate to={safePath} replace />;
   }
 
@@ -72,7 +72,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     console.warn(`🚨 SECURITY: User ${user.email} (role: ${user.role}) not in allowed roles [${allowedRoles.join(', ')}] for route: ${location.pathname}`);
     
-    const safePath = user.role === 'admin' ? '/admin' : '/completar-aplicaciones';
+    const safePath = user.role === 'admin' ? '/admin' : '/postulante/completar-aplicaciones';
     return <Navigate to={safePath} replace />;
   }
 
