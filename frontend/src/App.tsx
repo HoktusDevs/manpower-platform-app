@@ -12,6 +12,8 @@ import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPa
 import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
+import { PostulanteLayout } from './components/PostulanteLayout';
+import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { PendingApplicationsView } from './pages/postulante/PendingApplicationsView';
 import { PostulacionPage } from './pages/postulacion/PostulacionPage';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
@@ -160,17 +162,17 @@ function AppContent() {
           } />
         </Route>
         
-        {/* POSTULANTE: All postulant routes under /postulante */}
-        <Route path="/postulante/completar-aplicaciones" element={
-          <RoleGuard requiredRole="postulante">
+        {/* POSTULANTE: All postulant routes under /postulante with layout */}
+        <Route path="/postulante/*" element={<PostulanteLayout />}>
+          <Route index element={<PostulanteDashboard />} />
+          <Route path="completar-aplicaciones" element={
             <PendingApplicationsView onComplete={() => window.location.href = '/aplicar'} />
-          </RoleGuard>
-        } />
-        <Route path="/postulante/forms/:formId" element={
-          <RoleGuard requiredRole="postulante">
-            <FormRenderer />
-          </RoleGuard>
-        } />
+          } />
+          <Route path="forms/:formId" element={<FormRenderer />} />
+          <Route path="aplicaciones" element={<div>Mis Aplicaciones (Coming Soon)</div>} />
+          <Route path="perfil" element={<div>Mi Perfil (Coming Soon)</div>} />
+          <Route path="configuracion" element={<div>Configuración (Coming Soon)</div>} />
+        </Route>
 
         {/* LEGACY: Redirect old route for compatibility */}
         <Route path="/completar-aplicaciones" element={
