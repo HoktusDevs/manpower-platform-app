@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
-import { useGraphQL } from '../../hooks/useGraphQL';
 
 interface JobPosting {
   jobId: string;
@@ -30,7 +29,6 @@ interface JobPosting {
 
 export function PostulacionPage() {
   const navigate = useNavigate();
-  const { fetchActiveJobPostings, jobPostings: graphqlJobPostings } = useGraphQL();
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,28 +54,9 @@ export function PostulacionPage() {
         setLoading(true);
         console.log('🔄 Iniciando carga de puestos activos...');
 
-        // Try to load from GraphQL first
-        try {
-          await fetchActiveJobPostings(20); // Fetch up to 20 job postings
-          if (graphqlJobPostings && graphqlJobPostings.length > 0) {
-            console.log('✅ Puestos cargados desde GraphQL:', graphqlJobPostings.length);
-            setJobPostings(graphqlJobPostings.map(job => ({
-              jobId: job.jobId,
-              title: job.title,
-              description: job.description,
-              requirements: job.requirements || '',
-              location: job.location || 'Remoto',
-              employmentType: job.employmentType || 'Tiempo completo',
-              companyName: job.companyName || 'Empresa',
-              salary: job.salary,
-              benefits: job.benefits,
-              experienceLevel: job.experienceLevel || 'Intermedio'
-            })));
-            return;
-          }
-        } catch (gqlError) {
-          console.warn('⚠️ GraphQL falló, usando datos temporales:', gqlError);
-        }
+        // TODO: Implementar endpoint público para ofertas de trabajo
+        // Por ahora usamos datos mock para evitar errores de autenticación en ruta pública
+        console.log('🔒 Usando datos mock - la ruta /aplicar es pública y no requiere autenticación');
 
         // Fallback to mock data if GraphQL fails
         console.log('⚠️ Usando datos temporales mientras se configura el acceso público al GraphQL');
@@ -146,7 +125,7 @@ export function PostulacionPage() {
     };
 
     loadActiveJobPostings();
-  }, [fetchActiveJobPostings, graphqlJobPostings]);
+  }, []);
 
   // Verificar autenticación y cargar datos del usuario para reutilización
   useEffect(() => {
