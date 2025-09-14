@@ -327,23 +327,23 @@ export function PostulacionPage() {
   // };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       {/* Main Content - Sin header */}
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl w-full">
         <div className="bg-white rounded-lg shadow-sm">
           {/* Header */}
-          <div className="px-6 py-6 border-b border-gray-200">
+          <div className="px-4 py-4 border-b border-gray-200">
             {showAuthOptions ? (
-              <h2 className="text-2xl font-bold text-gray-900 text-center">
+              <h2 className="text-xl font-bold text-gray-900 text-center">
                 Autenticación requerida
               </h2>
             ) : (
               <>
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <div className="text-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">
                     Ofertas de Trabajo Disponibles
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600">
                     Selecciona los puestos a los que deseas postular
                   </p>
                 </div>
@@ -354,7 +354,7 @@ export function PostulacionPage() {
                     placeholder="Buscar por título, empresa, ubicación, salario..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </>
@@ -362,7 +362,7 @@ export function PostulacionPage() {
           </div>
 
           {/* Body */}
-          <div className="px-6 py-6">
+          <div className="px-4 py-3 max-h-[60vh] overflow-y-auto">
           {showAuthOptions ? (
             // Mostrar opciones de autenticación
             <div className="flex flex-col items-center justify-center py-8 space-y-6">
@@ -422,51 +422,51 @@ export function PostulacionPage() {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+            <div className="space-y-3">
               {filteredJobPostings.map((job) => (
                 <div
                   key={job.jobId}
-                  className={`p-6 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
                     selectedJobs.includes(job.jobId)
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-300'
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
                   onClick={() => handleJobSelection(job.jobId)}
                 >
-                  <div className="flex items-start space-x-4">
+                  <div className="flex items-start space-x-3">
                     <input
                       type="checkbox"
                       checked={selectedJobs.includes(job.jobId)}
                       onChange={() => handleJobSelection(job.jobId)}
                       onClick={(e) => e.stopPropagation()}
-                      className="mt-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
-                      <div className="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-600">
+                      <h3 className="text-base font-semibold text-gray-900 mb-1">{job.title}</h3>
+                      <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-600">
                         <span className="font-medium">{job.companyName}</span>
                         <span>•</span>
                         <span>{job.location}</span>
                         <span>•</span>
                         <span>{job.employmentType}</span>
                         <span>•</span>
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">{job.experienceLevel}</span>
+                        <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{job.experienceLevel}</span>
                       </div>
                       {job.salary && (
-                        <p className="text-sm text-green-600 font-medium mb-2">
+                        <p className="text-xs text-green-600 font-medium mb-1">
                           💰 {job.salary}
                         </p>
                       )}
-                      <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                      <p className="text-xs text-gray-700 mb-2 line-clamp-2">
                         {job.description}
                       </p>
                       {job.requirements && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 line-clamp-1">
                           <span className="font-medium">Requisitos:</span> {job.requirements}
                         </p>
                       )}
                       {job.benefits && (
-                        <p className="text-xs text-blue-600 mt-2">
+                        <p className="text-xs text-blue-600 mt-1 line-clamp-1">
                           <span className="font-medium">Beneficios:</span> {job.benefits}
                         </p>
                       )}
@@ -480,9 +480,9 @@ export function PostulacionPage() {
 
           {/* Footer */}
           {!showAuthOptions && (
-            <div className="px-6 py-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="text-sm text-gray-600">
+            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="text-xs text-gray-600">
                   {selectedJobs.length > 0 ? (
                     <span className="font-medium text-blue-600">
                       ✓ {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''} seleccionado{selectedJobs.length > 1 ? 's' : ''}
@@ -496,7 +496,7 @@ export function PostulacionPage() {
                 <Button
                   onClick={handleProceedToApplication}
                   disabled={loading || selectedJobs.length === 0}
-                  className={`px-8 py-3 rounded-lg font-medium transition-colors ${
+                  className={`px-6 py-2 text-sm rounded-lg font-medium transition-colors ${
                     loading || selectedJobs.length === 0
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
