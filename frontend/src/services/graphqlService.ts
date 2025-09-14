@@ -107,24 +107,21 @@ class GraphQLService {
       }
     };
 
-    // Add appropriate auth configuration based on type
-    if (config.authenticationType === 'AWS_IAM' && config.identityPoolId) {
-      amplifyConfig.Auth = {
-        Cognito: {
-          identityPoolId: config.identityPoolId,
-          region: config.region,
-          userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
-          userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
-        }
-      };
-    } else {
-      amplifyConfig.Auth = {
-        Cognito: {
-          userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
-          userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
-        }
-      };
+    // Add appropriate auth configuration - support both User Pool and Identity Pool
+    // This allows AppSync to work with both authentication types
+    const authConfig: Record<string, unknown> = {
+      userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
+      userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
+    };
+    
+    // Add Identity Pool if available (enables IAM-based auth for some operations)
+    if (config.identityPoolId || import.meta.env.VITE_IDENTITY_POOL_ID) {
+      authConfig.identityPoolId = config.identityPoolId || import.meta.env.VITE_IDENTITY_POOL_ID;
     }
+    
+    amplifyConfig.Auth = {
+      Cognito: authConfig
+    };
     
     Amplify.configure(amplifyConfig);
     this.client = generateClient() as typeof this.client;

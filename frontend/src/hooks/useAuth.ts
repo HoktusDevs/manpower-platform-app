@@ -41,11 +41,11 @@ export const useAuth = (): UseAuthReturn => {
       }
 
       try {
-        // Initialize cognitoAuthService WITHOUT identity pool
+        // Initialize cognitoAuthService WITH identity pool for AppSync compatibility
         cognitoAuthService.initialize({
           userPoolId: import.meta.env.VITE_USER_POOL_ID,
           userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-          identityPoolId: '', // Empty string instead of undefined to avoid IAM issues
+          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || '',
           region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
         });
 
