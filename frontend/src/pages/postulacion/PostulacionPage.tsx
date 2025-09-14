@@ -16,16 +16,16 @@ interface JobPosting {
   experienceLevel: string;
 }
 
-interface UserApplicationData {
-  nombre: string;
-  rut: string;
-  email: string;
-  telefono: string;
-  direccion?: string;
-  experiencia?: string;
-  educacion?: string;
-  motivacion?: string;
-}
+// interface UserApplicationData {
+//   nombre: string;
+//   rut: string;
+//   email: string;
+//   telefono: string;
+//   direccion?: string;
+//   experiencia?: string;
+//   educacion?: string;
+//   motivacion?: string;
+// }
 
 export function PostulacionPage() {
   const navigate = useNavigate();
@@ -36,16 +36,16 @@ export function PostulacionPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAuthOptions, setShowAuthOptions] = useState(false);
   // const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const [userApplicationData, setUserApplicationData] = useState<UserApplicationData>({
-    nombre: '',
-    rut: '',
-    email: '',
-    telefono: '',
-    direccion: '',
-    experiencia: '',
-    educacion: '',
-    motivacion: ''
-  });
+  // const [userApplicationData, setUserApplicationData] = useState<UserApplicationData>({
+  //   nombre: '',
+  //   rut: '',
+  //   email: '',
+  //   telefono: '',
+  //   direccion: '',
+  //   experiencia: '',
+  //   educacion: '',
+  //   motivacion: ''
+  // });
   // const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Cargar puestos activos al montar el componente
@@ -167,7 +167,7 @@ export function PostulacionPage() {
       if (hasTokens) {
         const authenticated = cognitoAuthService.isAuthenticated();
         console.log('🔍 Estado de autenticación:', authenticated);
-        setIsAuthenticated(authenticated);
+        // setIsAuthenticated(authenticated);
         
         if (authenticated) {
           const currentUser = cognitoAuthService.getCurrentUser();
@@ -218,7 +218,7 @@ export function PostulacionPage() {
       }
     } catch (error) {
       console.log('⚠️ Error verificando autenticación:', error);
-      setIsAuthenticated(false);
+      // setIsAuthenticated(false);
     }
   }, []);
 
