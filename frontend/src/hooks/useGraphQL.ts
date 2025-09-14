@@ -229,7 +229,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     setError(null);
 
     try {
-      const result = await graphqlService.getAllForms(status, jobId, limit);
+      const result = await graphqlService.getAllForms(status as Form['status'], jobId, limit);
       setForms(result);
       console.log('✅ fetchAllForms SUCCESS', result.length, 'forms');
     } catch (err) {
@@ -267,7 +267,7 @@ export const useGraphQL = (): UseGraphQLReturn => {
     setError(null);
 
     try {
-      const result = await graphqlService.getFormSubmissions(formId, status, limit);
+      const result = await graphqlService.getFormSubmissions(formId, status as FormSubmission['status'], limit);
       setFormSubmissions(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch form submissions';

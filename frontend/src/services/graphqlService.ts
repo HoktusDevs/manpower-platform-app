@@ -7,6 +7,12 @@ import { ApplicationsService } from './graphql/applications';
 import { JobPostingsService } from './graphql/jobPostings';
 import { FormsService } from './graphql/forms';
 import { FoldersService } from './graphql/folders';
+// Import types for proper typing
+import type { Application, CreateApplicationInput, ApplicationStats } from './graphql/applications';
+import type { Form, FormSubmission, CreateFormInput, UpdateFormInput, SubmitFormInput, ReviewSubmissionInput, FormsStats } from './graphql/forms';
+import type { Folder, CreateFolderInput, UpdateFolderInput, FoldersStats } from './graphql/folders';
+import type { JobPosting, CreateJobPostingInput, UpdateJobPostingInput, JobPostingStats } from './graphql/jobPostings';
+import type { Document, UploadDocumentInput } from './graphql/documents';
 
 // GraphQL Client Configuration
 interface GraphQLConfig {
@@ -265,13 +271,13 @@ class GraphQLService {
   }
 
   // Core admin-only operations that require custom logic
-  async updateApplicationStatus(userId: string, applicationId: string, status: string): Promise<any> {
+  async updateApplicationStatus(userId: string, applicationId: string, status: Application['status']): Promise<Application> {
     const user = cognitoAuthService.getCurrentUser();
     if (user?.role !== 'admin') {
       throw new Error('Admin access required');
     }
 
-    const result = await this.executeMutation<{ updateApplicationStatus: any }>(
+    const result = await this.executeMutation<{ updateApplicationStatus: Application }>(
       UPDATE_APPLICATION_STATUS,
       { applicationId, userId, status }
     );
@@ -303,7 +309,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get all applications
    */
-  async getAllApplications(status?: any, limit?: number, nextToken?: string): Promise<any[]> {
+  async getAllApplications(status?: Application['status'], limit?: number, nextToken?: string): Promise<Application[]> {
     if (!this.applicationsService) {
       throw new Error('ApplicationsService not initialized');
     }
@@ -313,7 +319,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get application statistics
    */
-  async getApplicationStats(): Promise<any> {
+  async getApplicationStats(): Promise<ApplicationStats> {
     if (!this.applicationsService) {
       throw new Error('ApplicationsService not initialized');
     }
@@ -323,7 +329,7 @@ class GraphQLService {
   /**
    * PUBLIC: Get active job postings
    */
-  async getActiveJobPostings(limit?: number, nextToken?: string): Promise<any[]> {
+  async getActiveJobPostings(limit?: number, nextToken?: string): Promise<JobPosting[]> {
     if (!this.jobPostingsService) {
       throw new Error('JobPostingsService not initialized');
     }
@@ -333,7 +339,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get all job postings
    */
-  async getAllJobPostings(status?: any, limit?: number, nextToken?: string): Promise<any[]> {
+  async getAllJobPostings(status?: JobPosting['status'], limit?: number, nextToken?: string): Promise<JobPosting[]> {
     if (!this.jobPostingsService) {
       throw new Error('JobPostingsService not initialized');
     }
@@ -343,7 +349,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get job posting statistics
    */
-  async getJobPostingStats(): Promise<any> {
+  async getJobPostingStats(): Promise<JobPostingStats> {
     if (!this.jobPostingsService) {
       throw new Error('JobPostingsService not initialized');
     }
@@ -353,7 +359,7 @@ class GraphQLService {
   /**
    * PUBLIC: Get active forms
    */
-  async getActiveForms(jobId?: string, limit?: number): Promise<any[]> {
+  async getActiveForms(jobId?: string, limit?: number): Promise<Form[]> {
     if (!this.formsService) {
       throw new Error('FormsService not initialized');
     }
@@ -363,7 +369,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get all forms
    */
-  async getAllForms(status?: string, jobId?: string, limit?: number): Promise<any[]> {
+  async getAllForms(status?: Form['status'], jobId?: string, limit?: number): Promise<Form[]> {
     if (!this.formsService) {
       throw new Error('FormsService not initialized');
     }
@@ -373,7 +379,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get forms statistics
    */
-  async getFormsStats(): Promise<any> {
+  async getFormsStats(): Promise<FormsStats> {
     if (!this.formsService) {
       throw new Error('FormsService not initialized');
     }
@@ -383,7 +389,7 @@ class GraphQLService {
   /**
    * Get all folders
    */
-  async getAllFolders(parentId?: string, limit?: number): Promise<any[]> {
+  async getAllFolders(parentId?: string, limit?: number): Promise<Folder[]> {
     if (!this.foldersService) {
       throw new Error('FoldersService not initialized');
     }
@@ -393,7 +399,7 @@ class GraphQLService {
   /**
    * ADMIN ONLY: Get folders statistics
    */
-  async getFoldersStats(): Promise<any> {
+  async getFoldersStats(): Promise<FoldersStats> {
     if (!this.foldersService) {
       throw new Error('FoldersService not initialized');
     }
@@ -403,7 +409,7 @@ class GraphQLService {
   /**
    * POSTULANTE: Get my applications
    */
-  async getMyApplications(): Promise<any[]> {
+  async getMyApplications(): Promise<Application[]> {
     if (!this.applicationsService) {
       throw new Error('ApplicationsService not initialized');
     }
@@ -413,11 +419,186 @@ class GraphQLService {
   /**
    * POSTULANTE: Get my documents
    */
-  async getMyDocuments(): Promise<any[]> {
+  async getMyDocuments(): Promise<Document[]> {
     if (!this.documentsService) {
       throw new Error('DocumentsService not initialized');
     }
     return this.documentsService.getMyDocuments();
+  }
+
+  // === FACADE METHODS FOR SPECIALIZED SERVICES ===
+  
+  // --- FOLDERS SERVICE FACADE ---
+  async createFolder(input: CreateFolderInput): Promise<Folder> {
+    if (!this.foldersService) {
+      throw new Error('FoldersService not initialized');
+    }
+    return this.foldersService.createFolder(input);
+  }
+
+  async deleteFolder(folderId: string): Promise<boolean> {
+    if (!this.foldersService) {
+      throw new Error('FoldersService not initialized');
+    }
+    return this.foldersService.deleteFolder(folderId);
+  }
+
+  async deleteFolders(folderIds: string[]): Promise<boolean> {
+    if (!this.foldersService) {
+      throw new Error('FoldersService not initialized');
+    }
+    return this.foldersService.deleteFolders(folderIds);
+  }
+
+  async updateFolder(input: UpdateFolderInput): Promise<Folder> {
+    if (!this.foldersService) {
+      throw new Error('FoldersService not initialized');
+    }
+    return this.foldersService.updateFolder(input);
+  }
+
+  // --- FORMS SERVICE FACADE ---
+  async getForm(formId: string): Promise<Form | null> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.getForm(formId);
+  }
+
+  async getFormSubmissions(formId: string, status?: FormSubmission['status'], limit?: number): Promise<FormSubmission[]> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.getFormSubmissions(formId, status, limit);
+  }
+
+  async getMyFormSubmissions(formId?: string): Promise<FormSubmission[]> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.getMyFormSubmissions(formId);
+  }
+
+  async createForm(input: CreateFormInput): Promise<Form> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.createForm(input);
+  }
+
+  async updateForm(input: UpdateFormInput): Promise<Form> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.updateForm(input);
+  }
+
+  async deleteForm(formId: string): Promise<boolean> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.deleteForm(formId);
+  }
+
+  async publishForm(formId: string): Promise<Form> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.publishForm(formId);
+  }
+
+  async pauseForm(formId: string): Promise<Form> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.pauseForm(formId);
+  }
+
+  async submitForm(input: SubmitFormInput): Promise<FormSubmission> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.submitForm(input);
+  }
+
+  async reviewSubmission(input: ReviewSubmissionInput): Promise<FormSubmission> {
+    if (!this.formsService) {
+      throw new Error('FormsService not initialized');
+    }
+    return this.formsService.reviewSubmission(input);
+  }
+
+  // --- APPLICATIONS SERVICE FACADE ---
+  async createApplication(input: CreateApplicationInput): Promise<Application> {
+    if (!this.applicationsService) {
+      throw new Error('ApplicationsService not initialized');
+    }
+    return this.applicationsService.createApplication(input);
+  }
+
+  async updateMyApplication(applicationId: string, updates: Partial<CreateApplicationInput>): Promise<Application> {
+    if (!this.applicationsService) {
+      throw new Error('ApplicationsService not initialized');
+    }
+    return this.applicationsService.updateMyApplication(applicationId, updates);
+  }
+
+  async deleteMyApplication(applicationId: string): Promise<boolean> {
+    if (!this.applicationsService) {
+      throw new Error('ApplicationsService not initialized');
+    }
+    return this.applicationsService.deleteMyApplication(applicationId);
+  }
+
+  // --- DOCUMENTS SERVICE FACADE ---
+  async uploadDocument(input: UploadDocumentInput): Promise<Document> {
+    if (!this.documentsService) {
+      throw new Error('DocumentsService not initialized');
+    }
+    return this.documentsService.uploadDocument(input);
+  }
+
+  // --- JOB POSTINGS SERVICE FACADE ---
+  async getJobPosting(jobId: string): Promise<JobPosting | null> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.getJobPosting(jobId);
+  }
+
+  async createJobPosting(input: CreateJobPostingInput): Promise<JobPosting> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.createJobPosting(input);
+  }
+
+  async updateJobPosting(input: UpdateJobPostingInput): Promise<JobPosting> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.updateJobPosting(input);
+  }
+
+  async deleteJobPosting(jobId: string): Promise<boolean> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.deleteJobPosting(jobId);
+  }
+
+  async publishJobPosting(jobId: string): Promise<JobPosting> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.publishJobPosting(jobId);
+  }
+
+  async pauseJobPosting(jobId: string): Promise<JobPosting> {
+    if (!this.jobPostingsService) {
+      throw new Error('JobPostingsService not initialized');
+    }
+    return this.jobPostingsService.pauseJobPosting(jobId);
   }
 
   // Utility methods

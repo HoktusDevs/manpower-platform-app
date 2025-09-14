@@ -113,6 +113,7 @@ export const DocumentsPage: React.FC = () => {
     const uploadInput: UploadDocumentInput = {
       fileName: uploadData.file.name,
       documentType: uploadData.documentType,
+      s3Key: `documents/${Date.now()}-${uploadData.file.name}`, // Generate s3 key
       fileSize: uploadData.file.size,
       mimeType: uploadData.file.type
     };

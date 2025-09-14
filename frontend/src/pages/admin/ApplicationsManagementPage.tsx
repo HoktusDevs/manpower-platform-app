@@ -89,17 +89,17 @@ export const ApplicationsManagementPage: React.FC = () => {
       key: 'status',
       label: 'Estado',
       render: (_, value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-          {getStatusText(value)}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value as Application['status'])}`}>
+          {getStatusText(value as Application['status'])}
         </span>
       )
     },
     {
-      key: 'submittedAt',
+      key: 'createdAt',
       label: 'Fecha de Envío',
       render: (_, value) => (
         <span className="text-sm text-gray-500">
-          {new Date(value).toLocaleDateString('es-ES')}
+          {new Date(value as string).toLocaleDateString('es-ES')}
         </span>
       )
     }

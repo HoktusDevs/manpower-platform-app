@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Container } from '../../core-ui';
 
 // Tipos genéricos para la tabla universal
-export interface TableColumn<T = any> {
+export interface TableColumn<T = Record<string, unknown>> {
   key: string;
   label: string;
   sortable?: boolean;
   width?: string;
-  render?: (item: T, value: any) => ReactNode;
+  render?: (item: T, value: string | number | boolean | null | undefined) => ReactNode;
 }
 
-export interface TableAction<T = any> {
+export interface TableAction<T = Record<string, unknown>> {
   key: string;
   label: string;
   icon?: ReactNode;
@@ -20,7 +20,7 @@ export interface TableAction<T = any> {
   show?: (item: T) => boolean;
 }
 
-export interface BulkAction<T = any> {
+export interface BulkAction<T = Record<string, unknown>> {
   key: string;
   label: string;
   icon?: ReactNode;
@@ -28,7 +28,7 @@ export interface BulkAction<T = any> {
   onClick: (items: T[]) => void;
 }
 
-export interface UniversalTableManagerProps<T = any> {
+export interface UniversalTableManagerProps<T = Record<string, unknown>> {
   title: string;
   data: T[];
   columns: TableColumn<T>[];
@@ -329,8 +329,8 @@ export const UniversalTableManager = <T,>({
                       {columns.map((column) => (
                         <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {column.render 
-                            ? column.render(item, (item as any)[column.key])
-                            : (item as any)[column.key]
+                            ? column.render(item, (item as Record<string, unknown>)[column.key] as string | number | boolean | null | undefined)
+                            : String((item as Record<string, unknown>)[column.key] ?? '')
                           }
                         </td>
                       ))}
