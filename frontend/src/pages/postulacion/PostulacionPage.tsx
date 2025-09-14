@@ -329,8 +329,8 @@ export function PostulacionPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       {/* Main Content - Sin header */}
-      <div className="max-w-5xl w-full">
-        <div className="bg-white rounded-lg shadow-sm">
+      <div className="max-w-3xl w-full">
+        <div className="bg-white rounded-lg shadow-md">
           {/* Header */}
           <div className="px-4 py-4 border-b border-gray-200">
             {showAuthOptions ? (
