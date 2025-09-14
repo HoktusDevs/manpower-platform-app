@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import { useGraphQL } from '../../hooks/useGraphQL';
@@ -331,17 +331,11 @@ export function PostulacionPage() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Link to="/" className="text-blue-600 hover:text-blue-800 flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Volver al inicio
-              </Link>
+          <div className="flex justify-center items-center py-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900">Manpower Platform</h1>
+              <p className="text-sm text-gray-600 mt-1">Oportunidades de trabajo</p>
             </div>
-            <h1 className="text-xl font-semibold text-gray-900">Manpower Platform</h1>
-            <div className="w-20"></div> {/* Spacer for center alignment */}
           </div>
         </div>
       </div>
