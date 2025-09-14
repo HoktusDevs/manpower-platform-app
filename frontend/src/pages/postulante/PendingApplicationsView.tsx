@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 
+type TabType = 'puestos' | 'informacion' | 'documentos';
+
 interface JobPosting {
   jobId: string;
   title: string;
@@ -31,6 +33,7 @@ interface PendingApplicationsViewProps {
 export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = ({ onComplete }) => {
   // const navigate = useNavigate();
   const [selectedJobs, setSelectedJobs] = useState<JobPosting[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('puestos');
   const [applicationData, setApplicationData] = useState<UserApplicationData>({
     nombre: '',
     rut: '',
@@ -246,14 +249,63 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
           <div className="px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-900">Completar Aplicaciones</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Completa tu información y adjunta documentos para {selectedJobs.length} puesto(s) seleccionado(s)
+              Aplica a {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''} con un solo formulario
             </p>
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800">
+                <span className="font-medium">🎯 Proceso optimizado:</span> Completa tu información una sola vez y se aplicará automáticamente a todos los puestos seleccionados.
+                {selectedJobs.length > 1 && ' Sin repetir datos, sin perder tiempo.'}
+              </p>
+            </div>
           </div>
 
-          <div className="p-6 space-y-8">
-            {/* Puestos Seleccionados */}
-            <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Puestos Seleccionados desde /aplicar</h2>
+          {/* Tabs Navigation */}
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('puestos')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'puestos'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Puestos Seleccionados ({selectedJobs.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('informacion')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'informacion'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Información Personal
+              </button>
+              <button
+                onClick={() => setActiveTab('documentos')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'documentos'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Documentos
+              </button>
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {/* Tab: Puestos Seleccionados */}
+            {activeTab === 'puestos' && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-2">Puestos a los que postularás</h2>
+                  <p className="text-sm text-gray-600">
+                    📋 <strong>Optimización inteligente:</strong> Completarás la información una sola vez para todos estos puestos.
+                    Los datos comunes se aplicarán automáticamente a todas tus postulaciones.
+                  </p>
+                </div>
               <div className="grid gap-4">
                 {selectedJobs.map((job) => (
                   <div key={job.jobId} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
@@ -306,10 +358,12 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                   </div>
                 ))}
               </div>
-            </div>
+              </div>
+            )}
 
-            {/* Formulario de Datos */}
-            <div>
+            {/* Tab: Información Personal */}
+            {activeTab === 'informacion' && (
+              <div>
               <h2 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -392,7 +446,62 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                   />
                 </div>
               </div>
-            </div>
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  ✨ <strong>Ahorro de tiempo:</strong> Esta información se aplicará automáticamente a todos los puestos seleccionados.
+                </p>
+              </div>
+              </div>
+            )}
+
+            {/* Tab: Documentos */}
+            {activeTab === 'documentos' && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-2">Documentos para tus postulaciones</h2>
+                  <p className="text-sm text-gray-600">
+                    📎 <strong>Documentos únicos:</strong> Sube documentos específicos para cada puesto o documentos generales que se aplicarán a todos.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  {selectedJobs.map((job) => (
+                    <div key={job.jobId} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{job.title}</h3>
+                      <p className="text-sm text-gray-600 mb-4">{job.companyName} - {job.location}</p>
+
+                      <div className="p-3 bg-gray-50 rounded-md">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Documentos para este puesto (CV, carta de presentación, portafolio, etc.)
+                        </label>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileChange(job.jobId, e.target.files)}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        {files[job.jobId] && files[job.jobId].length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm text-green-600 font-medium">
+                              ✅ {files[job.jobId].length} archivo(s) seleccionado(s):
+                            </p>
+                            <ul className="text-sm text-gray-600 mt-2 space-y-1">
+                              {files[job.jobId].map((file, fileIdx) => (
+                                <li key={fileIdx} className="flex items-center">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                  {file.name}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
