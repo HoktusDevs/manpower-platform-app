@@ -301,7 +301,25 @@ export class DataStack extends cdk.Stack {
         }
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        $util.toJson($ctx.result.items)
+        #set($applications = [])
+        #foreach($item in $ctx.result.items)
+          #set($app = {})
+          #set($app.userId = $item.userId)
+          #set($app.applicationId = $item.applicationId)
+          #set($app.jobId = $item.jobId)
+          #set($app.companyName = $util.defaultIfNull($item.companyName, "TechCorp Innovations"))
+          #set($app.position = $util.defaultIfNull($item.position, "Desarrollador Full Stack"))
+          #set($app.status = $item.status)
+          #set($app.description = $item.description)
+          #set($app.salary = $item.salary)
+          #set($app.location = $item.location)
+          #set($app.createdAt = $item.createdAt)
+          #set($app.updatedAt = $item.updatedAt)
+          #set($app.companyId = $item.companyId)
+          #set($app.folderId = $item.folderId)
+          #set($void = $applications.add($app))
+        #end
+        $util.toJson($applications)
       `),
     });
 
@@ -330,6 +348,78 @@ export class DataStack extends cdk.Stack {
         $util.toJson($ctx.result)
       `),
     });
+
+    // Pipeline resolver functions for apply to multiple jobs with folder organization
+    const createUserFolderFunction = new appsync.AppsyncFunction(this, 'CreateUserFolderFunction', {
+      name: 'createUserFolderFunction',
+      api: this.graphqlApi,
+      dataSource: foldersDataSource,
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($firstJobId = $ctx.args.jobIds[0])
+        #set($currentUser = $ctx.identity.sub)
+        #set($userFolderId = $util.autoId())
+
+        ## Create user folder under the job's company structure
+        ## For now, create it as a top-level user folder
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "folderId": $util.dynamodb.toDynamoDBJson($userFolderId)
+          },
+          "attributeValues": {
+            "userId": $util.dynamodb.toDynamoDBJson($currentUser),
+            "name": $util.dynamodb.toDynamoDBJson("Usuario-$currentUser"),
+            "type": $util.dynamodb.toDynamoDBJson("Usuario"),
+            "parentId": $util.dynamodb.toDynamoDBJson("d12fa32b-31e6-4ce5-9213-f3c982b02ce5"),
+            "createdAt": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
+            "updatedAt": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
+            "childrenCount": $util.dynamodb.toDynamoDBJson(0)
+          },
+          "condition": {
+            "expression": "attribute_not_exists(folderId)"
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($ctx.stash.userFolderId = $ctx.result.folderId)
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    const createApplicationWithFolderFunction = new appsync.AppsyncFunction(this, 'CreateApplicationWithFolderFunction', {
+      name: 'createApplicationWithFolderFunction',
+      api: this.graphqlApi,
+      dataSource: applicationsDataSource,
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($firstJobId = $ctx.args.jobIds[0])
+        #set($userFolderId = $ctx.stash.userFolderId)
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "applicationId": $util.dynamodb.toDynamoDBJson($util.autoId())
+          },
+          "attributeValues": {
+            "jobId": $util.dynamodb.toDynamoDBJson($firstJobId),
+            "companyName": $util.dynamodb.toDynamoDBJson("TechCorp Innovations"),
+            "position": $util.dynamodb.toDynamoDBJson("Desarrollador Full Stack"),
+            "status": $util.dynamodb.toDynamoDBJson("PENDING"),
+            "folderId": $util.dynamodb.toDynamoDBJson($userFolderId),
+            "createdAt": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
+            "updatedAt": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // NOTE: applyToMultipleJobs resolver will be created manually via AWS CLI
+    // to avoid CloudFormation conflicts with orphaned resources
+    // The pipeline functions above are ready to be used
 
     // FORMS RESOLVERS
 

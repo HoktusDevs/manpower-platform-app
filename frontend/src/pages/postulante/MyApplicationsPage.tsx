@@ -1,125 +1,34 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useGraphQL } from '../../hooks/useGraphQL';
+import type { Application } from '../../services/graphqlService';
 
-interface Application {
-  applicationId: string;
-  jobId: string;
-  jobTitle: string;
-  companyName: string;
-  location: string;
-  salary?: string;
-  appliedDate: string;
-  status: 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
-  isActive: boolean; // true for active applications, false for inactive/closed
-  description: string;
-  employmentType: string;
-}
 
 export const MyApplicationsPage = () => {
-  const { user } = useAuth();
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    applications,
+    loading,
+    error,
+    fetchMyApplications,
+    isGraphQLAvailable
+  } = useGraphQL();
   const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
 
   // Cargar aplicaciones del usuario
   useEffect(() => {
-    const loadApplications = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // TODO: Reemplazar con llamada real a la API
-        console.log('🔄 Cargando aplicaciones para usuario:', user?.email);
-
-        // Simular delay de API
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Mock data - simulando aplicaciones del usuario
-        const mockApplications: Application[] = [
-          {
-            applicationId: 'app-001',
-            jobId: 'job-001',
-            jobTitle: 'Desarrollador Full Stack',
-            companyName: 'TechCorp Innovations',
-            location: 'Madrid, España',
-            salary: '45.000€ - 60.000€ anuales',
-            appliedDate: '2024-01-15',
-            status: 'IN_REVIEW',
-            isActive: true,
-            description: 'Desarrollo de aplicaciones web con React y Node.js',
-            employmentType: 'Tiempo completo'
-          },
-          {
-            applicationId: 'app-002',
-            jobId: 'job-002',
-            jobTitle: 'Diseñador UX/UI Senior',
-            companyName: 'Design Studio Pro',
-            location: 'Barcelona, España',
-            salary: '40.000€ - 55.000€ anuales',
-            appliedDate: '2024-01-10',
-            status: 'PENDING',
-            isActive: true,
-            description: 'Diseño de experiencias digitales excepcionales',
-            employmentType: 'Tiempo completo'
-          },
-          {
-            applicationId: 'app-003',
-            jobId: 'job-003',
-            jobTitle: 'Analista de Datos',
-            companyName: 'DataWorks Analytics',
-            location: 'Valencia, España',
-            salary: '38.000€ - 50.000€ anuales',
-            appliedDate: '2024-01-05',
-            status: 'APPROVED',
-            isActive: false,
-            description: 'Análisis de grandes volúmenes de información',
-            employmentType: 'Tiempo completo'
-          },
-          {
-            applicationId: 'app-004',
-            jobId: 'job-004',
-            jobTitle: 'Marketing Digital Specialist',
-            companyName: 'Digital Growth Agency',
-            location: 'Sevilla, España',
-            salary: '25.000€ - 35.000€ anuales',
-            appliedDate: '2023-12-20',
-            status: 'REJECTED',
-            isActive: false,
-            description: 'Gestión de campañas digitales',
-            employmentType: 'Tiempo parcial'
-          },
-          {
-            applicationId: 'app-005',
-            jobId: 'job-005',
-            jobTitle: 'Desarrollador Backend',
-            companyName: 'StartupTech Solutions',
-            location: 'Remoto',
-            appliedDate: '2023-12-15',
-            status: 'EXPIRED',
-            isActive: false,
-            description: 'Desarrollo de APIs y servicios backend',
-            employmentType: 'Tiempo completo'
-          }
-        ];
-
-        console.log('✅ Aplicaciones cargadas:', mockApplications.length);
-        setApplications(mockApplications);
-
-      } catch (err) {
-        console.error('❌ Error cargando aplicaciones:', err);
-        setError('No se pudieron cargar tus aplicaciones. Por favor intenta de nuevo más tarde.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadApplications();
-  }, [user]);
+    if (isGraphQLAvailable()) {
+      fetchMyApplications();
+    }
+  }, [isGraphQLAvailable, fetchMyApplications]);
 
   // Filtrar aplicaciones por estado activo/inactivo
-  const activeApplications = applications.filter(app => app.isActive);
-  const inactiveApplications = applications.filter(app => !app.isActive);
+  // Considerar como activas las que están PENDING, IN_REVIEW o INTERVIEW_SCHEDULED
+  const activeApplications = applications.filter(app =>
+    app.status === 'PENDING' || app.status === 'IN_REVIEW' || app.status === 'INTERVIEW_SCHEDULED'
+  );
+  // Considerar como finalizadas las que están APPROVED, REJECTED o HIRED
+  const inactiveApplications = applications.filter(app =>
+    app.status === 'APPROVED' || app.status === 'REJECTED' || app.status === 'HIRED'
+  );
   const currentApplications = activeTab === 'active' ? activeApplications : inactiveApplications;
 
   // Función para obtener el estilo del estado
@@ -133,8 +42,10 @@ export const MyApplicationsPage = () => {
         return 'bg-green-100 text-green-800 border-green-200';
       case 'REJECTED':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'EXPIRED':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'INTERVIEW_SCHEDULED':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'HIRED':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -144,15 +55,17 @@ export const MyApplicationsPage = () => {
   const getStatusText = (status: Application['status']) => {
     switch (status) {
       case 'PENDING':
-        return 'Pendiente de revisión';
+        return 'Pendiente';
       case 'IN_REVIEW':
         return 'En revisión';
       case 'APPROVED':
         return 'Aprobada';
       case 'REJECTED':
         return 'Rechazada';
-      case 'EXPIRED':
-        return 'Expirada';
+      case 'INTERVIEW_SCHEDULED':
+        return 'Entrevista programada';
+      case 'HIRED':
+        return 'Contratado';
       default:
         return status;
     }
@@ -202,9 +115,9 @@ export const MyApplicationsPage = () => {
                 </div>
                 <div className="bg-yellow-50 p-3 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">
-                    {applications.filter(app => app.status === 'IN_REVIEW').length}
+                    {applications.filter(app => app.status === 'IN_REVIEW' || app.status === 'INTERVIEW_SCHEDULED').length}
                   </div>
-                  <div className="text-sm text-yellow-700">En revisión</div>
+                  <div className="text-sm text-yellow-700">En proceso</div>
                 </div>
               </div>
             )}
@@ -293,14 +206,12 @@ export const MyApplicationsPage = () => {
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {application.jobTitle}
+                          {application.position}
                         </h3>
                         <div className="text-gray-600 mb-2">
                           <span className="font-medium">{application.companyName}</span>
                           <span className="mx-2">•</span>
-                          <span>{application.location}</span>
-                          <span className="mx-2">•</span>
-                          <span>{application.employmentType}</span>
+                          <span>{application.location || 'No especificada'}</span>
                         </div>
                         {application.salary && (
                           <div className="text-green-600 font-medium text-sm mb-2">
@@ -319,7 +230,7 @@ export const MyApplicationsPage = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm text-gray-500">
                       <span>
-                        Aplicado el {new Date(application.appliedDate).toLocaleDateString('es-ES', {
+                        Aplicado el {new Date(application.createdAt).toLocaleDateString('es-ES', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'

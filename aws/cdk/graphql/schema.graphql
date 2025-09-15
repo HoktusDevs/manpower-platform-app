@@ -15,6 +15,7 @@ type Application {
   createdAt: String!
   updatedAt: String!
   companyId: String
+  folderId: String
 }
 
 type Document {

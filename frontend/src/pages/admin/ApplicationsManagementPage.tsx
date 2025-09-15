@@ -63,7 +63,7 @@ export const ApplicationsManagementPage: React.FC = () => {
       label: 'Usuario',
       render: (_, value) => (
         <div className="font-medium text-gray-900">
-          {value}
+          Usuario-{(value as string).slice(-8)}
         </div>
       )
     },

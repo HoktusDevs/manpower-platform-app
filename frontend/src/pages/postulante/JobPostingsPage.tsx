@@ -99,6 +99,7 @@ export const JobPostingsPage: React.FC = () => {
     if (!user) return;
 
     const applicationData: CreateApplicationInput = {
+      jobId: job.jobId,
       companyName: job.companyName,
       position: job.title,
       description: `Aplicación para: ${job.title}`,

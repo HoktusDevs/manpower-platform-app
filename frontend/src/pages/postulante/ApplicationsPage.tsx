@@ -96,6 +96,7 @@ export const ApplicationsPage: React.FC = () => {
     }
 
     const success = await createApplication({
+      jobId: 'temp-job-id', // TODO: Get actual jobId from job posting
       companyName: formData.companyName,
       position: formData.position,
       description: formData.description || undefined,
