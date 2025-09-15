@@ -195,10 +195,10 @@ export function PostulacionPage() {
 
   // Filtrar puestos basado en el término de búsqueda
   const filteredJobPostings = jobPostings.filter((job) => {
-    if (!searchTerm.trim()) return true;
-    
+    if (!searchTerm.trim()) return false; // No mostrar puestos si no hay búsqueda
+
     const searchLower = searchTerm.toLowerCase();
-    
+
     // Buscar en todos los campos relevantes
     const searchableFields = [
       job.title,
@@ -211,8 +211,8 @@ export function PostulacionPage() {
       job.salary || '',
       job.benefits || ''
     ];
-    
-    return searchableFields.some(field => 
+
+    return searchableFields.some(field =>
       field.toLowerCase().includes(searchLower)
     );
   });
@@ -386,9 +386,9 @@ export function PostulacionPage() {
           ) : filteredJobPostings.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-gray-600">
-                {searchTerm.trim() 
+                {searchTerm.trim()
                   ? `No se encontraron puestos que coincidan con "${searchTerm}"`
-                  : 'No hay puestos activos disponibles en este momento.'
+                  : 'Escribe en el campo de búsqueda para ver las ofertas disponibles'
                 }
               </p>
               {searchTerm.trim() && (

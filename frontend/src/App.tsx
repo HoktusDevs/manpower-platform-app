@@ -20,9 +20,9 @@ import { MyApplicationsPage } from './pages/postulante/MyApplicationsPage';
 import { MyProfilePage } from './pages/postulante/MyProfilePage';
 import { ConfigurationPage } from './pages/postulante/ConfigurationPage';
 import { PostulacionPage } from './pages/postulacion/PostulacionPage';
-import { PluxeePortal } from './pages/pluxee/PluxeePortal';
-import { PluxeeAdminDashboard } from './pages/pluxee/admin/PluxeeAdminDashboard';
-import { PluxeeCompanyDashboard } from './pages/pluxee/company/PluxeeCompanyDashboard';
+import { PluxeeFoldersAndFilesPage } from './pages/pluxee/admin/PluxeeFoldersAndFilesPage';
+import { PluxeeCompanyFoldersPage } from './pages/pluxee/company/PluxeeCompanyFoldersPage';
+import { PluxeeLayout } from './components/PluxeeLayout';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
@@ -134,18 +134,25 @@ function AppContent() {
         {/* Ruta pública para aplicar a trabajos - NO REQUIERE AUTENTICACIÓN */}
         <Route path="/aplicar" element={<PostulacionPage />} />
 
-        {/* PLUXEE: Dedicated portal routes */}
-        <Route path="/pluxee" element={<PluxeePortal />} />
-        <Route path="/pluxee/admin" element={
+        {/* PLUXEE: Admin portal routes */}
+        <Route path="/pluxee/admin/*" element={
           <RoleGuard requiredRole="admin">
-            <PluxeeAdminDashboard />
+            <PluxeeLayout portalType="admin" />
           </RoleGuard>
-        } />
-        <Route path="/pluxee/company" element={
+        }>
+          <Route index element={<Navigate to="/pluxee/admin/folders" replace />} />
+          <Route path="folders" element={<PluxeeFoldersAndFilesPage />} />
+        </Route>
+
+        {/* PLUXEE: Company portal routes */}
+        <Route path="/pluxee/empresa/*" element={
           <RoleGuard requiredRole="admin">
-            <PluxeeCompanyDashboard />
+            <PluxeeLayout portalType="empresa" />
           </RoleGuard>
-        } />
+        }>
+          <Route index element={<Navigate to="/pluxee/empresa/folders" replace />} />
+          <Route path="folders" element={<PluxeeCompanyFoldersPage />} />
+        </Route>
 
         {/* SECURITY: Admin routes with MILITARY-GRADE protection */}
         <Route path="/admin/*" element={<AdminLayout />}>
