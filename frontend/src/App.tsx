@@ -15,6 +15,7 @@ import { AdminLayout } from './components/AdminLayout';
 import { PostulanteLayout } from './components/PostulanteLayout';
 import { PostulanteDashboard } from './pages/postulante/PostulanteDashboard';
 import { PendingApplicationsView } from './pages/postulante/PendingApplicationsView';
+import { JobSearchPage } from './pages/postulante/JobSearchPage';
 import { PostulacionPage } from './pages/postulacion/PostulacionPage';
 import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
@@ -168,6 +169,7 @@ function AppContent() {
           <Route path="completar-aplicaciones" element={
             <PendingApplicationsView onComplete={() => window.location.href = '/aplicar'} />
           } />
+          <Route path="buscar-empleos" element={<JobSearchPage />} />
           <Route path="forms/:formId" element={<FormRenderer />} />
           <Route path="aplicaciones" element={<div>Mis Aplicaciones (Coming Soon)</div>} />
           <Route path="perfil" element={<div>Mi Perfil (Coming Soon)</div>} />

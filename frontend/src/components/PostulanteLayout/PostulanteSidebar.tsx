@@ -63,7 +63,7 @@ const sidebarItems: SidebarItem[] = [
     id: 'buscar-empleos',
     name: 'Buscar Empleos',
     icon: BriefcaseIcon,
-    path: '/aplicar',
+    path: '/postulante/buscar-empleos',
     description: ''
   },
   {
