@@ -23,7 +23,17 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated) {
+    return (
+      <AccessDenied
+        message="Debes iniciar sesión para acceder a este panel."
+        redirectLabel="Ir al Login"
+        onRedirect={() => navigate('/login')}
+      />
+    );
+  }
+
+  if (user?.role !== 'admin') {
     return (
       <AccessDenied
         message="Solo los administradores pueden acceder a este panel."

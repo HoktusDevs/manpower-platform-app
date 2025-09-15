@@ -24,7 +24,17 @@ export const PostulanteLayout = ({ children }: PostulanteLayoutProps) => {
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'postulante') {
+  if (!isAuthenticated) {
+    return (
+      <AccessDenied
+        message="Debes iniciar sesión para acceder a este panel."
+        redirectLabel="Ir al Login"
+        onRedirect={() => navigate('/login')}
+      />
+    );
+  }
+
+  if (user?.role !== 'postulante') {
     return (
       <AccessDenied
         message="Solo los postulantes pueden acceder a este panel."
