@@ -9,6 +9,7 @@ import {
 } from '../../schemas/jobPostingSchema';
 import { CompanySelector } from '../../components/CompanySelector';
 import { FoldersProvider } from '../../components/FoldersAndFiles';
+import { useFolderJobSync } from '../../hooks/useFolderJobSync';
 import { UniversalTableManager } from '../../components/UniversalTable/UniversalTableManager';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable/UniversalTableManager';
 
@@ -131,6 +132,9 @@ export const JobPostingsManagementPage: React.FC = () => {
     // clearError,
     isGraphQLAvailable
   } = useGraphQL();
+
+  // Hook for syncing folders with job operations
+  const { syncFoldersAfterJobOperation } = useFolderJobSync();
 
   const [selectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -426,7 +430,12 @@ export const JobPostingsManagementPage: React.FC = () => {
         // Refresh the list
         const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
         await fetchAllJobPostings(statusFilter);
-        
+
+        // Sync folders to maintain consistency (non-blocking)
+        if (successCount > 0) {
+          await syncFoldersAfterJobOperation();
+        }
+
         // Clear selection and close modal
         setSelectedJobs(new Set());
         setIsBulkDeleting(false);
@@ -461,10 +470,13 @@ export const JobPostingsManagementPage: React.FC = () => {
           
           if (success) {
             showSuccess('Oferta eliminada', 'La oferta de trabajo se eliminó correctamente');
-            
+
             // Refresh the list
             const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
             await fetchAllJobPostings(statusFilter);
+
+            // Sync folders to maintain consistency (non-blocking)
+            await syncFoldersAfterJobOperation();
           } else {
             showError('Error al eliminar', 'No se pudo eliminar la oferta de trabajo');
           }
@@ -632,10 +644,13 @@ export const JobPostingsManagementPage: React.FC = () => {
           showSuccess('Oferta actualizada', 'La oferta de trabajo se actualizó correctamente');
           setShowCreateModal(false);
           resetModalState();
-          
+
           // Refresh the job postings list
           const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
           await fetchAllJobPostings(statusFilter);
+
+          // Sync folders to maintain consistency (non-blocking)
+          await syncFoldersAfterJobOperation();
         }
       } else {
         // Create new job
@@ -662,10 +677,13 @@ export const JobPostingsManagementPage: React.FC = () => {
           showSuccess('Oferta creada', 'La oferta de trabajo se creó correctamente');
           setShowCreateModal(false);
           resetModalState();
-          
+
           // Refresh the job postings list
           const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
           await fetchAllJobPostings(statusFilter);
+
+          // Sync folders to maintain consistency (non-blocking)
+          await syncFoldersAfterJobOperation();
         }
       }
     } catch (err) {
