@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
+import { publicGraphqlService } from '../../services/publicGraphqlService';
 
 interface JobPosting {
   jobId: string;
@@ -54,14 +55,36 @@ export function PostulacionPage() {
         setLoading(true);
         console.log('🔄 Iniciando carga de puestos activos...');
 
-        // TODO: Implementar endpoint público para ofertas de trabajo
-        // Por ahora usamos datos mock para evitar errores de autenticación en ruta pública
-        console.log('🔒 Usando datos mock - la ruta /aplicar es pública y no requiere autenticación');
+        // Initialize public GraphQL service if not already done
+        if (!publicGraphqlService.isInitialized() && import.meta.env.VITE_GRAPHQL_API_KEY) {
+          console.log('🔧 Inicializando servicio público de GraphQL...');
+          await publicGraphqlService.initialize({
+            graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
+            region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+            apiKey: import.meta.env.VITE_GRAPHQL_API_KEY
+          });
+        }
 
-        // Fallback to mock data if GraphQL fails
-        console.log('⚠️ Usando datos temporales mientras se configura el acceso público al GraphQL');
+        // Try to fetch real job postings via public API
+        if (publicGraphqlService.isInitialized()) {
+          console.log('🌐 Cargando ofertas reales desde API pública...');
+          const realJobPostings = await publicGraphqlService.getActiveJobPostings(20);
+
+          if (realJobPostings.length > 0) {
+            console.log(`✅ ${realJobPostings.length} ofertas cargadas desde API pública`);
+            setJobPostings(realJobPostings);
+            return;
+          } else {
+            console.log('ℹ️  No hay ofertas activas en la base de datos, usando datos de ejemplo');
+          }
+        } else {
+          console.log('⚠️ API pública no disponible (falta VITE_GRAPHQL_API_KEY), usando datos de ejemplo');
+        }
+
+        // Fallback to mock data if public API is not available or returns no results
+        console.log('🔒 Usando datos de ejemplo para demostración');
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         const mockJobPostings: JobPosting[] = [
           {
             jobId: 'job-001',
@@ -113,7 +136,7 @@ export function PostulacionPage() {
           }
         ];
 
-        console.log('✅ Puestos cargados (datos temporales):', mockJobPostings.length, mockJobPostings);
+        console.log('✅ Ofertas de ejemplo cargadas:', mockJobPostings.length, mockJobPostings);
         setJobPostings(mockJobPostings);
         
       } catch (error) {

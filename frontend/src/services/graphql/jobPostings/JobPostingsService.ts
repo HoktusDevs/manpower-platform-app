@@ -7,6 +7,7 @@
  */
 
 import { cognitoAuthService } from '../../cognitoAuthService';
+import { publicGraphqlService } from '../../publicGraphqlService';
 import type { JobPosting, CreateJobPostingInput, UpdateJobPostingInput, JobPostingStats } from './types';
 
 // GraphQL Operations - Extracted from original graphqlService.ts
@@ -213,12 +214,21 @@ export class JobPostingsService {
 
   /**
    * PUBLIC: Get active job postings
-   * Exact same implementation as original graphqlService
+   * Uses public API if available, falls back to authenticated query
    */
   async getActiveJobPostings(limit?: number, nextToken?: string): Promise<JobPosting[]> {
+    // Try public API first (no authentication required)
+    if (publicGraphqlService.isInitialized()) {
+      const publicResult = await publicGraphqlService.getActiveJobPostings(limit, nextToken);
+      if (publicResult.length > 0 || limit === 0) {
+        return publicResult;
+      }
+    }
+
+    // Fallback to authenticated query if public API fails or not configured
     try {
       const result = await this.executeQuery<{ getActiveJobPostings: JobPosting[] | null }>(
-        GET_ACTIVE_JOB_POSTINGS, 
+        GET_ACTIVE_JOB_POSTINGS,
         { limit, nextToken }
       );
       return result.getActiveJobPostings || [];
@@ -229,14 +239,27 @@ export class JobPostingsService {
 
   /**
    * PUBLIC: Get specific job posting
-   * Exact same implementation as original graphqlService
+   * Uses public API if available, falls back to authenticated query
    */
   async getJobPosting(jobId: string): Promise<JobPosting | null> {
-    const result = await this.executeQuery<{ getJobPosting: JobPosting | null }>(
-      GET_JOB_POSTING,
-      { jobId }
-    );
-    return result.getJobPosting;
+    // Try public API first (no authentication required)
+    if (publicGraphqlService.isInitialized()) {
+      const publicResult = await publicGraphqlService.getJobPosting(jobId);
+      if (publicResult) {
+        return publicResult;
+      }
+    }
+
+    // Fallback to authenticated query if public API fails or not configured
+    try {
+      const result = await this.executeQuery<{ getJobPosting: JobPosting | null }>(
+        GET_JOB_POSTING,
+        { jobId }
+      );
+      return result.getJobPosting;
+    } catch {
+      return null;
+    }
   }
 
   /**

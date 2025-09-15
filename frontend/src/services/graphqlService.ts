@@ -1,6 +1,7 @@
 import { generateClient } from 'aws-amplify/api';
 import { Amplify } from 'aws-amplify';
 import { cognitoAuthService } from './cognitoAuthService';
+import { publicGraphqlService } from './publicGraphqlService';
 // Import separated services
 import { DocumentsService } from './graphql/documents';
 import { ApplicationsService } from './graphql/applications';
@@ -22,6 +23,7 @@ interface GraphQLConfig {
   userPoolId?: string;
   userPoolClientId?: string;
   identityPoolId?: string;
+  apiKey?: string;
 }
 
 // Subscription queries (only operations remaining in main service)
@@ -125,7 +127,16 @@ class GraphQLService {
     
     Amplify.configure(amplifyConfig);
     this.client = generateClient() as typeof this.client;
-    
+
+    // Initialize public GraphQL service if API key is available
+    if (config.apiKey) {
+      await publicGraphqlService.initialize({
+        graphqlEndpoint: config.graphqlEndpoint,
+        region: config.region,
+        apiKey: config.apiKey
+      });
+    }
+
     // Initialize separated services
     this.documentsService = new DocumentsService(
       this.executeQuery.bind(this),

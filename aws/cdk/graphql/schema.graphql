@@ -94,9 +94,11 @@ type Query {
   # JOB POSTINGS QUERIES
   # PUBLIC: Get active job postings (published, not expired)
   getActiveJobPostings(limit: Int, nextToken: String): [JobPosting!]!
-  
+    @aws_api_key @aws_cognito_user_pools @aws_iam
+
   # PUBLIC: Get specific job posting
   getJobPosting(jobId: String!): JobPosting
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   
   # ADMIN ONLY: Get all job postings
   getAllJobPostings(status: JobStatus, limit: Int, nextToken: String): [JobPosting!]!

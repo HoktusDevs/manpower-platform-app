@@ -64,7 +64,8 @@ function AppContent() {
         VITE_AWS_REGION: import.meta.env.VITE_AWS_REGION,
         VITE_USER_POOL_ID: import.meta.env.VITE_USER_POOL_ID,
         VITE_USER_POOL_CLIENT_ID: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-        VITE_IDENTITY_POOL_ID: import.meta.env.VITE_IDENTITY_POOL_ID
+        VITE_IDENTITY_POOL_ID: import.meta.env.VITE_IDENTITY_POOL_ID,
+        VITE_GRAPHQL_API_KEY: import.meta.env.VITE_GRAPHQL_API_KEY ? '***' : undefined
       });
       
       if (!graphqlService.isInitialized()) {
@@ -74,7 +75,8 @@ function AppContent() {
           authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const,
           userPoolId: import.meta.env.VITE_USER_POOL_ID || 'us-east-1_uRCDemTcQ',
           userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID || '5jt63usa3sgmaeju2pqojr7io1',
-          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || undefined
+          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || undefined,
+          apiKey: import.meta.env.VITE_GRAPHQL_API_KEY || undefined
         };
 
         console.log('🛠️ Initializing GraphQL with config:', config);

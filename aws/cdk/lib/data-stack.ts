@@ -221,6 +221,13 @@ export class DataStack extends cdk.Stack {
           {
             authorizationType: appsync.AuthorizationType.IAM,
           },
+          {
+            authorizationType: appsync.AuthorizationType.API_KEY,
+            apiKeyConfig: {
+              expires: cdk.Expiration.after(cdk.Duration.days(365)),
+              description: 'Public API for job postings access',
+            },
+          },
         ],
       },
 
