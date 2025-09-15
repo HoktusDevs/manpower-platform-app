@@ -50,14 +50,25 @@ export const SessionRenewalModal: React.FC<SessionRenewalModalProps> = ({
             Su sesión está por vencer. Para continuar usando la aplicación sin interrupciones, necesita renovar su sesión.
           </p>
           
-          {timeRemaining && timeRemaining > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-3">
+          {timeRemaining !== undefined && (
+            <div className={`border rounded-md p-3 mb-3 ${
+              timeRemaining > 0
+                ? 'bg-yellow-50 border-yellow-200'
+                : 'bg-red-50 border-red-200'
+            }`}>
               <div className="flex items-center">
-                <svg className="w-4 h-4 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <svg className={`w-4 h-4 mr-2 ${
+                  timeRemaining > 0 ? 'text-yellow-600' : 'text-red-600'
+                }`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
-                <span className="text-sm font-medium text-yellow-800">
-                  Tiempo restante: {formatTime(timeRemaining)}
+                <span className={`text-sm font-medium ${
+                  timeRemaining > 0 ? 'text-yellow-800' : 'text-red-800'
+                }`}>
+                  {timeRemaining > 0
+                    ? `Tiempo restante: ${formatTime(timeRemaining)}`
+                    : 'Sesión expirada - Cerrando sesión automáticamente en 5 segundos...'
+                  }
                 </span>
               </div>
             </div>

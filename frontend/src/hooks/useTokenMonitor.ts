@@ -13,7 +13,8 @@ interface UseTokenMonitorReturn extends TokenMonitorState {
 }
 
 const TOKEN_WARNING_TIME = 5 * 60; // 5 minutes before expiration
-const CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
+const CHECK_INTERVAL = 1 * 1000; // Check every 1 second for better countdown accuracy
+const AUTO_LOGOUT_DELAY = 5 * 1000; // Auto logout after 5 seconds when token expires
 
 export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const [state, setState] = useState<TokenMonitorState>({
@@ -26,6 +27,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const warningShownRef = useRef<boolean>(false);
   const userDismissedRef = useRef<boolean>(false);
   const isLoggedOutRef = useRef<boolean>(false);
+  const autoLogoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const parseJWT = (token: string) => {
     try {
@@ -74,12 +76,35 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     const now = Math.floor(Date.now() / 1000);
     const timeRemaining = expirationTime - now;
 
-    // Token has already expired - show modal immediately (but only once)
+    // Token has already expired - show modal immediately and start auto-logout timer
     if (timeRemaining <= 0) {
       console.log('🚨 Token expired, showing renewal modal');
       if (!warningShownRef.current && !userDismissedRef.current) {
         setState(prev => ({ ...prev, showRenewalModal: true, timeRemaining: 0 }));
         warningShownRef.current = true;
+
+        // Start auto-logout timer when token expires
+        if (!autoLogoutTimerRef.current) {
+          autoLogoutTimerRef.current = setTimeout(() => {
+            console.log('🚀 Auto-logout after token expiration');
+            // Stop all monitoring
+            isLoggedOutRef.current = true;
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+
+            // Force logout
+            setState({
+              showRenewalModal: false,
+              isRenewing: false,
+              timeRemaining: 0
+            });
+            cognitoAuthService.logout();
+            localStorage.clear();
+            window.location.href = '/login';
+          }, AUTO_LOGOUT_DELAY);
+        }
       }
       return;
     }
@@ -115,10 +140,17 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       if (validToken) {
         // Successfully renewed - close modal and reset state immediately
         console.log('✅ Token renewed successfully, closing modal');
+
+        // Clear auto-logout timer if it exists
+        if (autoLogoutTimerRef.current) {
+          clearTimeout(autoLogoutTimerRef.current);
+          autoLogoutTimerRef.current = null;
+        }
+
         setState({
-          showRenewalModal: false, 
+          showRenewalModal: false,
           isRenewing: false,
-          timeRemaining: 0 
+          timeRemaining: 0
         });
         warningShownRef.current = false;
         userDismissedRef.current = false; // Reset dismiss flag after successful renewal
@@ -137,12 +169,18 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      
+
+      // Clear auto-logout timer if it exists
+      if (autoLogoutTimerRef.current) {
+        clearTimeout(autoLogoutTimerRef.current);
+        autoLogoutTimerRef.current = null;
+      }
+
       // Close modal and force logout immediately
       setState({
         showRenewalModal: false,
         isRenewing: false,
-        timeRemaining: 0 
+        timeRemaining: 0
       });
       warningShownRef.current = false;
       userDismissedRef.current = false;
@@ -163,11 +201,17 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    
+
+    // Clear auto-logout timer if it exists
+    if (autoLogoutTimerRef.current) {
+      clearTimeout(autoLogoutTimerRef.current);
+      autoLogoutTimerRef.current = null;
+    }
+
     setState({
       showRenewalModal: false,
       isRenewing: false,
-      timeRemaining: 0 
+      timeRemaining: 0
     });
     warningShownRef.current = false;
     userDismissedRef.current = true;
@@ -193,6 +237,10 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (autoLogoutTimerRef.current) {
+        clearTimeout(autoLogoutTimerRef.current);
+        autoLogoutTimerRef.current = null;
       }
     };
   }, [checkTokenExpiration]);
