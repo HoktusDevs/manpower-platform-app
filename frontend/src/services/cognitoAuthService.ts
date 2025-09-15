@@ -38,6 +38,18 @@ class CognitoAuthService {
     const [firstName, ...lastNameParts] = fullName.trim().split(' ');
     const lastName = lastNameParts.join(' ') || firstName;
 
+    // Extract additional postulante data from request
+    const extendedRequest = request as RegisterRequest & {
+      phone?: string;
+      rut?: string;
+      address?: string;
+      city?: string;
+      dateOfBirth?: string;
+      educationLevel?: string;
+      workExperience?: string;
+      skills?: string;
+    };
+
     const attributeList = [
       new CognitoUserAttribute({
         Name: 'email',
@@ -57,8 +69,63 @@ class CognitoAuthService {
       }),
     ];
 
-    // Store additional postulante data in localStorage after successful registration
-    // This is a temporary solution until Cognito User Pool is configured with custom attributes
+    // Add postulante-specific attributes if this is a postulante registration
+    if (role === 'postulante') {
+      // Phone number (standard attribute)
+      if (extendedRequest.phone) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'phone_number',
+          Value: extendedRequest.phone.startsWith('+') ? extendedRequest.phone : `+56${extendedRequest.phone}`,
+        }));
+      }
+
+      // Address (standard attribute)
+      if (extendedRequest.address && extendedRequest.city) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'address',
+          Value: `${extendedRequest.address}, ${extendedRequest.city}`,
+        }));
+      }
+
+      // Birth date (standard attribute)
+      if (extendedRequest.dateOfBirth) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'birthdate',
+          Value: extendedRequest.dateOfBirth,
+        }));
+      }
+
+      // Custom attributes for postulante-specific data
+      if (extendedRequest.rut) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'custom:rut',
+          Value: extendedRequest.rut,
+        }));
+      }
+
+      if (extendedRequest.educationLevel) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'custom:education_level',
+          Value: extendedRequest.educationLevel,
+        }));
+      }
+
+      if (extendedRequest.workExperience) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'custom:work_experience',
+          Value: extendedRequest.workExperience,
+        }));
+      }
+
+      if (extendedRequest.skills) {
+        attributeList.push(new CognitoUserAttribute({
+          Name: 'custom:skills',
+          Value: extendedRequest.skills,
+        }));
+      }
+    }
+
+    console.log('📋 Registrando usuario con atributos completos:', attributeList.map(attr => `${attr.getName()}: ${attr.getValue()}`));
 
     return new Promise((resolve) => {
       this.userPool!.signUp(email, password, attributeList, [], (err, result) => {
@@ -72,52 +139,29 @@ class CognitoAuthService {
         }
 
         if (result?.user) {
-          // Store additional postulante data in localStorage for later use
+          console.log('✅ Usuario registrado exitosamente con todos los atributos en Cognito');
+
+          // Mantener localStorage solo como backup/cache para aplicaciones
           if (role === 'postulante') {
-            console.log('📋 Procesando datos adicionales de registro:', request);
-            
-            const extendedRequest = request as RegisterRequest & {
-              phone?: string;
-              rut?: string;
-              address?: string;
-              city?: string;
-              dateOfBirth?: string;
-              educationLevel?: string;
-              workExperience?: string;
-              skills?: string;
-            };
-            
-            const additionalData = {
-              phone: extendedRequest.phone || '',
-              rut: extendedRequest.rut || '',
-              address: extendedRequest.address || '',
-              city: extendedRequest.city || '',
-              dateOfBirth: extendedRequest.dateOfBirth || '',
-              educationLevel: extendedRequest.educationLevel || '',
-              workExperience: extendedRequest.workExperience || '',
-              skills: extendedRequest.skills || '',
-            };
-            
-            console.log('📋 Datos adicionales extraídos:', additionalData);
-            
             const completeUserData = {
               nombre: fullName,
               email: email.toLowerCase(),
-              telefono: additionalData.phone,
-              rut: additionalData.rut,
-              direccion: `${additionalData.address}, ${additionalData.city}`.trim().replace(/^,\s*|,\s*$/g, ''),
-              fechaNacimiento: additionalData.dateOfBirth,
-              experiencia: additionalData.workExperience,
-              educacion: additionalData.educationLevel,
-              habilidades: additionalData.skills,
+              telefono: extendedRequest.phone || '',
+              rut: extendedRequest.rut || '',
+              direccion: extendedRequest.address && extendedRequest.city
+                ? `${extendedRequest.address}, ${extendedRequest.city}`.trim().replace(/^,\s*|,\s*$/g, '')
+                : '',
+              fechaNacimiento: extendedRequest.dateOfBirth || '',
+              experiencia: extendedRequest.workExperience || '',
+              educacion: extendedRequest.educationLevel || '',
+              habilidades: extendedRequest.skills || '',
               motivacion: '' // Campo vacío para llenar en la aplicación
             };
-            
+
             localStorage.setItem('userApplicationData', JSON.stringify(completeUserData));
-            
-            console.log('✅ Datos COMPLETOS del postulante guardados en localStorage:', completeUserData);
+            console.log('💾 Datos guardados como backup en localStorage:', completeUserData);
           }
-          
+
           // Don't return user data immediately after registration
           // This prevents token mismatch issues - user should login after registration
           resolve({

@@ -65,21 +65,21 @@ export const MyProfilePage = () => {
           }
         }
 
-        // Combinar datos de Cognito + localStorage del registro
+        // Combinar datos de Cognito (prioritario) + localStorage (fallback)
         const profileInfo: UserProfileData = {
           // Datos básicos de Cognito
           nombre: attributes?.given_name || user.fullName?.split(' ')[0] || '',
           apellido: attributes?.family_name || user.fullName?.split(' ').slice(1).join(' ') || '',
           email: attributes?.email || user.email || '',
 
-          // Datos del registro almacenados en localStorage
-          rut: registrationData?.rut || '',
-          telefono: registrationData?.telefono || attributes?.phone_number?.replace('+56', '') || '',
-          direccion: registrationData?.direccion || '',
-          fechaNacimiento: registrationData?.fechaNacimiento || '',
-          educacionNivel: registrationData?.educacion || '',
-          experienciaLaboral: registrationData?.experiencia || '',
-          habilidades: registrationData?.habilidades || ''
+          // Datos del registro - priorizar Cognito sobre localStorage
+          rut: attributes?.['custom:rut'] || registrationData?.rut || '',
+          telefono: attributes?.phone_number?.replace('+56', '') || registrationData?.telefono || '',
+          direccion: attributes?.address || registrationData?.direccion || '',
+          fechaNacimiento: attributes?.birthdate || registrationData?.fechaNacimiento || '',
+          educacionNivel: attributes?.['custom:education_level'] || registrationData?.educacion || '',
+          experienciaLaboral: attributes?.['custom:work_experience'] || registrationData?.experiencia || '',
+          habilidades: attributes?.['custom:skills'] || registrationData?.habilidades || ''
         };
 
         setProfileData(profileInfo);
