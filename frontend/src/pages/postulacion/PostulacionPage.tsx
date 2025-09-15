@@ -219,7 +219,7 @@ export function PostulacionPage() {
 
   // Filtrar puestos basado en el término de búsqueda
   const filteredJobPostings = jobPostings.filter((job) => {
-    if (!searchTerm.trim()) return true; // Mostrar todos los puestos si no hay búsqueda
+    if (!searchTerm.trim()) return false; // No mostrar puestos si no hay búsqueda
 
     const searchLower = searchTerm.toLowerCase();
 
