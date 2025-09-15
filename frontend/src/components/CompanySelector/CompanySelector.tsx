@@ -33,7 +33,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
   const [filteredCompanies, setFilteredCompanies] = useState<CompanyOption[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Removed expandedFolders state as we're now showing all companies in a simple list
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -141,115 +141,85 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
     inputRef.current?.blur();
   };
 
-  const handleToggleExpanded = (folderId: string) => {
-    setExpandedFolders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderId)) {
-        newSet.delete(folderId);
-      } else {
-        newSet.add(folderId);
-      }
-      return newSet;
-    });
-  };
+  // Removed accordion functions as we're now using a simple list view
 
-  // Function to get subfolders
-  const getSubfolders = (parentId: string): CompanyOption[] => {
-    return filteredCompanies.filter(company => company.parentId === parentId);
-  };
-
-  // Function to render accordion-style companies
-  const renderAccordionCompanies = () => {
+  // Function to render companies with proper hierarchy
+  const renderHierarchicalCompanies = () => {
     // Get root companies (no parent)
     const rootCompanies = filteredCompanies.filter(company => !company.parentId);
-    
-    const renderCompanyAccordion = (company: CompanyOption): React.JSX.Element => {
-      const subfolders = getSubfolders(company.id);
-      const isExpanded = expandedFolders.has(company.id);
-      const hasSubfolders = subfolders.length > 0;
-      
-      return (
-        <div key={company.id} className="border-b border-gray-100 last:border-b-0">
-          {/* Main company row */}
-          <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
-            <div 
-              className="flex items-center flex-1"
-              onClick={() => handleCompanySelect(company)}
-            >
-              <div className="mr-2">
-                <svg className="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">{company.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {company.type}
-                  </span>
-                  {hasSubfolders && (
-                    <span className="ml-2 text-gray-400">
-                      {subfolders.length} subcarpeta{subfolders.length > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {hasSubfolders && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleExpanded(company.id);
-                }}
-                className="p-1 rounded hover:bg-gray-200 transition-colors ml-2"
-                aria-label={isExpanded ? 'Contraer' : 'Expandir'}
-              >
-                <svg 
-                  className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            )}
-          </div>
 
-          {/* Expanded subfolders */}
-          {isExpanded && hasSubfolders && (
-            <div className="bg-gray-50 border-t border-gray-200">
-              {subfolders.map((subfolder) => (
-                <div
-                  key={subfolder.id}
-                  onClick={() => handleCompanySelect(subfolder)}
-                  className="flex items-center px-8 py-2 hover:bg-gray-100 cursor-pointer"
-                >
-                  <div className="mr-2">
-                    <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-700">{subfolder.name}</div>
-                    <div className="text-xs text-gray-500">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
-                        {subfolder.type}
-                      </span>
-                    </div>
-                  </div>
+    // Function to get children of a folder
+    const getChildren = (parentId: string): CompanyOption[] => {
+      return filteredCompanies.filter(company => company.parentId === parentId);
+    };
+
+    // Function to render a company and its children recursively
+    const renderCompanyWithChildren = (company: CompanyOption, level: number = 0): React.JSX.Element[] => {
+      const children = getChildren(company.id);
+      const paddingLeft = level * 16; // 16px per level
+
+      const elements: React.JSX.Element[] = [];
+
+      // Render the company itself
+      elements.push(
+        <div
+          key={company.id}
+          onClick={() => handleCompanySelect(company)}
+          className="flex items-center py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+          style={{ paddingLeft: `${16 + paddingLeft}px`, paddingRight: '16px' }}
+        >
+          {/* Indentation indicators */}
+          {level > 0 && (
+            <div className="flex items-center mr-2">
+              {Array.from({ length: level }).map((_, i) => (
+                <div key={i} className="w-4 h-4 flex items-center justify-center">
+                  {i === level - 1 ? (
+                    <div className="w-2 h-2 border-l border-b border-gray-300"></div>
+                  ) : (
+                    <div className="w-px h-full bg-gray-300"></div>
+                  )}
                 </div>
               ))}
             </div>
           )}
+
+          <div className="mr-3">
+            <svg className="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0h3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <div className="font-medium text-gray-900">{company.path[company.path.length - 1]}</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {company.type}
+              </span>
+              {children.length > 0 && (
+                <span className="ml-2 text-gray-400">
+                  {children.length} subcarpeta{children.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       );
+
+      // Render children recursively
+      children.forEach(child => {
+        elements.push(...renderCompanyWithChildren(child, level + 1));
+      });
+
+      return elements;
     };
 
-    return rootCompanies.map(renderCompanyAccordion);
+    // Render all root companies and their hierarchies
+    const allElements: React.JSX.Element[] = [];
+    rootCompanies.forEach(rootCompany => {
+      allElements.push(...renderCompanyWithChildren(rootCompany));
+    });
+
+    return allElements;
   };
 
   const handleInputFocus = () => {
@@ -291,10 +261,10 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
         </div>
       )}
 
-      {/* Accordion-style Dropdown */}
+      {/* Company Dropdown with Hierarchy */}
       {isOpen && !isLoading && filteredCompanies.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-72 overflow-y-auto">
-          {renderAccordionCompanies()}
+          {renderHierarchicalCompanies()}
         </div>
       )}
 

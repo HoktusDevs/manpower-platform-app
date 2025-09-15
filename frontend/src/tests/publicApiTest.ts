@@ -77,7 +77,7 @@ export async function testInvalidApiKey(): Promise<boolean> {
 
     // TODO: Fix test implementation - disabled for now
     console.log('📊 Test disabled - requires proper service setup');
-    const result: any[] = [];
+    const result: unknown[] = [];
 
     // Should return empty array on failure, not throw
     console.log(`📊 Invalid key test result: ${result.length} items (should be 0)`);

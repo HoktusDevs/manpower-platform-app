@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import { publicGraphqlService } from '../../services/publicGraphqlService';
+import { graphqlService } from '../../services/graphqlService';
 
 interface JobPosting {
   jobId: string;
@@ -23,6 +24,7 @@ export const JobSearchPage = () => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userApplications, setUserApplications] = useState<string[]>([]);
 
   // Cargar todos los job postings usando getAllJobPostings
   useEffect(() => {
@@ -63,6 +65,27 @@ export const JobSearchPage = () => {
     };
 
     loadAllJobPostings();
+  }, []);
+
+  // Cargar aplicaciones del usuario para filtrar trabajos ya aplicados
+  useEffect(() => {
+    const loadUserApplications = async () => {
+      try {
+        const hasTokens = localStorage.getItem('cognito_id_token') || localStorage.getItem('cognito_access_token');
+
+        if (hasTokens && cognitoAuthService.isAuthenticated()) {
+          console.log('🔄 Cargando aplicaciones del usuario...');
+          const applications = await graphqlService.getAllApplications();
+          const appliedJobIds = applications.map(app => app.jobId);
+          setUserApplications(appliedJobIds);
+          console.log('✅ Jobs ya aplicados:', appliedJobIds);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando aplicaciones del usuario:', error);
+      }
+    };
+
+    loadUserApplications();
   }, []);
 
   // Verificar autenticación y cargar datos del usuario para reutilización
@@ -127,8 +150,13 @@ export const JobSearchPage = () => {
     }
   }, []);
 
-  // Filtrar puestos basado en el término de búsqueda
+  // Filtrar puestos basado en el término de búsqueda y excluir trabajos ya aplicados
   const filteredJobPostings = jobPostings.filter((job) => {
+    // Excluir trabajos a los que el usuario ya aplicó
+    if (userApplications.includes(job.jobId)) {
+      return false;
+    }
+
     if (!searchTerm.trim()) return true;
 
     const searchLower = searchTerm.toLowerCase();

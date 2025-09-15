@@ -778,13 +778,59 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
-    // Mutation: Create job posting (admin only)
-    jobPostingsDataSource.createResolver('CreateJobPostingResolver', {
-      typeName: 'Mutation',
-      fieldName: 'createJobPosting',
+    // STEP 1: Create folder function for pipeline
+    const createJobFolderFunction = new appsync.AppsyncFunction(this, 'CreateJobFolderFunction', {
+      name: 'createJobFolder',
+      api: this.graphqlApi,
+      dataSource: foldersDataSource,
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #set($jobId = $util.autoId())
+        ## Generate folder ID and current timestamp
+        #set($cargoFolderId = $util.autoId())
         #set($now = $util.time.nowISO8601())
+        #set($userId = $ctx.identity.sub)
+
+        ## Store values in stash for next function
+        $util.qr($ctx.stash.put("cargoFolderId", $cargoFolderId))
+        $util.qr($ctx.stash.put("now", $now))
+        $util.qr($ctx.stash.put("jobId", $util.autoId()))
+
+        ## Create the job position folder
+        {
+          "version": "2017-02-28",
+          "operation": "PutItem",
+          "key": {
+            "userId": $util.dynamodb.toDynamoDBJson($userId),
+            "folderId": $util.dynamodb.toDynamoDBJson($cargoFolderId)
+          },
+          "attributeValues": {
+            "userId": $util.dynamodb.toDynamoDBJson($userId),
+            "folderId": $util.dynamodb.toDynamoDBJson($cargoFolderId),
+            "name": $util.dynamodb.toDynamoDBJson($ctx.args.input.title),
+            "type": $util.dynamodb.toDynamoDBJson("Cargo"),
+            "createdAt": $util.dynamodb.toDynamoDBJson($now),
+            "updatedAt": $util.dynamodb.toDynamoDBJson($now),
+            "childrenCount": $util.dynamodb.toDynamoDBJson(0)
+            #if($ctx.args.input.folderId)
+              ,"parentId": $util.dynamodb.toDynamoDBJson($ctx.args.input.folderId)
+            #end
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        ## Pass folder creation result and continue
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    const createJobPostingFunction = new appsync.AppsyncFunction(this, 'CreateJobPostingFunction', {
+      name: 'createJobPosting',
+      api: this.graphqlApi,
+      dataSource: jobPostingsDataSource,
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        ## Get values from stash
+        #set($jobId = $ctx.stash.jobId)
+        #set($cargoFolderId = $ctx.stash.cargoFolderId)
+        #set($now = $ctx.stash.now)
         {
           "version": "2017-02-28",
           "operation": "PutItem",
@@ -801,14 +847,12 @@ export class DataStack extends cdk.Stack {
             "status": $util.dynamodb.toDynamoDBJson("DRAFT"),
             "companyName": $util.dynamodb.toDynamoDBJson($ctx.args.input.companyName),
             "experienceLevel": $util.dynamodb.toDynamoDBJson($ctx.args.input.experienceLevel),
+            "folderId": $util.dynamodb.toDynamoDBJson($cargoFolderId),
             "createdAt": $util.dynamodb.toDynamoDBJson($now),
             "updatedAt": $util.dynamodb.toDynamoDBJson($now),
             "applicationCount": $util.dynamodb.toDynamoDBJson(0)
             #if($ctx.args.input.salary)
               ,"salary": $util.dynamodb.toDynamoDBJson($ctx.args.input.salary)
-            #end
-            #if($ctx.args.input.folderId)
-              ,"folderId": $util.dynamodb.toDynamoDBJson($ctx.args.input.folderId)
             #end
             #if($ctx.args.input.companyId)
               ,"companyId": $util.dynamodb.toDynamoDBJson($ctx.args.input.companyId)
@@ -823,6 +867,24 @@ export class DataStack extends cdk.Stack {
         }
       `),
       responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `),
+    });
+
+    // STEP 2: Create Pipeline Resolver
+    this.graphqlApi.createResolver('CreateJobPostingPipelineResolver', {
+      typeName: 'Mutation',
+      fieldName: 'createJobPosting',
+      pipelineConfig: [createJobFolderFunction, createJobPostingFunction],
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #if(!$ctx.identity.claims.scope.contains("aws.cognito.signin.user.admin"))
+          $util.unauthorized()
+        #end
+        ## Pipeline start - store original input
+        $util.toJson({})
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        ## Return the created job posting
         $util.toJson($ctx.result)
       `),
     });

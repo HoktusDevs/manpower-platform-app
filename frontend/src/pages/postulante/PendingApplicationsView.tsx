@@ -255,7 +255,7 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
             </p>
             <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800">
-                <span className="font-medium">🎯 Proceso optimizado:</span> Completa tu información una sola vez y se aplicará automáticamente a todos los puestos seleccionados.
+                <span className="font-medium">Proceso optimizado:</span> Completa tu información una sola vez y se aplicará automáticamente a todos los puestos seleccionados.
                 {selectedJobs.length > 1 && ' Sin repetir datos, sin perder tiempo.'}
               </p>
             </div>
@@ -468,14 +468,14 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
             </button>
             <Button
               onClick={handleSubmit}
-              disabled={loading || !applicationData.nombre || !applicationData.email}
+              disabled={loading || selectedJobs.length === 0 || !applicationData.nombre || !applicationData.email}
               className={`px-6 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                loading || !applicationData.nombre || !applicationData.email
+                loading || selectedJobs.length === 0 || !applicationData.nombre || !applicationData.email
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
               }`}
             >
-              {loading ? 'Enviando...' : `Enviar ${selectedJobs.length} Aplicación(es)`}
+              {loading ? 'Enviando...' : selectedJobs.length === 0 ? 'Sin aplicaciones por enviar' : `Enviar ${selectedJobs.length} Aplicación(es)`}
             </Button>
           </div>
         </div>
