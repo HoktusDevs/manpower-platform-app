@@ -358,6 +358,27 @@ class CognitoAuthService {
   }
 
   /**
+   * Refresh user session (simplified method for token renewal modal)
+   */
+  async refreshUserSession(): Promise<boolean> {
+    try {
+      console.log('🔄 Refreshing user session...');
+      const newToken = await this.refreshAccessToken();
+
+      if (newToken) {
+        console.log('✅ User session refreshed successfully');
+        return true;
+      }
+
+      console.error('❌ Failed to refresh user session');
+      return false;
+    } catch (error) {
+      console.error('❌ Error refreshing user session:', error);
+      return false;
+    }
+  }
+
+  /**
    * TEMPORARY: Update user role to admin (for development/testing)
    */
   async updateUserRole(newRole: string): Promise<boolean> {
