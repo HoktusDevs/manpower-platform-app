@@ -135,7 +135,8 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       }
 
       // Try to get a valid access token (this will refresh if needed)
-      const validToken = await cognitoAuthService.getValidAccessToken();
+      // Pass isSessionRenewal=true to prevent forced logout during renewal
+      const validToken = await cognitoAuthService.getValidAccessToken(true);
       
       if (validToken) {
         // Successfully renewed - close modal and reset state immediately

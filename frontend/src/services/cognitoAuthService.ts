@@ -370,7 +370,7 @@ class CognitoAuthService {
   /**
    * Get valid access token (refresh if needed)
    */
-  async getValidAccessToken(): Promise<string | null> {
+  async getValidAccessToken(isSessionRenewal: boolean = false): Promise<string | null> {
     const accessToken = localStorage.getItem('cognito_access_token');
     const idToken = localStorage.getItem('cognito_id_token');
     const refreshToken = localStorage.getItem('cognito_refresh_token');
@@ -395,13 +395,15 @@ class CognitoAuthService {
         }
       }
       
-      // If missing role claim, force logout immediately
-      if (!hasRoleClaim) {
+      // If missing role claim, force logout immediately (but not during session renewal)
+      if (!hasRoleClaim && !isSessionRenewal) {
         console.error('🚨 Token missing custom:role claim - forcing logout');
         this.logout();
         localStorage.clear();
         window.location.href = '/login?reason=missing_role';
         return null;
+      } else if (!hasRoleClaim && isSessionRenewal) {
+        console.warn('⚠️ Token missing custom:role claim during session renewal - allowing continuation');
       }
       
       // If token is expired, try to refresh
