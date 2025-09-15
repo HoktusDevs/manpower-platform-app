@@ -71,11 +71,15 @@ export function PostulacionPage() {
           const realJobPostings = await publicGraphqlService.getActiveJobPostings(20);
 
           if (realJobPostings.length > 0) {
-            console.log(`✅ ${realJobPostings.length} ofertas cargadas desde API pública`);
+            console.log(`✅ ${realJobPostings.length} ofertas reales cargadas desde API pública`);
             setJobPostings(realJobPostings);
             return;
           } else {
-            console.log('ℹ️  No hay ofertas activas en la base de datos, usando datos de ejemplo');
+            console.log('ℹ️  No hay ofertas PUBLICADAS en la base de datos. Para ver ofertas reales:');
+            console.log('   1. Ve a /admin/jobs');
+            console.log('   2. Cambia el estado de las ofertas de "BORRADOR" a "PUBLICADO"');
+            console.log('   3. Recarga esta página');
+            console.log('   📋 Mostrando ofertas de ejemplo mientras tanto...');
           }
         } else {
           console.log('⚠️ API pública no disponible (falta VITE_GRAPHQL_API_KEY), usando datos de ejemplo');
