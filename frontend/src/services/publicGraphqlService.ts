@@ -51,6 +51,30 @@ const GET_JOB_POSTING_PUBLIC = `
   }
 `;
 
+const GET_ALL_JOB_POSTINGS_PUBLIC = `
+  query GetAllJobPostings($status: JobStatus, $limit: Int, $nextToken: String) {
+    getAllJobPostings(status: $status, limit: $limit, nextToken: $nextToken) {
+      jobId
+      title
+      description
+      requirements
+      location
+      employmentType
+      status
+      companyName
+      companyId
+      salary
+      benefits
+      experienceLevel
+      createdAt
+      updatedAt
+      expiresAt
+      applicationCount
+      folderId
+    }
+  }
+`;
+
 interface PublicGraphQLConfig {
   graphqlEndpoint: string;
   region: string;
@@ -73,7 +97,7 @@ class PublicGraphQLService {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
           region: config.region,
-          defaultAuthMode: 'apiKey',
+          defaultAuthMode: 'apiKey' as const,
           apiKey: config.apiKey
         }
       }
@@ -139,6 +163,22 @@ class PublicGraphQLService {
     } catch (error) {
       console.warn(`Failed to fetch job posting ${jobId} publicly:`, error);
       return null;
+    }
+  }
+
+  /**
+   * PUBLIC: Get all job postings without authentication (including drafts)
+   */
+  async getAllJobPostings(status?: string, limit?: number, nextToken?: string): Promise<JobPosting[]> {
+    try {
+      const result = await this.executePublicQuery<{ getAllJobPostings: JobPosting[] | null }>(
+        GET_ALL_JOB_POSTINGS_PUBLIC,
+        { status, limit, nextToken }
+      );
+      return result.getAllJobPostings || [];
+    } catch (error) {
+      console.warn('Failed to fetch all job postings publicly:', error);
+      return [];
     }
   }
 

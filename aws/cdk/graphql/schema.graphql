@@ -100,8 +100,9 @@ type Query {
   getJobPosting(jobId: String!): JobPosting
     @aws_api_key @aws_cognito_user_pools @aws_iam
   
-  # ADMIN ONLY: Get all job postings
+  # PUBLIC/ADMIN: Get all job postings
   getAllJobPostings(status: JobStatus, limit: Int, nextToken: String): [JobPosting!]!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   
   # ADMIN ONLY: Get job posting statistics
   getJobPostingStats: JobPostingStats
@@ -251,22 +252,39 @@ type CompanyStats {
 # JOB POSTINGS TYPES
 type JobPosting {
   jobId: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   title: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   description: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   requirements: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   salary: String
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   location: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   employmentType: EmploymentType!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   status: JobStatus!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   companyName: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   companyId: String
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   folderId: String  # Link to company folder in directory system
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   benefits: String
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   experienceLevel: ExperienceLevel!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   createdAt: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   updatedAt: String!
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   expiresAt: String
+    @aws_api_key @aws_cognito_user_pools @aws_iam
   applicationCount: Int
+    @aws_api_key @aws_cognito_user_pools @aws_iam
 }
 
 # JOB POSTINGS ENUMS

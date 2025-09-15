@@ -65,20 +65,17 @@ export function PostulacionPage() {
           });
         }
 
-        // Try to fetch real job postings via public API
+        // Try to fetch real job postings via public API (all job postings)
         if (publicGraphqlService.isInitialized()) {
-          console.log('🌐 Cargando ofertas reales desde API pública...');
-          const realJobPostings = await publicGraphqlService.getActiveJobPostings(20);
+          console.log('🌐 Cargando TODAS las ofertas desde API pública...');
+          const realJobPostings = await publicGraphqlService.getAllJobPostings(undefined, 20);
 
           if (realJobPostings.length > 0) {
-            console.log(`✅ ${realJobPostings.length} ofertas reales cargadas desde API pública`);
+            console.log(`✅ ${realJobPostings.length} ofertas reales cargadas desde API pública (incluyendo borradores)`);
             setJobPostings(realJobPostings);
             return;
           } else {
-            console.log('ℹ️  No hay ofertas PUBLICADAS en la base de datos. Para ver ofertas reales:');
-            console.log('   1. Ve a /admin/jobs');
-            console.log('   2. Cambia el estado de las ofertas de "BORRADOR" a "PUBLICADO"');
-            console.log('   3. Recarga esta página');
+            console.log('ℹ️  No hay ofertas en la base de datos.');
             console.log('   📋 Mostrando ofertas de ejemplo mientras tanto...');
           }
         } else {
