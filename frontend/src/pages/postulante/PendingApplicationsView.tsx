@@ -21,9 +21,7 @@ interface UserApplicationData {
   email: string;
   telefono: string;
   direccion: string;
-  experiencia: string;
   educacion: string;
-  motivacion: string;
 }
 
 interface PendingApplicationsViewProps {
@@ -40,9 +38,7 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
     email: '',
     telefono: '',
     direccion: '',
-    experiencia: '',
-    educacion: '',
-    motivacion: ''
+    educacion: ''
   });
   const [files, setFiles] = useState<{ [jobId: string]: File[] }>({});
   const [loading, setLoading] = useState(false);
@@ -103,7 +99,6 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
           email: parsedUserData.email || '',
           telefono: parsedUserData.telefono || '',
           direccion: parsedUserData.direccion || '',
-          experiencia: parsedUserData.experiencia || '',
           educacion: parsedUserData.educacion || ''
         }));
         
@@ -146,9 +141,7 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                 email: attrs.email || currentUser.email || '',
                 telefono: attrs.phone_number?.replace('+56', '') || '', // Limpiar código de país
                 direccion: attrs.address || '',
-                experiencia: attrs['custom:work_experience'] || '',
-                educacion: attrs['custom:education_level'] || '',
-                motivacion: '' // Campo vacío para que el usuario llene
+                educacion: attrs['custom:education_level'] || ''
               };
               
               setApplicationData(prev => ({
@@ -169,9 +162,7 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                 rut: '',
                 telefono: '',
                 direccion: '',
-                experiencia: '',
-                educacion: '',
-                motivacion: ''
+                educacion: ''
               };
               
               setApplicationData(prev => ({
@@ -416,16 +407,6 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Experiencia Laboral</label>
-                  <textarea
-                    value={applicationData.experiencia}
-                    onChange={(e) => handleInputChange('experiencia', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Describe tu experiencia laboral relevante..."
-                  />
-                </div>
-                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Educación</label>
                   <textarea
                     value={applicationData.educacion}
@@ -433,16 +414,6 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Describe tu formación académica..."
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivación</label>
-                  <textarea
-                    value={applicationData.motivacion}
-                    onChange={(e) => handleInputChange('motivacion', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="¿Por qué te interesa este/estos puesto(s)?"
                   />
                 </div>
               </div>

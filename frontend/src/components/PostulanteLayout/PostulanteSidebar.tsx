@@ -50,35 +50,35 @@ const sidebarItems: SidebarItem[] = [
     name: 'Completar Aplicaciones',
     icon: ClipboardDocumentListIcon,
     path: '/postulante/completar-aplicaciones',
-    description: 'Completa tus postulaciones pendientes'
+    description: ''
   },
   {
     id: 'mis-aplicaciones',
     name: 'Mis Aplicaciones',
     icon: DocumentTextIcon,
     path: '/postulante/aplicaciones',
-    description: 'Ver estado de tus postulaciones'
+    description: ''
   },
   {
     id: 'buscar-empleos',
     name: 'Buscar Empleos',
     icon: BriefcaseIcon,
     path: '/aplicar',
-    description: 'Explorar nuevas oportunidades'
+    description: ''
   },
   {
     id: 'perfil',
     name: 'Mi Perfil',
     icon: UserIcon,
     path: '/postulante/perfil',
-    description: 'Administrar información personal'
+    description: ''
   },
   {
     id: 'configuracion',
     name: 'Configuración',
     icon: Cog6ToothIcon,
     path: '/postulante/configuracion',
-    description: 'Preferencias y notificaciones'
+    description: ''
   },
 ];
 
@@ -93,8 +93,6 @@ export const PostulanteSidebar = ({ onNavigate }: PostulanteSidebarProps) => {
   return (
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 overflow-y-auto">
       <div className="p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Mi Panel</h2>
-
         <nav className="space-y-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
@@ -119,9 +117,6 @@ export const PostulanteSidebar = ({ onNavigate }: PostulanteSidebarProps) => {
                   <div className="flex-1">
                     <div className={`text-sm font-medium ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>
                       {item.name}
-                    </div>
-                    <div className={`text-xs mt-1 ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
-                      {item.description}
                     </div>
                   </div>
                 </div>
