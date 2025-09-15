@@ -11,9 +11,9 @@ interface UserProfileData {
   telefono: string;
   direccion: string;
   fechaNacimiento: string;
-  genero: string;
   educacionNivel: string;
   experienciaLaboral: string;
+  habilidades: string;
 }
 
 export const MyProfilePage = () => {
@@ -26,9 +26,9 @@ export const MyProfilePage = () => {
     telefono: '',
     direccion: '',
     fechaNacimiento: '',
-    genero: '',
     educacionNivel: '',
-    experienciaLaboral: ''
+    experienciaLaboral: '',
+    habilidades: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,37 +49,41 @@ export const MyProfilePage = () => {
           throw new Error('Usuario no encontrado');
         }
 
-        // Obtener atributos del usuario desde Cognito
+        // Obtener datos combinados: Cognito + localStorage
         const attributes = await cognitoAuthService.getUserAttributes();
         console.log('📋 Atributos del usuario desde Cognito:', attributes);
 
-        if (attributes) {
-          // Mapear atributos de Cognito a nuestro formato
-          const profileInfo: UserProfileData = {
-            nombre: attributes.given_name || '',
-            apellido: attributes.family_name || '',
-            rut: attributes['custom:rut'] || '',
-            email: attributes.email || user.email || '',
-            telefono: attributes.phone_number?.replace('+56', '') || '',
-            direccion: attributes.address || '',
-            fechaNacimiento: attributes.birthdate || '',
-            genero: attributes.gender || '',
-            educacionNivel: attributes['custom:education_level'] || '',
-            experienciaLaboral: attributes['custom:work_experience'] || ''
-          };
-
-          setProfileData(profileInfo);
-          console.log('✅ Datos del perfil cargados:', profileInfo);
-        } else {
-          // Fallback con datos básicos del usuario
-          setProfileData(prev => ({
-            ...prev,
-            nombre: user.fullName?.split(' ')[0] || '',
-            apellido: user.fullName?.split(' ').slice(1).join(' ') || '',
-            email: user.email || ''
-          }));
-          console.log('⚠️ Usando datos básicos del usuario');
+        // Obtener datos adicionales del registro desde localStorage
+        const additionalData = localStorage.getItem('userApplicationData');
+        let registrationData = null;
+        if (additionalData) {
+          try {
+            registrationData = JSON.parse(additionalData);
+            console.log('📋 Datos adicionales del registro:', registrationData);
+          } catch (e) {
+            console.warn('⚠️ Error parseando datos del registro:', e);
+          }
         }
+
+        // Combinar datos de Cognito + localStorage del registro
+        const profileInfo: UserProfileData = {
+          // Datos básicos de Cognito
+          nombre: attributes?.given_name || user.fullName?.split(' ')[0] || '',
+          apellido: attributes?.family_name || user.fullName?.split(' ').slice(1).join(' ') || '',
+          email: attributes?.email || user.email || '',
+
+          // Datos del registro almacenados en localStorage
+          rut: registrationData?.rut || '',
+          telefono: registrationData?.telefono || attributes?.phone_number?.replace('+56', '') || '',
+          direccion: registrationData?.direccion || '',
+          fechaNacimiento: registrationData?.fechaNacimiento || '',
+          educacionNivel: registrationData?.educacion || '',
+          experienciaLaboral: registrationData?.experiencia || '',
+          habilidades: registrationData?.habilidades || ''
+        };
+
+        setProfileData(profileInfo);
+        console.log('✅ Datos del perfil COMPLETOS cargados:', profileInfo);
 
       } catch (err) {
         console.error('❌ Error cargando perfil:', err);
@@ -120,14 +124,32 @@ export const MyProfilePage = () => {
         phone_number: profileData.telefono ? `+56${profileData.telefono}` : '',
         address: profileData.direccion,
         birthdate: profileData.fechaNacimiento,
-        gender: profileData.genero,
+        // gender: removed - not collected in registration
         'custom:rut': profileData.rut,
         'custom:education_level': profileData.educacionNivel,
-        'custom:work_experience': profileData.experienciaLaboral
+        'custom:work_experience': profileData.experienciaLaboral,
+        'custom:skills': profileData.habilidades
       };
 
       // TODO: Implementar actualización de atributos en Cognito
       console.log('🔄 Atributos a actualizar:', attributesToUpdate);
+
+      // También actualizar los datos en localStorage para persistencia
+      const updatedApplicationData = {
+        nombre: profileData.nombre,
+        email: profileData.email,
+        telefono: profileData.telefono,
+        rut: profileData.rut,
+        direccion: profileData.direccion,
+        fechaNacimiento: profileData.fechaNacimiento,
+        experiencia: profileData.experienciaLaboral,
+        educacion: profileData.educacionNivel,
+        habilidades: profileData.habilidades,
+        motivacion: '' // Campo preservado para aplicaciones
+      };
+
+      localStorage.setItem('userApplicationData', JSON.stringify(updatedApplicationData));
+      console.log('💾 Datos actualizados en localStorage:', updatedApplicationData);
 
       // Simular guardado por ahora
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -410,24 +432,20 @@ export const MyProfilePage = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Género
+                      Habilidades y Competencias
                     </label>
-                    <select
-                      value={profileData.genero}
-                      onChange={(e) => handleInputChange('genero', e.target.value)}
+                    <textarea
+                      value={profileData.habilidades}
+                      onChange={(e) => handleInputChange('habilidades', e.target.value)}
                       disabled={!isEditing}
+                      rows={3}
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         isEditing
                           ? 'border-gray-300 bg-white'
                           : 'border-gray-200 bg-gray-50 cursor-not-allowed'
                       }`}
-                    >
-                      <option value="">Selecciona tu género</option>
-                      <option value="masculino">Masculino</option>
-                      <option value="femenino">Femenino</option>
-                      <option value="otro">Otro</option>
-                      <option value="prefiero-no-decir">Prefiero no decir</option>
-                    </select>
+                      placeholder="Menciona tus principales habilidades, idiomas, certificaciones, etc."
+                    />
                   </div>
 
                   <div className="md:col-span-2">
