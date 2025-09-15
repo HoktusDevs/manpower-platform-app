@@ -233,11 +233,11 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg">
+    <div className="h-full bg-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-6 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-900">Completar Aplicaciones</h1>
             <p className="text-sm text-gray-600 mt-1">
               Aplica a {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''} con un solo formulario
