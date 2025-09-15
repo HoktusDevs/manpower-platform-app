@@ -20,9 +20,26 @@ export class CognitoAuthStack extends cdk.Stack {
 
     const environment = props.environment || 'dev';
 
-    // Custom attributes for roles
-    const roleAttribute = new cognito.StringAttribute({ 
-      mutable: true 
+    // Custom attributes for roles and postulante data
+    const roleAttribute = new cognito.StringAttribute({
+      mutable: true
+    });
+
+    // Postulante-specific custom attributes
+    const rutAttribute = new cognito.StringAttribute({
+      mutable: true
+    });
+
+    const educationLevelAttribute = new cognito.StringAttribute({
+      mutable: true
+    });
+
+    const workExperienceAttribute = new cognito.StringAttribute({
+      mutable: true
+    });
+
+    const skillsAttribute = new cognito.StringAttribute({
+      mutable: true
     });
 
     // Cognito User Pool
@@ -61,11 +78,27 @@ export class CognitoAuthStack extends cdk.Stack {
           required: true,
           mutable: true,
         },
+        phoneNumber: {
+          required: false,
+          mutable: true,
+        },
+        address: {
+          required: false,
+          mutable: true,
+        },
+        birthdate: {
+          required: false,
+          mutable: true,
+        },
       },
 
       // Custom attributes
       customAttributes: {
         role: roleAttribute,
+        rut: rutAttribute,
+        education_level: educationLevelAttribute,
+        work_experience: workExperienceAttribute,
+        skills: skillsAttribute,
       },
 
       // Password policy
