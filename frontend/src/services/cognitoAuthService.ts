@@ -810,6 +810,7 @@ class CognitoAuthService {
       'Invalid verification code provided, please try again.': 'Código de verificación inválido',
       'Password attempts exceeded': 'Demasiados intentos. Intenta más tarde.',
       'UsernameExistsException': 'Un usuario con este email ya existe',
+      'User already exists': 'Un usuario con este email ya existe',
       'InvalidPasswordException': 'La contraseña no cumple con los requisitos',
       'NotAuthorizedException': 'Contraseña actual incorrecta',
       'LimitExceededException': 'Demasiados intentos. Intenta más tarde.',

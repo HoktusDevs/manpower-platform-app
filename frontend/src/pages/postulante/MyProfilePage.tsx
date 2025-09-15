@@ -82,6 +82,16 @@ export const MyProfilePage = () => {
           habilidades: attributes?.['custom:skills'] || registrationData?.habilidades || ''
         };
 
+        // Debug: Log where each field is coming from
+        console.log('🔍 Origen de datos del perfil:');
+        console.log('- RUT:', attributes?.['custom:rut'] ? 'Cognito' : (registrationData?.rut ? 'localStorage' : 'vacío'));
+        console.log('- Teléfono:', attributes?.phone_number ? 'Cognito' : (registrationData?.telefono ? 'localStorage' : 'vacío'));
+        console.log('- Dirección:', attributes?.address ? 'Cognito' : (registrationData?.direccion ? 'localStorage' : 'vacío'));
+        console.log('- Fecha Nacimiento:', attributes?.birthdate ? 'Cognito' : (registrationData?.fechaNacimiento ? 'localStorage' : 'vacío'));
+        console.log('- Educación:', attributes?.['custom:education_level'] ? 'Cognito' : (registrationData?.educacion ? 'localStorage' : 'vacío'));
+        console.log('- Experiencia:', attributes?.['custom:work_experience'] ? 'Cognito' : (registrationData?.experiencia ? 'localStorage' : 'vacío'));
+        console.log('- Habilidades:', attributes?.['custom:skills'] ? 'Cognito' : (registrationData?.habilidades ? 'localStorage' : 'vacío'));
+
         setProfileData(profileInfo);
         console.log('✅ Datos del perfil COMPLETOS cargados:', profileInfo);
 

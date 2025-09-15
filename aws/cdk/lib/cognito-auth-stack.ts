@@ -20,27 +20,7 @@ export class CognitoAuthStack extends cdk.Stack {
 
     const environment = props.environment || 'dev';
 
-    // Custom attributes for roles and postulante data
-    const roleAttribute = new cognito.StringAttribute({
-      mutable: true
-    });
-
-    // Postulante-specific custom attributes
-    const rutAttribute = new cognito.StringAttribute({
-      mutable: true
-    });
-
-    const educationLevelAttribute = new cognito.StringAttribute({
-      mutable: true
-    });
-
-    const workExperienceAttribute = new cognito.StringAttribute({
-      mutable: true
-    });
-
-    const skillsAttribute = new cognito.StringAttribute({
-      mutable: true
-    });
+    // Custom attributes for roles and postulante data (existing schema will be used)
 
     // Cognito User Pool
     this.userPool = new cognito.UserPool(this, 'ManpowerUserPool', {
@@ -92,14 +72,7 @@ export class CognitoAuthStack extends cdk.Stack {
         },
       },
 
-      // Custom attributes
-      customAttributes: {
-        role: roleAttribute,
-        rut: rutAttribute,
-        education_level: educationLevelAttribute,
-        work_experience: workExperienceAttribute,
-        skills: skillsAttribute,
-      },
+      // Custom attributes (existing schema will be preserved)
 
       // Password policy
       passwordPolicy: {
@@ -181,23 +154,29 @@ export class CognitoAuthStack extends cdk.Stack {
       preventUserExistenceErrors: true,
       generateSecret: false, // For web apps
       
-      // Attributes - CRITICAL: Include custom:role in tokens
+      // Attributes - CRITICAL: Include all custom attributes in tokens
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
           givenName: true,
           familyName: true,
           emailVerified: true,
+          phoneNumber: true,
+          address: true,
+          birthdate: true,
         })
-        .withCustomAttributes('role'),
-        
+        .withCustomAttributes('role', 'rut', 'education_level', 'work_experience', 'skills'),
+
       writeAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
           givenName: true,
           familyName: true,
+          phoneNumber: true,
+          address: true,
+          birthdate: true,
         })
-        .withCustomAttributes('role'),
+        .withCustomAttributes('role', 'rut', 'education_level', 'work_experience', 'skills'),
     });
 
     // Identity Pool for AWS resource access

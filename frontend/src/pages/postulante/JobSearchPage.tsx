@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
+import { publicGraphqlService } from '../../services/publicGraphqlService';
 
 interface JobPosting {
   jobId: string;
@@ -23,21 +24,24 @@ export const JobSearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Cargar puestos activos al montar el componente
+  // Cargar todos los job postings usando getAllJobPostings
   useEffect(() => {
-    const loadActiveJobPostings = async () => {
+    const loadAllJobPostings = async () => {
       try {
         setLoading(true);
-        console.log('🔄 Iniciando carga de puestos activos...');
+        console.log('🔄 Cargando todos los job postings con getAllJobPostings...');
 
-        // TODO: Implementar endpoint público para ofertas de trabajo
-        // Por ahora usamos datos mock para evitar errores de autenticación en ruta pública
-        console.log('🔒 Usando datos mock - búsqueda de empleos dentro de layout postulante');
+        // Usar getAllJobPostings para consistencia con /aplicar
+        const realJobPostings = await publicGraphqlService.getAllJobPostings(undefined, 20);
 
-        // Fallback to mock data if GraphQL fails
-        console.log('⚠️ Usando datos temporales mientras se configura el acceso público al GraphQL');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('✅ Job postings cargados desde GraphQL:', realJobPostings.length);
+        setJobPostings(realJobPostings);
 
+      } catch (error) {
+        console.error('❌ Error cargando job postings:', error);
+
+        // Fallback a datos mock solo si falla la API
+        console.log('⚠️ Usando datos mock como fallback');
         const mockJobPostings: JobPosting[] = [
           {
             jobId: 'job-001',
@@ -50,57 +54,15 @@ export const JobSearchPage = () => {
             salary: '45.000€ - 60.000€ anuales',
             benefits: 'Seguro médico, teletrabajo híbrido, 25 días de vacaciones',
             experienceLevel: 'Intermedio'
-          },
-          {
-            jobId: 'job-002',
-            title: 'Diseñador UX/UI Senior',
-            description: 'Únete a nuestro equipo de diseño para crear experiencias digitales excepcionales.',
-            requirements: 'Figma, Adobe Creative Suite, experiencia en diseño de productos digitales. Portfolio requerido.',
-            location: 'Barcelona, España',
-            employmentType: 'Tiempo completo',
-            companyName: 'Design Studio Pro',
-            salary: '40.000€ - 55.000€ anuales',
-            benefits: 'Formación continua, horario flexible, ambiente creativo',
-            experienceLevel: 'Senior'
-          },
-          {
-            jobId: 'job-003',
-            title: 'Analista de Datos',
-            description: 'Buscamos un analista de datos para extraer insights valiosos de grandes volúmenes de información.',
-            requirements: 'Python, SQL, Power BI, Excel avanzado. Conocimientos en machine learning valorados.',
-            location: 'Valencia, España',
-            employmentType: 'Tiempo completo',
-            companyName: 'DataWorks Analytics',
-            salary: '38.000€ - 50.000€ anuales',
-            benefits: 'Cursos de certificación, bonus por rendimiento',
-            experienceLevel: 'Intermedio'
-          },
-          {
-            jobId: 'job-004',
-            title: 'Marketing Digital Specialist',
-            description: 'Gestiona campañas digitales y optimiza la presencia online de nuestros clientes.',
-            requirements: 'Google Ads, Facebook Ads, SEO/SEM, Google Analytics. 2+ años de experiencia.',
-            location: 'Sevilla, España',
-            employmentType: 'Tiempo parcial',
-            companyName: 'Digital Growth Agency',
-            salary: '25.000€ - 35.000€ anuales',
-            benefits: 'Trabajo remoto, horario flexible',
-            experienceLevel: 'Junior'
           }
         ];
-
-        console.log('✅ Puestos cargados (datos temporales):', mockJobPostings.length, mockJobPostings);
         setJobPostings(mockJobPostings);
-
-      } catch (error) {
-        console.error('❌ Error cargando puestos:', error);
-        setJobPostings([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadActiveJobPostings();
+    loadAllJobPostings();
   }, []);
 
   // Verificar autenticación y cargar datos del usuario para reutilización

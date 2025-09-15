@@ -323,34 +323,6 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
                       </div>
                     </div>
                     
-                    {/* Upload de archivos para este puesto */}
-                    <div className="mt-4 p-3 bg-white rounded-md border border-gray-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        📎 Documentos para "{job.title}" (CV, carta de presentación, etc.)
-                      </label>
-                      <input
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        onChange={(e) => handleFileChange(job.jobId, e.target.files)}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                      {files[job.jobId] && files[job.jobId].length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-sm text-green-600 font-medium">
-                            ✅ {files[job.jobId].length} archivo(s) seleccionado(s):
-                          </p>
-                          <ul className="text-xs text-gray-600 mt-1 space-y-1">
-                            {files[job.jobId].map((file, fileIdx) => (
-                              <li key={fileIdx} className="flex items-center">
-                                <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                                {file.name}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 ))}
               </div>
