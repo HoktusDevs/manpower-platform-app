@@ -133,22 +133,14 @@ function AppContent() {
         {/* Ruta pública para aplicar a trabajos - NO REQUIERE AUTENTICACIÓN */}
         <Route path="/aplicar" element={<PostulacionPage />} />
 
-        {/* PLUXEE: Admin portal routes */}
-        <Route path="/pluxee/admin/*" element={
-          <RoleGuard requiredRole="admin">
-            <PluxeeLayout portalType="admin" />
-          </RoleGuard>
-        }>
+        {/* PLUXEE: Public portal routes - NO AUTHENTICATION REQUIRED */}
+        <Route path="/pluxee/admin/*" element={<PluxeeLayout portalType="admin" />}>
           <Route index element={<Navigate to="/pluxee/admin/folders" replace />} />
           <Route path="folders" element={<PluxeeFoldersAndFilesPage />} />
         </Route>
 
-        {/* PLUXEE: Company portal routes */}
-        <Route path="/pluxee/empresa/*" element={
-          <RoleGuard requiredRole="admin">
-            <PluxeeLayout portalType="empresa" />
-          </RoleGuard>
-        }>
+        {/* PLUXEE: Public company portal routes - NO AUTHENTICATION REQUIRED */}
+        <Route path="/pluxee/empresa/*" element={<PluxeeLayout portalType="empresa" />}>
           <Route index element={<Navigate to="/pluxee/empresa/folders" replace />} />
           <Route path="folders" element={<PluxeeCompanyFoldersPage />} />
         </Route>

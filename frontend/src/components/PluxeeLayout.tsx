@@ -1,8 +1,7 @@
 import { type ReactNode } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { AccessDenied } from '../core-ui';
-import { DashboardHeader, Sidebar } from './AdminDashboard';
+import { PluxeeHeader } from './PluxeeHeader';
+import { Sidebar } from './AdminDashboard';
 
 interface PluxeeLayoutProps {
   children?: ReactNode;
@@ -11,32 +10,12 @@ interface PluxeeLayoutProps {
 
 export const PluxeeLayout = ({ children, portalType }: PluxeeLayoutProps) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-gray-600">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || user?.role !== 'admin') {
-    return (
-      <AccessDenied
-        message="Solo los administradores pueden acceder a este portal."
-        redirectLabel="Ir al Dashboard de Postulante"
-        onRedirect={() => navigate('/postulante')}
-      />
-    );
-  }
+  // NO AUTHENTICATION CHECK - Pluxee is public
 
   return (
     <div className="h-screen bg-gray-100 overflow-hidden">
-      <DashboardHeader />
+      <PluxeeHeader />
 
       <div className="flex h-[calc(100vh-4rem)] overflow-visible">
         <Sidebar
