@@ -27,3 +27,10 @@ export const useFoldersContext = (): UseFoldersStateReturn => {
   }
   return context;
 };
+
+// Optional version that doesn't throw
+// eslint-disable-next-line react-refresh/only-export-components
+export const useFoldersContextOptional = (): UseFoldersStateReturn | null => {
+  const context = useContext(FoldersContext);
+  return context;
+};

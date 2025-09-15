@@ -1,13 +1,15 @@
 import { useCallback } from 'react';
-import { useFoldersContext } from '../components/FoldersAndFiles/context/FoldersContext';
+import { useFoldersContextOptional } from '../components/FoldersAndFiles/context/FoldersContext';
 
 /**
  * Custom hook for synchronizing folder system with job operations
  * Follows Single Responsibility Principle - handles only sync logic
- * NOTE: Must be used within a FoldersProvider context
+ * NOTE: Works gracefully whether or not FoldersProvider context is available
  */
 export const useFolderJobSync = () => {
-  const { refreshFolders } = useFoldersContext();
+  // Get folders context optionally - won't throw if not available
+  const foldersContext = useFoldersContextOptional();
+  const refreshFolders = foldersContext?.refreshFolders;
 
   /**
    * Refresh folders after job operations
@@ -15,8 +17,12 @@ export const useFolderJobSync = () => {
    */
   const syncFoldersAfterJobOperation = useCallback(async () => {
     try {
-      // Trigger folder refresh to update any job counts or related data
-      await refreshFolders();
+      // Only sync if refreshFolders is available
+      if (refreshFolders) {
+        await refreshFolders();
+      } else {
+        console.debug('Skipping folder sync - FoldersProvider not available');
+      }
     } catch (error) {
       console.warn('Failed to sync folders after job operation:', error);
       // Don't throw - this is a non-critical sync operation
