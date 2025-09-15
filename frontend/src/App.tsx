@@ -23,7 +23,6 @@ import { PostulacionPage } from './pages/postulacion/PostulacionPage';
 import { PluxeeFoldersAndFilesPage } from './pages/pluxee/admin/PluxeeFoldersAndFilesPage';
 import { PluxeeCompanyFoldersPage } from './pages/pluxee/company/PluxeeCompanyFoldersPage';
 import { PluxeeLayout } from './components/PluxeeLayout';
-import { EnhancedFormsManager } from './pages/admin/EnhancedFormsManager';
 import { FormRenderer } from './pages/postulante/FormRenderer';
 import { RoleGuard } from './components/RoleGuard';
 import { SessionRenewalModal } from './components/SessionRenewalModal';
@@ -160,11 +159,6 @@ function AppContent() {
           <Route path="migration" element={
             <RoleGuard requiredRole="admin">
               <MigrationDashboard />
-            </RoleGuard>
-          } />
-          <Route path="forms/*" element={
-            <RoleGuard requiredRole="admin">
-              <EnhancedFormsManager />
             </RoleGuard>
           } />
           <Route path="applications" element={
