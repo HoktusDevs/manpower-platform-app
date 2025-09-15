@@ -335,6 +335,26 @@ class GraphQLService {
   }
 
   /**
+   * POSTULANTE: Apply to a single job from /aplicar page
+   */
+  async applyToJob(jobId: string): Promise<Application> {
+    if (!this.applicationsService) {
+      throw new Error('ApplicationsService not initialized');
+    }
+    return this.applicationsService.applyToJob(jobId);
+  }
+
+  /**
+   * POSTULANTE: Apply to multiple jobs from /aplicar page
+   */
+  async applyToMultipleJobs(jobIds: string[]): Promise<Application[]> {
+    if (!this.applicationsService) {
+      throw new Error('ApplicationsService not initialized');
+    }
+    return this.applicationsService.applyToMultipleJobs(jobIds);
+  }
+
+  /**
    * PUBLIC: Get active job postings
    */
   async getActiveJobPostings(limit?: number, nextToken?: string): Promise<JobPosting[]> {

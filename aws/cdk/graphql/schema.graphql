@@ -5,6 +5,7 @@
 type Application {
   userId: String!
   applicationId: String!
+  jobId: String!  # Reference to JobPosting
   companyName: String!
   position: String!
   status: ApplicationStatus!
@@ -48,6 +49,7 @@ enum DocumentType {
 
 # INPUT TYPES
 input CreateApplicationInput {
+  jobId: String!  # Reference to JobPosting
   companyName: String!
   position: String!
   description: String
@@ -147,6 +149,12 @@ type Query {
 type Mutation {
   # POSTULANTE: Create new application
   createApplication(input: CreateApplicationInput!): Application!
+
+  # POSTULANTE: Apply to job from /aplicar page (creates application + updates job)
+  applyToJob(jobId: String!): Application!
+
+  # POSTULANTE: Apply to multiple jobs from /aplicar page
+  applyToMultipleJobs(jobIds: [String!]!): [Application!]!
   
   # POSTULANTE: Update my application (limited fields)
   updateMyApplication(input: UpdateApplicationInput!): Application!
@@ -284,6 +292,8 @@ type JobPosting {
   expiresAt: String
     @aws_api_key @aws_cognito_user_pools @aws_iam
   applicationCount: Int
+    @aws_api_key @aws_cognito_user_pools @aws_iam
+  applicantIds: [String!]  # List of userIds who applied
     @aws_api_key @aws_cognito_user_pools @aws_iam
 }
 

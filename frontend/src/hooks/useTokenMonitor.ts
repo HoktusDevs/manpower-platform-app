@@ -28,6 +28,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const userDismissedRef = useRef<boolean>(false);
   const isLoggedOutRef = useRef<boolean>(false);
   const autoLogoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRenewalTimeRef = useRef<number>(0);
 
   const performLogout = useCallback(() => {
     // Stop all monitoring
@@ -131,12 +132,20 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       return;
     }
 
+    // Check if we recently renewed (within last 2 minutes) to avoid immediate re-triggering
+    const timeSinceLastRenewal = (Date.now() / 1000) - lastRenewalTimeRef.current;
+    const RENEWAL_GRACE_PERIOD = 2 * 60; // 2 minutes grace period after renewal
+
     // Show warning if token expires within WARNING_TIME and hasn't been shown yet and user hasn't dismissed
-    if (timeRemaining <= TOKEN_WARNING_TIME && !warningShownRef.current && !userDismissedRef.current) {
-      setState(prev => ({ 
-        ...prev, 
-        showRenewalModal: true, 
-        timeRemaining 
+    // AND we're not in the grace period after renewal
+    if (timeRemaining <= TOKEN_WARNING_TIME &&
+        !warningShownRef.current &&
+        !userDismissedRef.current &&
+        timeSinceLastRenewal > RENEWAL_GRACE_PERIOD) {
+      setState(prev => ({
+        ...prev,
+        showRenewalModal: true,
+        timeRemaining
       }));
       warningShownRef.current = true;
     } else if (warningShownRef.current && !userDismissedRef.current) {
@@ -175,9 +184,10 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
           timeRemaining: 0
         });
 
-        // Reset all flags
+        // Reset all flags and record renewal time
         warningShownRef.current = false;
         userDismissedRef.current = false;
+        lastRenewalTimeRef.current = Date.now() / 1000;
 
         console.log('✅ Session renewal completed - modal closed');
       } else {
@@ -207,6 +217,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       });
       warningShownRef.current = false;
       userDismissedRef.current = false;
+      lastRenewalTimeRef.current = 0;
       
       console.log('🚀 Session renewal failed - redirecting to login');
       cognitoAuthService.logout();

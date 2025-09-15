@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
+import { graphqlService } from '../../services/graphqlService';
 
 type TabType = 'puestos' | 'informacion' | 'documentos';
 
@@ -207,10 +208,14 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
         }))
       });
 
-      // TODO: Implementar envío real
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simular envío
+      // Enviar aplicaciones usando el servicio GraphQL
+      const jobIds = selectedJobs.map(job => job.jobId);
+      console.log('📤 Enviando aplicaciones para jobIds:', jobIds);
 
-      alert('¡Aplicaciones enviadas exitosamente!');
+      const applications = await graphqlService.applyToMultipleJobs(jobIds);
+      console.log('✅ Aplicaciones creadas:', applications);
+
+      alert(`¡${applications.length} aplicaciones enviadas exitosamente!`);
       
       // Limpiar datos guardados
       localStorage.removeItem('selectedJobPostings');

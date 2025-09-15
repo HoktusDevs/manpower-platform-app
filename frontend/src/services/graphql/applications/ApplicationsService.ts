@@ -15,6 +15,7 @@ const GET_MY_APPLICATIONS = `
     getMyApplications {
       userId
       applicationId
+      jobId
       companyName
       position
       status
@@ -33,6 +34,7 @@ const GET_ALL_APPLICATIONS = `
     getAllApplications(status: $status, limit: $limit, nextToken: $nextToken) {
       userId
       applicationId
+      jobId
       companyName
       position
       status
@@ -65,6 +67,7 @@ const CREATE_APPLICATION = `
     createApplication(input: $input) {
       userId
       applicationId
+      jobId
       companyName
       position
       status
@@ -83,6 +86,7 @@ const UPDATE_MY_APPLICATION = `
     updateMyApplication(applicationId: $applicationId, updates: $updates) {
       userId
       applicationId
+      jobId
       companyName
       position
       status
@@ -107,6 +111,45 @@ const UPDATE_APPLICATION_STATUS = `
     updateApplicationStatus(applicationId: $applicationId, userId: $userId, status: $status) {
       userId
       applicationId
+      jobId
+      companyName
+      position
+      status
+      description
+      salary
+      location
+      createdAt
+      updatedAt
+      companyId
+    }
+  }
+`;
+
+const APPLY_TO_JOB = `
+  mutation ApplyToJob($jobId: String!) {
+    applyToJob(jobId: $jobId) {
+      userId
+      applicationId
+      jobId
+      companyName
+      position
+      status
+      description
+      salary
+      location
+      createdAt
+      updatedAt
+      companyId
+    }
+  }
+`;
+
+const APPLY_TO_MULTIPLE_JOBS = `
+  mutation ApplyToMultipleJobs($jobIds: [String!]!) {
+    applyToMultipleJobs(jobIds: $jobIds) {
+      userId
+      applicationId
+      jobId
       companyName
       position
       status
@@ -266,5 +309,39 @@ export class ApplicationsService {
       { applicationId, userId, status }
     );
     return result.updateApplicationStatus;
+  }
+
+  /**
+   * POSTULANTE: Apply to a single job from /aplicar page
+   * Creates application and updates job with applicant relationship
+   */
+  async applyToJob(jobId: string): Promise<Application> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'postulante') {
+      throw new Error('Only postulantes can apply to jobs');
+    }
+
+    const result = await this.executeMutation<{ applyToJob: Application }>(
+      APPLY_TO_JOB,
+      { jobId }
+    );
+    return result.applyToJob;
+  }
+
+  /**
+   * POSTULANTE: Apply to multiple jobs from /aplicar page
+   * Creates multiple applications and updates jobs with applicant relationships
+   */
+  async applyToMultipleJobs(jobIds: string[]): Promise<Application[]> {
+    const user = cognitoAuthService.getCurrentUser();
+    if (user?.role !== 'postulante') {
+      throw new Error('Only postulantes can apply to jobs');
+    }
+
+    const result = await this.executeMutation<{ applyToMultipleJobs: Application[] }>(
+      APPLY_TO_MULTIPLE_JOBS,
+      { jobIds }
+    );
+    return result.applyToMultipleJobs;
   }
 }

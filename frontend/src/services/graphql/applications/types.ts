@@ -6,6 +6,7 @@
 export interface Application {
   userId: string;
   applicationId: string;
+  jobId: string;  // Reference to JobPosting
   companyName: string;
   position: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'INTERVIEW_SCHEDULED' | 'HIRED';
@@ -18,6 +19,7 @@ export interface Application {
 }
 
 export interface CreateApplicationInput {
+  jobId: string;  // Reference to JobPosting
   companyName: string;
   position: string;
   description?: string;
