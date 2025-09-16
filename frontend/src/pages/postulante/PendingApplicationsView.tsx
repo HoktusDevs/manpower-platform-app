@@ -228,7 +228,17 @@ export const PendingApplicationsView: React.FC<PendingApplicationsViewProps> = (
 
       // Limpiar datos guardados
       localStorage.removeItem('selectedJobPostings');
+      localStorage.removeItem('selectedJobsData');
       localStorage.removeItem('redirectAfterAuth');
+      localStorage.removeItem('applicationContext');
+
+      // Limpiar estado local - remover jobs aplicados
+      setSelectedJobs([]);
+
+      // Redirigir a Mis Aplicaciones después de 2 segundos
+      setTimeout(() => {
+        window.location.href = '/postulante/mis-aplicaciones';
+      }, 2000);
     } catch (error) {
       console.error('❌ Error enviando aplicaciones:', error);
       alert('Error al enviar aplicaciones. Por favor intenta de nuevo.');

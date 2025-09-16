@@ -163,6 +163,8 @@ const APPLY_TO_MULTIPLE_JOBS = `
   }
 `;
 
+
+
 export class ApplicationsService {
   private executeQuery: <T>(query: string, variables?: Record<string, unknown>) => Promise<T>;
   private executeMutation: <T>(mutation: string, variables?: Record<string, unknown>) => Promise<T>;
@@ -313,7 +315,7 @@ export class ApplicationsService {
 
   /**
    * POSTULANTE: Apply to a single job from /aplicar page
-   * Creates application and updates job with applicant relationship
+   * Uses the new applyToJob GraphQL mutation with proper jobId handling
    */
   async applyToJob(jobId: string): Promise<Application> {
     const user = cognitoAuthService.getCurrentUser();
@@ -330,7 +332,7 @@ export class ApplicationsService {
 
   /**
    * POSTULANTE: Apply to multiple jobs from /aplicar page
-   * Creates multiple applications and updates jobs with applicant relationships
+   * Uses the new applyToMultipleJobs GraphQL mutation for efficient batch processing
    */
   async applyToMultipleJobs(jobIds: string[]): Promise<Application[]> {
     const user = cognitoAuthService.getCurrentUser();

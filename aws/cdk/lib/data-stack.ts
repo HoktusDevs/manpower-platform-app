@@ -417,9 +417,60 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
-    // NOTE: applyToMultipleJobs resolver will be created manually via AWS CLI
-    // to avoid CloudFormation conflicts with orphaned resources
-    // The pipeline functions above are ready to be used
+    // Mutation: Apply to single job (creates application with job info)
+    applicationsDataSource.createResolver('ApplyToJobResolver', {
+      typeName: 'Mutation',
+      fieldName: 'applyToJob',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        {
+          "version" : "2017-02-28",
+          "operation" : "PutItem",
+          "key" : {
+            "userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "applicationId" : $util.dynamodb.toDynamoDBJson($util.autoId())
+          },
+          "attributeValues" : {
+            "jobId" : $util.dynamodb.toDynamoDBJson($ctx.args.jobId),
+            "companyName" : $util.dynamodb.toDynamoDBJson("Empresa Pendiente"),
+            "position" : $util.dynamodb.toDynamoDBJson("Aplicación para trabajo"),
+            "status" : $util.dynamodb.toDynamoDBJson("PENDING"),
+            "createdAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
+            "updatedAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        $util.toJson($ctx.result)
+      `)
+    });
+
+    // Mutation: Apply to multiple jobs (creates multiple applications)
+    applicationsDataSource.createResolver('ApplyToMultipleJobsResolver', {
+      typeName: 'Mutation',
+      fieldName: 'applyToMultipleJobs',
+      requestMappingTemplate: appsync.MappingTemplate.fromString(`
+        #set($firstJobId = $ctx.args.jobIds[0])
+        {
+          "version" : "2017-02-28",
+          "operation" : "PutItem",
+          "key" : {
+            "userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
+            "applicationId" : $util.dynamodb.toDynamoDBJson($util.autoId())
+          },
+          "attributeValues" : {
+            "jobId" : $util.dynamodb.toDynamoDBJson($firstJobId),
+            "companyName" : $util.dynamodb.toDynamoDBJson("Empresa Pendiente"),
+            "position" : $util.dynamodb.toDynamoDBJson("Aplicación múltiple"),
+            "status" : $util.dynamodb.toDynamoDBJson("PENDING"),
+            "createdAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
+            "updatedAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+          }
+        }
+      `),
+      responseMappingTemplate: appsync.MappingTemplate.fromString(`
+        [$util.toJson($ctx.result)]
+      `)
+    });
 
     // FORMS RESOLVERS
 
