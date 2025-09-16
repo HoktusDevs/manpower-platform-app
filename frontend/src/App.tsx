@@ -28,6 +28,7 @@ import { RoleGuard } from './components/RoleGuard';
 import { SessionRenewalModal } from './components/SessionRenewalModal';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
+import { AWS_CONFIG } from './config/aws-config';
 import { cognitoAuthService } from './services/cognitoAuthService';
 import { useTokenMonitor } from './hooks/useTokenMonitor';
 import { useEffect, useState } from 'react';
@@ -59,23 +60,22 @@ function AppContent() {
   // Initialize GraphQL service
   useEffect(() => {
     const initGraphQL = async () => {
-      console.log('🔧 Environment variables check:', {
-        VITE_GRAPHQL_URL: import.meta.env.VITE_GRAPHQL_URL,
-        VITE_AWS_REGION: import.meta.env.VITE_AWS_REGION,
-        VITE_USER_POOL_ID: import.meta.env.VITE_USER_POOL_ID,
-        VITE_USER_POOL_CLIENT_ID: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-        VITE_IDENTITY_POOL_ID: import.meta.env.VITE_IDENTITY_POOL_ID,
-        VITE_GRAPHQL_API_KEY: import.meta.env.VITE_GRAPHQL_API_KEY ? '***' : undefined
+      console.log('🔧 Using AWS configuration:', {
+        graphqlEndpoint: AWS_CONFIG.graphql.endpoint,
+        region: AWS_CONFIG.region,
+        userPoolId: AWS_CONFIG.cognito.userPoolId,
+        userPoolClientId: AWS_CONFIG.cognito.userPoolClientId,
+        identityPoolId: AWS_CONFIG.cognito.identityPoolId
       });
       
       if (!graphqlService.isInitialized()) {
         const config = {
-          graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || 'https://xwewxrgy4rgedhyhc6bkjojg5i.appsync-api.us-east-1.amazonaws.com/graphql',
-          region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
+          graphqlEndpoint: AWS_CONFIG.graphql.endpoint,
+          region: AWS_CONFIG.region,
           authenticationType: 'AMAZON_COGNITO_USER_POOLS' as const,
-          userPoolId: import.meta.env.VITE_USER_POOL_ID || 'us-east-1_uRCDemTcQ',
-          userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID || '5jt63usa3sgmaeju2pqojr7io1',
-          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || undefined,
+          userPoolId: AWS_CONFIG.cognito.userPoolId,
+          userPoolClientId: AWS_CONFIG.cognito.userPoolClientId,
+          identityPoolId: AWS_CONFIG.cognito.identityPoolId,
           apiKey: import.meta.env.VITE_GRAPHQL_API_KEY || undefined
         };
 

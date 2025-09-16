@@ -104,7 +104,7 @@ class GraphQLService {
         GraphQL: {
           endpoint: config.graphqlEndpoint,
           region: config.region,
-          defaultAuthMode: config.authenticationType === 'AWS_IAM' ? 'identityPool' : 'userPool'
+          defaultAuthMode: 'userPool' // Force userPool mode
         }
       }
     };
@@ -112,14 +112,13 @@ class GraphQLService {
     // Add appropriate auth configuration - support both User Pool and Identity Pool
     // This allows AppSync to work with both authentication types
     const authConfig: Record<string, unknown> = {
-      userPoolId: config.userPoolId || import.meta.env.VITE_USER_POOL_ID,
-      userPoolClientId: config.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID
+      userPoolId: config.userPoolId,
+      userPoolClientId: config.userPoolClientId
     };
-    
-    // Add Identity Pool if available (enables IAM-based auth for some operations)
-    if (config.identityPoolId || import.meta.env.VITE_IDENTITY_POOL_ID) {
-      authConfig.identityPoolId = config.identityPoolId || import.meta.env.VITE_IDENTITY_POOL_ID;
-    }
+
+    // DON'T configure Identity Pool initially - it causes 400 errors for unauthenticated users
+    // Identity Pool will be configured automatically by Amplify when user logs in
+    console.log('🔧 Configuring User Pool only - Identity Pool will be added after login');
     
     amplifyConfig.Auth = {
       Cognito: authConfig

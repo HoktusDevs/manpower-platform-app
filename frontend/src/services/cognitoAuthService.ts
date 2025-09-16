@@ -1,12 +1,13 @@
 import { AuthenticationDetails, CognitoUser, CognitoUserPool, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
-import type { 
-  User, 
-  RegisterRequest, 
-  LoginRequest, 
-  AuthResponse, 
-  CognitoConfig 
+import type {
+  User,
+  RegisterRequest,
+  LoginRequest,
+  AuthResponse,
+  CognitoConfig
 } from '../types/auth';
 import type { JWTPayload } from '../types/config';
+import { AWS_CONFIG } from '../config/aws-config';
 
 class CognitoAuthService {
   private userPool: CognitoUserPool | null = null;
@@ -15,11 +16,14 @@ class CognitoAuthService {
   /**
    * Initialize the Cognito service with configuration
    */
-  initialize(config: CognitoConfig): void {
+  initialize(config?: CognitoConfig): void {
+    // Use AWS_CONFIG as default if no config provided
+    const cognitoConfig = config || AWS_CONFIG.cognito;
+
     // Store configuration values directly in userPool initialization
     this.userPool = new CognitoUserPool({
-      UserPoolId: config.userPoolId,
-      ClientId: config.userPoolClientId,
+      UserPoolId: cognitoConfig.userPoolId,
+      ClientId: cognitoConfig.userPoolClientId,
     });
 
     // Skip Amplify configuration - let graphqlService handle it with complete config

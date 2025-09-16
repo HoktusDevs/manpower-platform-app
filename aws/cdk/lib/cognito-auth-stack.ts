@@ -51,11 +51,11 @@ export class CognitoAuthStack extends cdk.Stack {
           mutable: true,
         },
         givenName: {
-          required: true,
+          required: false,
           mutable: true,
         },
         familyName: {
-          required: true,
+          required: false,
           mutable: true,
         },
         phoneNumber: {
@@ -72,7 +72,24 @@ export class CognitoAuthStack extends cdk.Stack {
         },
       },
 
-      // Custom attributes (existing schema will be preserved)
+      // Custom attributes - match existing User Pool constraints
+      customAttributes: {
+        role: new cognito.StringAttribute({
+          mutable: true
+        }),
+        rut: new cognito.StringAttribute({
+          mutable: true
+        }),
+        education_level: new cognito.StringAttribute({
+          mutable: true
+        }),
+        work_experience: new cognito.StringAttribute({
+          mutable: true
+        }),
+        skills: new cognito.StringAttribute({
+          mutable: true
+        })
+      },
 
       // Password policy
       passwordPolicy: {
@@ -105,6 +122,8 @@ export class CognitoAuthStack extends cdk.Stack {
       } : {
         // Auto-confirm users in development
         preSignUp: this.createAutoConfirmTrigger(environment),
+        // Add users to groups in development (same as prod)
+        postConfirmation: this.createPostConfirmationTrigger(environment),
         // CRITICAL: Include custom:role in JWT tokens (dev)
         preTokenGeneration: this.createPreTokenGenerationTrigger(environment),
       },
@@ -158,9 +177,9 @@ export class CognitoAuthStack extends cdk.Stack {
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
+          emailVerified: true,
           givenName: true,
           familyName: true,
-          emailVerified: true,
           phoneNumber: true,
           address: true,
           birthdate: true,
@@ -299,37 +318,38 @@ export class CognitoAuthStack extends cdk.Stack {
   }
 
   private createPostConfirmationTrigger(environment: string): lambda.Function {
-    return new lambda.Function(this, 'PostConfirmationTrigger', {
+    const postConfirmationFunction = new lambda.Function(this, 'PostConfirmationTrigger', {
       functionName: `manpower-post-confirmation-${environment}`,
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'index.handler',
       code: lambda.Code.fromInline(`
-        const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
-        
-        const cognitoClient = new CognitoIdentityProviderClient({
-          region: process.env.COGNITO_REGION
-        });
-        
         exports.handler = async (event) => {
           console.log('PostConfirmation trigger:', JSON.stringify(event, null, 2));
-          
+
           try {
             const role = event.request.userAttributes['custom:role'];
             const userPoolId = event.userPoolId;
             const username = event.userName;
-            
+
             // Add user to appropriate group
             if (role === 'admin' || role === 'postulante') {
+              // Use AWS SDK v3 that comes with Lambda runtime
+              const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
+
+              const cognitoClient = new CognitoIdentityProviderClient({
+                region: process.env.COGNITO_REGION || process.env.AWS_REGION
+              });
+
               const addToGroupCommand = new AdminAddUserToGroupCommand({
                 UserPoolId: userPoolId,
                 Username: username,
                 GroupName: role
               });
-              
+
               await cognitoClient.send(addToGroupCommand);
               console.log(\`User \${username} added to \${role} group\`);
             }
-            
+
             return event;
           } catch (error) {
             console.error('Error in PostConfirmation trigger:', error);
@@ -343,6 +363,14 @@ export class CognitoAuthStack extends cdk.Stack {
       },
       timeout: cdk.Duration.seconds(30),
     });
+
+    // Grant permissions to add users to groups - use wildcard for User Pool ARN
+    postConfirmationFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['cognito-idp:AdminAddUserToGroup'],
+      resources: [`arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`],
+    }));
+
+    return postConfirmationFunction;
   }
 
   private createAutoConfirmTrigger(environment: string): lambda.Function {

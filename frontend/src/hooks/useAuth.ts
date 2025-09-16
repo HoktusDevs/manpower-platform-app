@@ -34,31 +34,27 @@ export const useAuth = (): UseAuthReturn => {
   // Initialize Amplify Auth
   useEffect(() => {
     const initializeAuth = async () => {
-      if (!import.meta.env.VITE_USER_POOL_ID || !import.meta.env.VITE_USER_POOL_CLIENT_ID) {
-        setError('Authentication configuration error');
-        setIsInitialized(true);
-        return;
-      }
+      // Configuration is now handled by aws-config.ts, no need to check env vars
 
       try {
-        // Initialize cognitoAuthService WITH identity pool for AppSync compatibility
-        cognitoAuthService.initialize({
-          userPoolId: import.meta.env.VITE_USER_POOL_ID,
-          userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-          identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || '',
-          region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-        });
+        // Initialize cognitoAuthService with deployed AWS configuration
+        cognitoAuthService.initialize();
 
-        // Only set user if tokens exist
+        // Check existing tokens
         const idToken = localStorage.getItem('cognito_id_token');
         const accessToken = localStorage.getItem('cognito_access_token');
-        
+
+        console.log('🔍 Auth tokens check:', {
+          hasIdToken: !!idToken,
+          hasAccessToken: !!accessToken
+        });
+
         if (idToken || accessToken) {
           const currentUser = cognitoAuthService.getCurrentUser();
           setUser(currentUser);
           setIdToken(idToken);
         }
-        
+
         setIsInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
