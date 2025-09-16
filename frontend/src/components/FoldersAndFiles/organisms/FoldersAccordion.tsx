@@ -58,7 +58,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className={`border rounded-lg mb-3 ${isSelected ? 'ring-2 ring-indigo-500' : 'border-gray-200'}`}>
+    <div className={`border rounded-lg mb-3 ${isSelected ? 'ring-2 ring-blue-500' : 'border-gray-200'}`}>
       {/* Header */}
       <div className="px-4 py-3 bg-gray-50 rounded-t-lg">
         <div className="flex items-center justify-between">
@@ -67,7 +67,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
             <Checkbox
               checked={isSelected}
               onChange={handleSelect}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
 
             {/* Folder Icon */}
@@ -77,7 +77,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h3 
-                  className="text-sm font-medium text-gray-900 cursor-pointer hover:text-indigo-600"
+                  className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600"
                   onClick={handleNavigateToFolder}
                 >
                   {folder.name}

@@ -20,7 +20,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
         onClick={() => onViewChange('table')}
         className={`px-3 py-2 text-sm font-medium rounded-l-lg border-t border-l border-b ${
           currentView === 'table'
-            ? 'bg-indigo-600 text-white border-indigo-600'
+            ? 'bg-blue-600 text-white border-blue-600'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         }`}
         aria-label="Vista tabla"
@@ -37,7 +37,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
         onClick={() => onViewChange('grid')}
         className={`px-3 py-2 text-sm font-medium border-t border-b ${
           currentView === 'grid'
-            ? 'bg-indigo-600 text-white border-indigo-600'
+            ? 'bg-blue-600 text-white border-blue-600'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         }`}
         aria-label="Vista iconos"
@@ -54,7 +54,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
         onClick={() => onViewChange('accordion')}
         className={`px-3 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b ${
           currentView === 'accordion'
-            ? 'bg-indigo-600 text-white border-indigo-600'
+            ? 'bg-blue-600 text-white border-blue-600'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         }`}
         aria-label="Vista acordeón"

@@ -29,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const baseClasses = 'rounded-md border shadow-sm transition-colors duration-200';
     
     const variantClasses = {
-      default: 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500',
+      default: 'border-gray-300 focus:border-blue-500 focus:ring-blue-500',
       search: 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 pl-10',
       filter: 'border-gray-200 focus:border-gray-400 focus:ring-gray-400'
     };

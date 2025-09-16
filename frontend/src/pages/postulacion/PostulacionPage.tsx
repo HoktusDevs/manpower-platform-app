@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../core-ui';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 import { publicGraphqlService } from '../../services/publicGraphqlService';
+import { AWS_CONFIG } from '../../config/aws-config';
 
 interface JobPosting {
   jobId: string;
@@ -56,89 +57,21 @@ export function PostulacionPage() {
         console.log('🔄 Iniciando carga de puestos activos...');
 
         // Initialize public GraphQL service if not already done
-        if (!publicGraphqlService.isInitialized() && import.meta.env.VITE_GRAPHQL_API_KEY) {
+        if (!publicGraphqlService.isInitialized()) {
           console.log('🔧 Inicializando servicio público de GraphQL...');
           await publicGraphqlService.initialize({
-            graphqlEndpoint: import.meta.env.VITE_GRAPHQL_URL || '',
-            region: import.meta.env.VITE_AWS_REGION || 'us-east-1',
-            apiKey: import.meta.env.VITE_GRAPHQL_API_KEY
+            graphqlEndpoint: AWS_CONFIG.graphql.endpoint,
+            region: AWS_CONFIG.region,
+            apiKey: 'da2-ypj42fzgojcjjl33wtqvgcforu' // Using the API Key from CDK deployment
           });
         }
 
-        // Try to fetch real job postings via public API (all job postings)
-        if (publicGraphqlService.isInitialized()) {
-          console.log('🌐 Cargando TODAS las ofertas desde API pública...');
-          const realJobPostings = await publicGraphqlService.getAllJobPostings(undefined, 20);
+        // Fetch all job postings via public API (including drafts)
+        console.log('🌐 Cargando todas las ofertas desde API...');
+        const realJobPostings = await publicGraphqlService.getAllJobPostings(undefined, 20);
 
-          if (realJobPostings.length > 0) {
-            console.log(`✅ ${realJobPostings.length} ofertas reales cargadas desde API pública (incluyendo borradores)`);
-            setJobPostings(realJobPostings);
-            return;
-          } else {
-            console.log('ℹ️  No hay ofertas en la base de datos.');
-            console.log('   📋 Mostrando ofertas de ejemplo mientras tanto...');
-          }
-        } else {
-          console.log('⚠️ API pública no disponible (falta VITE_GRAPHQL_API_KEY), usando datos de ejemplo');
-        }
-
-        // Fallback to mock data if public API is not available or returns no results
-        console.log('🔒 Usando datos de ejemplo para demostración');
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const mockJobPostings: JobPosting[] = [
-          {
-            jobId: 'job-001',
-            title: 'Desarrollador Full Stack',
-            description: 'Buscamos un desarrollador full stack con experiencia en React y Node.js para unirse a nuestro equipo dinámico.',
-            requirements: 'React, Node.js, TypeScript, AWS, GraphQL. Mínimo 3 años de experiencia.',
-            location: 'Madrid, España',
-            employmentType: 'Tiempo completo',
-            companyName: 'TechCorp Innovations',
-            salary: '45.000€ - 60.000€ anuales',
-            benefits: 'Seguro médico, teletrabajo híbrido, 25 días de vacaciones',
-            experienceLevel: 'Intermedio'
-          },
-          {
-            jobId: 'job-002', 
-            title: 'Diseñador UX/UI Senior',
-            description: 'Únete a nuestro equipo de diseño para crear experiencias digitales excepcionales.',
-            requirements: 'Figma, Adobe Creative Suite, experiencia en diseño de productos digitales. Portfolio requerido.',
-            location: 'Barcelona, España',
-            employmentType: 'Tiempo completo',
-            companyName: 'Design Studio Pro',
-            salary: '40.000€ - 55.000€ anuales', 
-            benefits: 'Formación continua, horario flexible, ambiente creativo',
-            experienceLevel: 'Senior'
-          },
-          {
-            jobId: 'job-003',
-            title: 'Analista de Datos',
-            description: 'Buscamos un analista de datos para extraer insights valiosos de grandes volúmenes de información.',
-            requirements: 'Python, SQL, Power BI, Excel avanzado. Conocimientos en machine learning valorados.',
-            location: 'Valencia, España',
-            employmentType: 'Tiempo completo',
-            companyName: 'DataWorks Analytics',
-            salary: '38.000€ - 50.000€ anuales',
-            benefits: 'Cursos de certificación, bonus por rendimiento',
-            experienceLevel: 'Intermedio'
-          },
-          {
-            jobId: 'job-004',
-            title: 'Marketing Digital Specialist',
-            description: 'Gestiona campañas digitales y optimiza la presencia online de nuestros clientes.',
-            requirements: 'Google Ads, Facebook Ads, SEO/SEM, Google Analytics. 2+ años de experiencia.',
-            location: 'Sevilla, España',
-            employmentType: 'Tiempo parcial',
-            companyName: 'Digital Growth Agency',
-            salary: '25.000€ - 35.000€ anuales',
-            benefits: 'Trabajo remoto, horario flexible',
-            experienceLevel: 'Junior'
-          }
-        ];
-
-        console.log('✅ Ofertas de ejemplo cargadas:', mockJobPostings.length, mockJobPostings);
-        setJobPostings(mockJobPostings);
+        console.log(`✅ ${realJobPostings.length} ofertas cargadas desde GraphQL API`);
+        setJobPostings(realJobPostings);
         
       } catch (error) {
         console.error('❌ Error cargando puestos:', error);

@@ -196,7 +196,7 @@ export const ApplicationsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowCreateForm(true)}
-            className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             Nueva Aplicación
           </button>
@@ -240,7 +240,7 @@ export const ApplicationsPage: React.FC = () => {
                     required
                     value={formData.companyName}
                     onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export const ApplicationsPage: React.FC = () => {
                     required
                     value={formData.position}
                     onChange={(e) => setFormData({...formData, position: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
                 </div>
                 <div>
@@ -259,7 +259,7 @@ export const ApplicationsPage: React.FC = () => {
                     rows={3}
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -269,7 +269,7 @@ export const ApplicationsPage: React.FC = () => {
                       type="text"
                       value={formData.salary}
                       onChange={(e) => setFormData({...formData, salary: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -278,7 +278,7 @@ export const ApplicationsPage: React.FC = () => {
                       type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -294,7 +294,7 @@ export const ApplicationsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
                 >
                   {loading ? 'Creando...' : 'Crear Aplicación'}
                 </button>
@@ -308,7 +308,7 @@ export const ApplicationsPage: React.FC = () => {
       <div className="mt-8">
         {loading && !applications.length ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <p className="mt-2 text-sm text-gray-500">Cargando aplicaciones...</p>
           </div>
         ) : applications.length === 0 ? (
@@ -331,7 +331,7 @@ export const ApplicationsPage: React.FC = () => {
             <div className="mt-6">
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
               >
                 Nueva Aplicación
               </button>
@@ -349,7 +349,7 @@ export const ApplicationsPage: React.FC = () => {
                           type="text"
                           value={formData.companyName}
                           onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                          className="w-full text-lg font-medium border-b border-gray-300 focus:border-indigo-500 focus:outline-none"
+                          className="w-full text-lg font-medium border-b border-gray-300 focus:border-blue-500 focus:outline-none"
                         />
                       </div>
                       <div>
@@ -357,7 +357,7 @@ export const ApplicationsPage: React.FC = () => {
                           type="text"
                           value={formData.position}
                           onChange={(e) => setFormData({...formData, position: e.target.value})}
-                          className="w-full text-sm text-gray-600 border-b border-gray-300 focus:border-indigo-500 focus:outline-none"
+                          className="w-full text-sm text-gray-600 border-b border-gray-300 focus:border-blue-500 focus:outline-none"
                         />
                       </div>
                       <div className="flex justify-end space-x-2">
@@ -370,7 +370,7 @@ export const ApplicationsPage: React.FC = () => {
                         </button>
                         <button
                           type="submit"
-                          className="text-sm text-indigo-600 hover:text-indigo-500"
+                          className="text-sm text-blue-600 hover:text-blue-500"
                         >
                           Guardar
                         </button>
@@ -406,7 +406,7 @@ export const ApplicationsPage: React.FC = () => {
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => startEdit(app)}
-                        className="text-sm text-indigo-600 hover:text-indigo-500"
+                        className="text-sm text-blue-600 hover:text-blue-500"
                       >
                         Editar
                       </button>

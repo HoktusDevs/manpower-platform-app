@@ -48,9 +48,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         };
       default:
         return {
-          confirmButton: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+          confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white',
           icon: (
-            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           )

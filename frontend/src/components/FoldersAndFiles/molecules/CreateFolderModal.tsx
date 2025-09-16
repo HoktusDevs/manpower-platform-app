@@ -86,7 +86,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
                 id="folderName"
                 value={formData.folderName}
                 onChange={handleNameChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Ej: Empresa, Región, Comuna..."
                 autoFocus
               />
@@ -101,7 +101,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
                 id="folderType"
                 value={formData.folderType}
                 onChange={handleTypeChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Ej: Organización, Ubicación, Departamento..."
               />
             </div>
@@ -117,7 +117,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
               >
                 {submitButtonText}
               </button>

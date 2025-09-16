@@ -67,11 +67,11 @@ export function CustomSelect<T extends string = string>({
         disabled={disabled}
         className={`
           w-full bg-white border border-gray-300 rounded-md py-2.5 pl-3 pr-10 text-left text-sm
-          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
           hover:border-gray-400 transition-colors duration-200
           shadow-sm cursor-pointer
           ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}
-          ${isOpen ? 'ring-2 ring-indigo-500 border-indigo-500' : ''}
+          ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}
         `}
         title={selectedOption?.description}
       >
@@ -102,9 +102,9 @@ export function CustomSelect<T extends string = string>({
               onClick={() => handleSelect(option.value)}
               className={`
                 w-full text-left px-3 py-2 text-sm transition-colors duration-150
-                hover:bg-indigo-50 hover:text-indigo-600
-                focus:outline-none focus:bg-indigo-50 focus:text-indigo-600
-                ${option.value === value ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-gray-700'}
+                hover:bg-blue-50 hover:text-blue-600
+                focus:outline-none focus:bg-blue-50 focus:text-blue-600
+                ${option.value === value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'}
                 ${index === 0 ? 'rounded-t-md' : ''}
                 ${index === options.length - 1 ? 'rounded-b-md' : ''}
               `}
@@ -113,7 +113,7 @@ export function CustomSelect<T extends string = string>({
               <div className="flex items-center justify-between">
                 <span className="truncate">{option.label}</span>
                 {option.value === value && (
-                  <svg className="h-4 w-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 )}

@@ -47,7 +47,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   return (
     <div 
       className={`relative group p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${
-        isSelected ? 'bg-blue-50 ring-2 ring-indigo-500' : ''
+        isSelected ? 'bg-blue-50 ring-2 ring-blue-500' : ''
       }`}
       onDoubleClick={handleDoubleClick}
     >
@@ -56,7 +56,7 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
         <Checkbox
           checked={isSelected}
           onChange={handleSelect}
-          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
         />
       </div>
 

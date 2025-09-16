@@ -184,7 +184,7 @@ export const DocumentsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowUploadForm(true)}
-            className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             Subir Documento
           </button>
@@ -227,7 +227,7 @@ export const DocumentsPage: React.FC = () => {
                     required
                     value={uploadData.documentType}
                     onChange={(e) => setUploadData({...uploadData, documentType: e.target.value as Document['documentType']})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   >
                     <option value="RESUME">Currículum</option>
                     <option value="COVER_LETTER">Carta de Presentación</option>
@@ -245,7 +245,7 @@ export const DocumentsPage: React.FC = () => {
                     required
                     onChange={handleFileSelect}
                     accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp"
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                   {uploadData.file && (
                     <p className="mt-1 text-xs text-gray-500">
@@ -269,7 +269,7 @@ export const DocumentsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
                 >
                   {loading ? 'Subiendo...' : 'Subir Documento'}
                 </button>
@@ -283,7 +283,7 @@ export const DocumentsPage: React.FC = () => {
       <div className="mt-8">
         {loading && !documents.length ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <p className="mt-2 text-sm text-gray-500">Cargando documentos...</p>
           </div>
         ) : documents.length === 0 ? (
@@ -306,7 +306,7 @@ export const DocumentsPage: React.FC = () => {
             <div className="mt-6">
               <button
                 onClick={() => setShowUploadForm(true)}
-                className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
               >
                 Subir Documento
               </button>
@@ -355,7 +355,7 @@ export const DocumentsPage: React.FC = () => {
                       // TODO: Implement download functionality with pre-signed URLs
                       alert('Funcionalidad de descarga próximamente disponible');
                     }}
-                    className="text-sm text-indigo-600 hover:text-indigo-500"
+                    className="text-sm text-blue-600 hover:text-blue-500"
                   >
                     Descargar
                   </button>

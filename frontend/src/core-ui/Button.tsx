@@ -9,7 +9,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'cla
 }
 
 const VARIANT_STYLES = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
+  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
   secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
   success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
   warning: 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500',

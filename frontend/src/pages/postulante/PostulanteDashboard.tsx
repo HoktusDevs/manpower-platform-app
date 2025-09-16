@@ -68,7 +68,7 @@ export const PostulanteDashboard = () => {
               onClick={() => setActiveTab('dashboard')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 activeTab === 'dashboard'
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -78,7 +78,7 @@ export const PostulanteDashboard = () => {
               onClick={() => setActiveTab('applications')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 activeTab === 'applications'
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -88,7 +88,7 @@ export const PostulanteDashboard = () => {
               onClick={() => setActiveTab('documents')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 activeTab === 'documents'
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -98,7 +98,7 @@ export const PostulanteDashboard = () => {
               onClick={() => setActiveTab('jobs')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 activeTab === 'jobs'
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -108,7 +108,7 @@ export const PostulanteDashboard = () => {
               onClick={() => setActiveTab('forms')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 activeTab === 'forms'
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -215,7 +215,7 @@ export const PostulanteDashboard = () => {
                 <h3 className="text-lg font-medium text-gray-900">Mis Aplicaciones</h3>
                 <button
                   onClick={() => setActiveTab('applications')}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+                  className="text-sm text-blue-600 hover:text-blue-500 font-medium"
                 >
                   Ver todas →
                 </button>
@@ -248,7 +248,7 @@ export const PostulanteDashboard = () => {
                     <div className="mt-6">
                       <button
                         onClick={() => setActiveTab('applications')}
-                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
                       >
                         🚀 Nueva Aplicación
                       </button>
@@ -288,7 +288,7 @@ export const PostulanteDashboard = () => {
                     <div className="text-center pt-4">
                       <button
                         onClick={() => setActiveTab('applications')}
-                        className="text-sm text-indigo-600 hover:text-indigo-500"
+                        className="text-sm text-blue-600 hover:text-blue-500"
                       >
                         Ver {applications.length - 3} aplicaciones más
                       </button>
