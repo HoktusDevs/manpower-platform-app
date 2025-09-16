@@ -101,22 +101,19 @@ export const useGraphQL = (): UseGraphQLReturn => {
 
   const isGraphQLAvailable = useCallback(() => {
     const isServiceInitialized = graphqlService.isInitialized();
-    const hasGraphQLUrl = !!import.meta.env.VITE_GRAPHQL_URL;
     const isUserAuthenticated = cognitoAuthService.isAuthenticated();
     const currentUser = cognitoAuthService.getCurrentUser();
     const hasValidToken = cognitoAuthService.getIdToken() !== null;
-    
-    const isAvailable = isServiceInitialized && hasGraphQLUrl && isUserAuthenticated && hasValidToken && currentUser !== null;
+
+    const isAvailable = isServiceInitialized && isUserAuthenticated && hasValidToken && currentUser !== null;
     
     // Only log when GraphQL is actually unavailable for debugging
     if (!isAvailable) {
       console.log('🔍 GraphQL not available:', {
         isServiceInitialized,
-        hasGraphQLUrl,
         isUserAuthenticated,
         hasValidToken,
-        hasCurrentUser: !!currentUser,
-        graphqlUrl: import.meta.env.VITE_GRAPHQL_URL
+        hasCurrentUser: !!currentUser
       });
     }
     
