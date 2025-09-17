@@ -17,7 +17,10 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/uuid": "^10.0.0",
     "aws-cdk-lib": "^2.160.0",
-    "constructs": "^10.3.0"
+    "constructs": "^10.3.0",
+    "uuid": "^13.0.0"
   }
 }

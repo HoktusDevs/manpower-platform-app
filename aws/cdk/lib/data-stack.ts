@@ -3,6 +3,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as appsync from 'aws-cdk-lib/aws-appsync';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
 export interface DataStackProps extends cdk.StackProps {
@@ -267,93 +269,78 @@ export class DataStack extends cdk.Stack {
       this.jobPostingsTable
     );
 
-    // RESOLVERS - No Lambda needed!
+    // LAMBDA RESOLVER - Simple TypeScript instead of VTL!
 
-    // Query: Get applications for current user
-    applicationsDataSource.createResolver('GetMyApplicationsResolver', {
+    // Create Lambda function for GraphQL resolver
+    const graphqlResolverLambda = new lambdaNodejs.NodejsFunction(this, 'GraphQLResolverLambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: 'lib/lambda/graphql-resolver.ts',
+      handler: 'handler',
+      functionName: `manpower-graphql-resolver-${environment}`,
+      environment: {
+        APPLICATIONS_TABLE: this.applicationsTable.tableName,
+        JOB_POSTINGS_TABLE: this.jobPostingsTable.tableName,
+        DOCUMENTS_TABLE: this.documentsTable.tableName,
+        FORMS_TABLE: this.formsTable.tableName,
+        FORM_SUBMISSIONS_TABLE: this.formSubmissionsTable.tableName,
+        FOLDERS_TABLE: this.foldersTable.tableName,
+        ENVIRONMENT: environment,
+      },
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 512,
+    });
+
+    // Grant Lambda permissions to access DynamoDB tables
+    this.applicationsTable.grantReadWriteData(graphqlResolverLambda);
+    this.jobPostingsTable.grantReadData(graphqlResolverLambda);
+    this.documentsTable.grantReadWriteData(graphqlResolverLambda);
+    this.formsTable.grantReadWriteData(graphqlResolverLambda);
+    this.formSubmissionsTable.grantReadWriteData(graphqlResolverLambda);
+    this.foldersTable.grantReadWriteData(graphqlResolverLambda);
+
+    // Create Lambda data source for AppSync
+    const lambdaDataSource = this.graphqlApi.addLambdaDataSource(
+      'LambdaDataSource',
+      graphqlResolverLambda
+    );
+
+    // Applications Resolvers - All use the same Lambda function
+    lambdaDataSource.createResolver('GetMyApplicationsResolver', {
       typeName: 'Query',
       fieldName: 'getMyApplications',
-      requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        {
-          "version" : "2017-02-28",
-          "operation" : "Query",
-          "query" : {
-            "expression": "userId = :userId",
-            "expressionValues" : {
-              ":userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub)
-            }
-          }
-        }
-      `),
-      responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        $util.toJson($ctx.result.items)
-      `),
     });
 
-    // Query: Get all applications (admin only)
-    applicationsDataSource.createResolver('GetAllApplicationsResolver', {
+    lambdaDataSource.createResolver('ApplyToJobResolver', {
+      typeName: 'Mutation',
+      fieldName: 'applyToJob',
+    });
+
+    lambdaDataSource.createResolver('ApplyToMultipleJobsResolver', {
+      typeName: 'Mutation',
+      fieldName: 'applyToMultipleJobs',
+    });
+
+    lambdaDataSource.createResolver('GetAllApplicationsResolver', {
       typeName: 'Query',
       fieldName: 'getAllApplications',
-      requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        {
-          "version" : "2017-02-28",
-          "operation" : "Scan"
-        }
-      `),
-      responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        #set($applications = [])
-        #foreach($item in $ctx.result.items)
-          #set($app = {})
-          #set($app.userId = $item.userId)
-          #set($app.applicationId = $item.applicationId)
-          #set($app.jobId = $item.jobId)
-          #set($app.companyName = $util.defaultIfNull($item.companyName, "TechCorp Innovations"))
-          #set($app.position = $util.defaultIfNull($item.position, "Desarrollador Full Stack"))
-          #set($app.status = $item.status)
-          #set($app.description = $item.description)
-          #set($app.salary = $item.salary)
-          #set($app.location = $item.location)
-          #set($app.createdAt = $item.createdAt)
-          #set($app.updatedAt = $item.updatedAt)
-          #set($app.companyId = $item.companyId)
-          #set($app.folderId = $item.folderId)
-          #set($void = $applications.add($app))
-        #end
-        $util.toJson($applications)
-      `),
     });
 
-    // Mutation: Create application
-    applicationsDataSource.createResolver('CreateApplicationResolver', {
+    lambdaDataSource.createResolver('UpdateApplicationStatusResolver', {
       typeName: 'Mutation',
-      fieldName: 'createApplication',
-      requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        {
-          "version" : "2017-02-28",
-          "operation" : "PutItem",
-          "key" : {
-            "userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
-            "applicationId" : $util.dynamodb.toDynamoDBJson($util.autoId())
-          },
-          "attributeValues" : {
-            "companyName" : $util.dynamodb.toDynamoDBJson($ctx.args.input.companyName),
-            "position" : $util.dynamodb.toDynamoDBJson($ctx.args.input.position),
-            "status" : $util.dynamodb.toDynamoDBJson("pending"),
-            "createdAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
-            "updatedAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
-          }
-        }
-      `),
-      responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        $util.toJson($ctx.result)
-      `),
+      fieldName: 'updateApplicationStatus',
     });
 
-    // Pipeline resolver functions for apply to multiple jobs with folder organization
-    const createUserFolderFunction = new appsync.AppsyncFunction(this, 'CreateUserFolderFunction', {
-      name: 'createUserFolderFunction',
-      api: this.graphqlApi,
-      dataSource: foldersDataSource,
+    lambdaDataSource.createResolver('DeleteMyApplicationResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteMyApplication',
+    });
+
+    // Query: Get all applications (admin only) - REMOVED: Now handled by Lambda
+
+    // Mutation: Create application - REMOVED: Now handled by Lambda
+
+    // Pipeline resolver functions - REMOVED: Now handled by Lambda
+    /* Removed VTL pipeline functions
       requestMappingTemplate: appsync.MappingTemplate.fromString(`
         #set($firstJobId = $ctx.args.jobIds[0])
         #set($currentUser = $ctx.identity.sub)
@@ -417,60 +404,8 @@ export class DataStack extends cdk.Stack {
       `),
     });
 
-    // Mutation: Apply to single job (creates application with job info)
-    applicationsDataSource.createResolver('ApplyToJobResolver', {
-      typeName: 'Mutation',
-      fieldName: 'applyToJob',
-      requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        {
-          "version" : "2017-02-28",
-          "operation" : "PutItem",
-          "key" : {
-            "userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
-            "applicationId" : $util.dynamodb.toDynamoDBJson($util.autoId())
-          },
-          "attributeValues" : {
-            "jobId" : $util.dynamodb.toDynamoDBJson($ctx.args.jobId),
-            "companyName" : $util.dynamodb.toDynamoDBJson("Empresa Pendiente"),
-            "position" : $util.dynamodb.toDynamoDBJson("Aplicación para trabajo"),
-            "status" : $util.dynamodb.toDynamoDBJson("PENDING"),
-            "createdAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
-            "updatedAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
-          }
-        }
-      `),
-      responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        $util.toJson($ctx.result)
-      `)
-    });
+    */
 
-    // Mutation: Apply to multiple jobs (creates multiple applications)
-    applicationsDataSource.createResolver('ApplyToMultipleJobsResolver', {
-      typeName: 'Mutation',
-      fieldName: 'applyToMultipleJobs',
-      requestMappingTemplate: appsync.MappingTemplate.fromString(`
-        #set($firstJobId = $ctx.args.jobIds[0])
-        {
-          "version" : "2017-02-28",
-          "operation" : "PutItem",
-          "key" : {
-            "userId" : $util.dynamodb.toDynamoDBJson($ctx.identity.sub),
-            "applicationId" : $util.dynamodb.toDynamoDBJson($util.autoId())
-          },
-          "attributeValues" : {
-            "jobId" : $util.dynamodb.toDynamoDBJson($firstJobId),
-            "companyName" : $util.dynamodb.toDynamoDBJson("Empresa Pendiente"),
-            "position" : $util.dynamodb.toDynamoDBJson("Aplicación múltiple"),
-            "status" : $util.dynamodb.toDynamoDBJson("PENDING"),
-            "createdAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601()),
-            "updatedAt" : $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
-          }
-        }
-      `),
-      responseMappingTemplate: appsync.MappingTemplate.fromString(`
-        [$util.toJson($ctx.result)]
-      `)
-    });
 
     // FORMS RESOLVERS
 
