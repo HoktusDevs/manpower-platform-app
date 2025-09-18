@@ -40,17 +40,17 @@ resources:
           Types:
             - REGIONAL
 
-    # Cognito Authorizer
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: CognitoAuthorizer-${self:provider.stage}
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-        RestApiId:
-          Ref: MainApiGateway
-        IdentitySource: method.request.header.Authorization
+    # # Cognito Authorizer
+    # CognitoAuthorizer:
+    #   Type: AWS::ApiGateway::Authorizer
+    #   Properties:
+    #     Name: CognitoAuthorizer-${self:provider.stage}
+    #     Type: COGNITO_USER_POOLS
+    #     ProviderARNs:
+    #       - arn:aws:cognito-idp:${self:provider.region}:041238861016:userpool/us-east-1_kQKPPUqRO
+    #     RestApiId:
+    #       Ref: MainApiGateway
+    #     IdentitySource: method.request.header.Authorization
 
     # Auth Service Proxy Resource
     AuthResource:
@@ -83,7 +83,7 @@ resources:
         Integration:
           Type: HTTP_PROXY
           IntegrationHttpMethod: ANY
-          Uri: https://#{AuthServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          Uri: https://j5ewdxkzwh.execute-api.us-east-1.amazonaws.com/dev/{proxy}
           IntegrationResponses:
             - StatusCode: 200
         MethodResponses:
@@ -118,13 +118,13 @@ resources:
         ResourceId:
           Ref: FilesProxyResource
         HttpMethod: ANY
-        AuthorizationType: COGNITO_USER_POOLS
-        AuthorizerId:
-          Ref: CognitoAuthorizer
+        AuthorizationType: NONE
+        # AuthorizerId:
+        #   Ref: CognitoAuthorizer
         Integration:
           Type: HTTP_PROXY
           IntegrationHttpMethod: ANY
-          Uri: https://#{FilesServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          Uri: https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev/{proxy}
           IntegrationResponses:
             - StatusCode: 200
         MethodResponses:
@@ -159,13 +159,13 @@ resources:
         ResourceId:
           Ref: FoldersProxyResource
         HttpMethod: ANY
-        AuthorizationType: COGNITO_USER_POOLS
-        AuthorizerId:
-          Ref: CognitoAuthorizer
+        AuthorizationType: NONE
+        # AuthorizerId:
+        #   Ref: CognitoAuthorizer
         Integration:
           Type: HTTP_PROXY
           IntegrationHttpMethod: ANY
-          Uri: https://#{FoldersServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          Uri: https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev/{proxy}
           IntegrationResponses:
             - StatusCode: 200
         MethodResponses:
@@ -200,13 +200,13 @@ resources:
         ResourceId:
           Ref: JobsProxyResource
         HttpMethod: ANY
-        AuthorizationType: COGNITO_USER_POOLS
-        AuthorizerId:
-          Ref: CognitoAuthorizer
+        AuthorizationType: NONE
+        # AuthorizerId:
+        #   Ref: CognitoAuthorizer
         Integration:
           Type: HTTP_PROXY
           IntegrationHttpMethod: ANY
-          Uri: https://#{JobsServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          Uri: https://pa3itplx4f.execute-api.us-east-1.amazonaws.com/dev/{proxy}
           IntegrationResponses:
             - StatusCode: 200
         MethodResponses:

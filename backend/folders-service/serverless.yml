@@ -7,7 +7,6 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     STAGE: ${self:provider.stage}
-    AWS_REGION: ${self:provider.region}
     FOLDERS_TABLE: manpower-folders-${self:provider.stage}
     INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
     DYNAMODB_ENDPOINT: ${env:DYNAMODB_ENDPOINT, ''}
@@ -44,10 +43,10 @@ functions:
           path: /folders
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Internal folder creation - for inter-service communication
   createFolderInternal:
@@ -66,10 +65,10 @@ functions:
           path: /folders
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Get single folder
   getFolder:
@@ -79,10 +78,10 @@ functions:
           path: /folders/{folderId}
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Get folder children
   getFolderChildren:
@@ -92,10 +91,10 @@ functions:
           path: /folders/{folderId}/children
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Get root folders
   getRootFolders:
@@ -105,10 +104,10 @@ functions:
           path: /folders/root
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Update folder - ADMIN ONLY
   updateFolder:
@@ -118,10 +117,10 @@ functions:
           path: /folders/{folderId}
           method: put
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Delete folder - ADMIN ONLY
   deleteFolder:
@@ -131,10 +130,10 @@ functions:
           path: /folders/{folderId}
           method: delete
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Delete multiple folders - ADMIN ONLY
   deleteFolders:
@@ -144,84 +143,84 @@ functions:
           path: /folders/batch
           method: delete
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
 resources:
   Resources:
-    # Cognito Authorizer (references auth-service User Pool)
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: FoldersCognitoAuthorizer
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-        RestApiId:
-          Ref: RestApiApigEvent
-        IdentitySource: method.request.header.Authorization
+    # # Cognito Authorizer (references auth-service User Pool)
+    # CognitoAuthorizer:
+    #   Type: AWS::ApiGateway::Authorizer
+    #   Properties:
+    #     Name: FoldersCognitoAuthorizer
+    #     Type: COGNITO_USER_POOLS
+    #     ProviderARNs:
+    #       - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+    #     RestApiId:
+    #       Ref: RestApi
+    #     IdentitySource: method.request.header.Authorization
 
-    # DynamoDB Table
-    FoldersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: manpower-folders-${self:provider.stage}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: folderId
-            AttributeType: S
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: parentId
-            AttributeType: S
-          - AttributeName: createdAt
-            AttributeType: S
-        KeySchema:
-          - AttributeName: folderId
-            KeyType: HASH
-          - AttributeName: userId
-            KeyType: RANGE
-        GlobalSecondaryIndexes:
-          - IndexName: UserIndex
-            KeySchema:
-              - AttributeName: userId
-                KeyType: HASH
-              - AttributeName: createdAt
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-          - IndexName: ParentIndex
-            KeySchema:
-              - AttributeName: parentId
-                KeyType: HASH
-              - AttributeName: createdAt
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
+    # # DynamoDB Table (already exists in shared infrastructure)
+    # FoldersTable:
+    #   Type: AWS::DynamoDB::Table
+    #   Properties:
+    #     TableName: manpower-folders-${self:provider.stage}
+    #     BillingMode: PAY_PER_REQUEST
+    #     AttributeDefinitions:
+    #       - AttributeName: folderId
+    #         AttributeType: S
+    #       - AttributeName: userId
+    #         AttributeType: S
+    #       - AttributeName: parentId
+    #         AttributeType: S
+    #       - AttributeName: createdAt
+    #         AttributeType: S
+    #     KeySchema:
+    #       - AttributeName: folderId
+    #         KeyType: HASH
+    #       - AttributeName: userId
+    #         KeyType: RANGE
+    #     GlobalSecondaryIndexes:
+    #       - IndexName: UserIndex
+    #         KeySchema:
+    #           - AttributeName: userId
+    #             KeyType: HASH
+    #           - AttributeName: createdAt
+    #             KeyType: RANGE
+    #         Projection:
+    #           ProjectionType: ALL
+    #       - IndexName: ParentIndex
+    #         KeySchema:
+    #           - AttributeName: parentId
+    #             KeyType: HASH
+    #           - AttributeName: createdAt
+    #             KeyType: RANGE
+    #         Projection:
+    #           ProjectionType: ALL
 
-  Outputs:
-    FoldersServiceUrl:
-      Description: Folders Service API Gateway URL
-      Value:
-        Fn::Join:
-          - ""
-          - - "https://"
-            - Ref: RestApiApigEvent
-            - ".execute-api."
-            - ${self:provider.region}
-            - ".amazonaws.com/"
-            - ${self:provider.stage}
-      Export:
-        Name: FoldersServiceUrl-${self:provider.stage}
+  # Outputs:
+  #   FoldersServiceUrl:
+  #     Description: Folders Service API Gateway URL
+  #     Value:
+  #       Fn::Join:
+  #         - ""
+  #         - - "https://"
+  #           - Ref: RestApi
+  #           - ".execute-api."
+  #           - ${self:provider.region}
+  #           - ".amazonaws.com/"
+  #           - ${self:provider.stage}
+  #     Export:
+  #       Name: FoldersServiceUrl-${self:provider.stage}
 
-    FoldersServiceApiId:
-      Description: Folders Service API Gateway ID
-      Value:
-        Ref: RestApiApigEvent
-      Export:
-        Name: FoldersServiceApiId-${self:provider.stage}
+  #   FoldersServiceApiId:
+  #     Description: Folders Service API Gateway ID
+  #     Value:
+  #       Ref: RestApi
+  #     Export:
+  #       Name: FoldersServiceApiId-${self:provider.stage}
 
 plugins:
   - serverless-plugin-typescript

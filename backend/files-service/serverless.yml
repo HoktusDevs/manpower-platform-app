@@ -56,10 +56,10 @@ functions:
           path: /files
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   getFile:
     handler: src/handlers/files.getFile
@@ -68,10 +68,10 @@ functions:
           path: /files/{fileId}
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   getFilesByFolder:
     handler: src/handlers/files.getFilesByFolder
@@ -80,10 +80,10 @@ functions:
           path: /files/folder/{folderId}
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # File Upload (Presigned URLs)
   getUploadUrl:
@@ -93,10 +93,10 @@ functions:
           path: /files/upload-url
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   confirmUpload:
     handler: src/handlers/files.confirmUpload
@@ -105,10 +105,10 @@ functions:
           path: /files/confirm-upload
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Bulk Upload
   getBulkUploadUrls:
@@ -118,10 +118,10 @@ functions:
           path: /files/bulk-upload-urls
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # File Operations
   updateFile:
@@ -131,10 +131,10 @@ functions:
           path: /files/{fileId}
           method: put
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   deleteFile:
     handler: src/handlers/files.deleteFile
@@ -143,10 +143,10 @@ functions:
           path: /files/{fileId}
           method: delete
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   deleteFiles:
     handler: src/handlers/files.deleteFiles
@@ -155,10 +155,10 @@ functions:
           path: /files/bulk-delete
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # File Download
   getDownloadUrl:
@@ -168,10 +168,10 @@ functions:
           path: /files/{fileId}/download
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   # Public Files (for shared documents)
   getPublicFile:
@@ -182,80 +182,80 @@ functions:
           method: get
           cors: true
 
-resources:
-  Resources:
-    # Cognito Authorizer
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: CognitoAuthorizer
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-        RestApiId:
-          Ref: RestApiApigEvent
-        IdentitySource: method.request.header.Authorization
+# resources:
+#   Resources:
+#     # Cognito Authorizer
+#     CognitoAuthorizer:
+#       Type: AWS::ApiGateway::Authorizer
+#       Properties:
+#         Name: CognitoAuthorizer
+#         Type: COGNITO_USER_POOLS
+#         ProviderARNs:
+#           - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+#         RestApiId:
+#           Ref: RestApi
+#         IdentitySource: method.request.header.Authorization
 
-    # S3 Bucket for file storage
-    FilesBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: ${self:provider.environment.S3_BUCKET}
-        VersioningConfiguration:
-          Status: Enabled
-        BucketEncryption:
-          ServerSideEncryptionConfiguration:
-            - ServerSideEncryptionByDefault:
-                SSEAlgorithm: AES256
-        PublicAccessBlockConfiguration:
-          BlockPublicAcls: true
-          BlockPublicPolicy: true
-          IgnorePublicAcls: true
-          RestrictPublicBuckets: true
-        CorsConfiguration:
-          CorsRules:
-            - AllowedHeaders:
-                - "*"
-              AllowedMethods:
-                - GET
-                - PUT
-                - POST
-                - HEAD
-              AllowedOrigins:
-                - "*"
-              MaxAge: 3000
+#     # S3 Bucket for file storage
+#     FilesBucket:
+#       Type: AWS::S3::Bucket
+#       Properties:
+#         BucketName: ${self:provider.environment.S3_BUCKET}
+#         VersioningConfiguration:
+#           Status: Enabled
+#         BucketEncryption:
+#           ServerSideEncryptionConfiguration:
+#             - ServerSideEncryptionByDefault:
+#                 SSEAlgorithm: AES256
+#         PublicAccessBlockConfiguration:
+#           BlockPublicAcls: true
+#           BlockPublicPolicy: true
+#           IgnorePublicAcls: true
+#           RestrictPublicBuckets: true
+#         CorsConfiguration:
+#           CorsRules:
+#             - AllowedHeaders:
+#                 - "*"
+#               AllowedMethods:
+#                 - GET
+#                 - PUT
+#                 - POST
+#                 - HEAD
+#               AllowedOrigins:
+#                 - "*"
+#               MaxAge: 3000
 
-    # DynamoDB Table for file metadata
-    DocumentsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.DOCUMENTS_TABLE}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: fileId
-            AttributeType: S
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: folderId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: fileId
-            KeyType: HASH
-          - AttributeName: userId
-            KeyType: RANGE
-        GlobalSecondaryIndexes:
-          - IndexName: UserIndex
-            KeySchema:
-              - AttributeName: userId
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-          - IndexName: FolderIndex
-            KeySchema:
-              - AttributeName: folderId
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
+#     # DynamoDB Table for file metadata
+#     DocumentsTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:provider.environment.DOCUMENTS_TABLE}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: fileId
+#             AttributeType: S
+#           - AttributeName: userId
+#             AttributeType: S
+#           - AttributeName: folderId
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: fileId
+#             KeyType: HASH
+#           - AttributeName: userId
+#             KeyType: RANGE
+#         GlobalSecondaryIndexes:
+#           - IndexName: UserIndex
+#             KeySchema:
+#               - AttributeName: userId
+#                 KeyType: HASH
+#             Projection:
+#               ProjectionType: ALL
+#           - IndexName: FolderIndex
+#             KeySchema:
+#               - AttributeName: folderId
+#                 KeyType: HASH
+#             Projection:
+#               ProjectionType: ALL
 
 plugins:
   - serverless-plugin-typescript

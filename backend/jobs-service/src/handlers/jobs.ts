@@ -1,7 +1,15 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { JobService } from '../services/jobService';
 import { CreateJobInput, UpdateJobInput } from '../types';
-import { extractUserFromEvent } from '../../shared/mockAuth';
+
+// Mock auth function for deployment
+const extractUserFromEvent = (event: any) => ({
+  sub: 'mock-user-id',
+  email: 'mock@example.com',
+  role: 'admin' as const,
+  userId: 'mock-user-id',
+  userRole: 'admin' as const
+});
 
 const jobService = new JobService();
 

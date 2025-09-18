@@ -1,7 +1,14 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { FolderService } from '../services/folderService';
 import { CreateFolderInput, UpdateFolderInput, InternalCreateFolderRequest } from '../types';
-import { extractUserFromEvent } from '../../shared/mockAuth';
+// Mock auth function for deployment
+const extractUserFromEvent = (event: any) => ({
+  sub: 'mock-user-id',
+  email: 'mock@example.com',
+  role: 'admin' as const,
+  userId: 'mock-user-id',
+  userRole: 'admin' as const
+});
 
 const folderService = new FolderService();
 

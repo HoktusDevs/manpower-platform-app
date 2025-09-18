@@ -32,7 +32,7 @@ export class FoldersServiceClient {
         body: JSON.stringify(requestData),
       });
 
-      const result = await response.json();
+      const result = await response.json() as any;
 
       if (!response.ok) {
         console.error('FoldersServiceClient: Error creating folder:', result);

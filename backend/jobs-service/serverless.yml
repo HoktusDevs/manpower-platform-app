@@ -41,10 +41,10 @@ functions:
           path: /jobs
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   getPublishedJobs:
     handler: src/handlers/jobs.getPublishedJobs
@@ -61,10 +61,10 @@ functions:
           path: /jobs/{jobId}
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   getJobsByFolder:
     handler: src/handlers/jobs.getJobsByFolder
@@ -73,10 +73,10 @@ functions:
           path: /jobs/folder/{folderId}
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   createJob:
     handler: src/handlers/jobs.createJob
@@ -85,10 +85,10 @@ functions:
           path: /jobs
           method: post
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   updateJob:
     handler: src/handlers/jobs.updateJob
@@ -97,10 +97,10 @@ functions:
           path: /jobs/{jobId}
           method: put
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
   deleteJob:
     handler: src/handlers/jobs.deleteJob
@@ -109,24 +109,24 @@ functions:
           path: /jobs/{jobId}
           method: delete
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
 
 
-resources:
-  Resources:
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: CognitoAuthorizer
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-        RestApiId:
-          Ref: RestApiApigEvent
-        IdentitySource: method.request.header.Authorization
+# resources:
+#   Resources:
+#     CognitoAuthorizer:
+#       Type: AWS::ApiGateway::Authorizer
+#       Properties:
+#         Name: CognitoAuthorizer
+#         Type: COGNITO_USER_POOLS
+#         ProviderARNs:
+#           - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+#         RestApiId:
+#           Ref: RestApi
+#         IdentitySource: method.request.header.Authorization
 
 plugins:
   - serverless-plugin-typescript

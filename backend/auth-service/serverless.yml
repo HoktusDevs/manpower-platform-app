@@ -9,7 +9,6 @@ provider:
     STAGE: ${self:provider.stage}
     COGNITO_USER_POOL_ID: us-east-1_kQKPPUqRO
     COGNITO_CLIENT_ID: ${self:custom.cognitoClientId}
-    AWS_REGION: ${self:provider.region}
   iamRoleStatements:
     # Cognito permissions
     - Effect: Allow
@@ -115,46 +114,42 @@ functions:
           path: /auth/profile
           method: get
           cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: CognitoAuthorizer
 
-resources:
-  Resources:
-    # Cognito Authorizer
-    CognitoAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: CognitoAuthorizer
-        Type: COGNITO_USER_POOLS
-        ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-        RestApiId:
-          Ref: RestApiApigEvent
-        IdentitySource: method.request.header.Authorization
-
-  Outputs:
-    AuthServiceUrl:
-      Description: Auth Service API Gateway URL
-      Value:
-        Fn::Join:
-          - ""
-          - - "https://"
-            - Ref: RestApiApigEvent
-            - ".execute-api."
-            - ${self:provider.region}
-            - ".amazonaws.com/"
-            - ${self:provider.stage}
-      Export:
-        Name: AuthServiceUrl-${self:provider.stage}
-
-    AuthServiceApiId:
-      Description: Auth Service API Gateway ID
-      Value:
-        Ref: RestApiApigEvent
-      Export:
-        Name: AuthServiceApiId-${self:provider.stage}
+# resources:
+#   Resources:
+#     # Cognito Authorizer
+#     CognitoAuthorizer:
+#       Type: AWS::ApiGateway::Authorizer
+#       Properties:
+#         Name: CognitoAuthorizer
+#         Type: COGNITO_USER_POOLS
+#         ProviderARNs:
+#           - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+#         RestApiId:
+#           Ref: RestApi
+#         IdentitySource: method.request.header.Authorization
+#
+#   Outputs:
+#     AuthServiceUrl:
+#       Description: Auth Service API Gateway URL
+#       Value:
+#         Fn::Join:
+#           - ""
+#           - - "https://"
+#             - Ref: RestApi
+#             - ".execute-api."
+#             - ${self:provider.region}
+#             - ".amazonaws.com/"
+#             - ${self:provider.stage}
+#       Export:
+#         Name: AuthServiceUrl-${self:provider.stage}
+#
+#     AuthServiceApiId:
+#       Description: Auth Service API Gateway ID
+#       Value:
+#         Ref: RestApi
+#       Export:
+#         Name: AuthServiceApiId-${self:provider.stage}
 
 plugins:
   - serverless-plugin-typescript

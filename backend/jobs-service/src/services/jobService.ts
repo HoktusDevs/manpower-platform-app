@@ -187,7 +187,7 @@ export class JobService {
       return {
         success: true,
         message: 'Job deleted successfully',
-        job: updatedJob,
+        job: updatedJob || undefined,
       };
     } catch (error) {
       console.error('Error in deleteJob:', error);

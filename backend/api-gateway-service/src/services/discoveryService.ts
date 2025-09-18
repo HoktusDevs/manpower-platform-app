@@ -68,11 +68,11 @@ export class DiscoveryService {
       const healthEndpoint = `${baseUrl}/health`;
       const response = await fetch(healthEndpoint, {
         method: 'GET',
-        timeout: 5000,
+        signal: AbortSignal.timeout(5000),
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as any;
         return {
           service: data.service || 'unknown',
           status: 'healthy',
