@@ -34,3 +34,27 @@ export interface User {
   given_name?: string | undefined;
   family_name?: string | undefined;
 }
+
+export interface UserApplicationData {
+  nombre: string;
+  rut: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  educacion: string;
+}
+
+export interface UserProfileData {
+  nombre: string;
+  apellido: string;
+  rut: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  fechaNacimiento: string;
+  educacionNivel: string;
+  experienciaLaboral: string;
+  habilidades: string;
+}
+
+export type TabType = 'puestos' | 'informacion' | 'documentos';
