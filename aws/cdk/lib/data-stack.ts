@@ -304,6 +304,12 @@ export class DataStack extends cdk.Stack {
       graphqlResolverLambda
     );
 
+    // Grant AppSync permission to invoke the Lambda function
+    graphqlResolverLambda.addPermission('AllowAppSyncInvocation', {
+      principal: new iam.ServicePrincipal('appsync.amazonaws.com'),
+      sourceArn: this.graphqlApi.arn
+    });
+
     // Applications Resolvers - All use the same Lambda function
     lambdaDataSource.createResolver('GetMyApplicationsResolver', {
       typeName: 'Query',
