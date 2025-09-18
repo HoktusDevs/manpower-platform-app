@@ -1,0 +1,253 @@
+service: api-gateway-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+
+functions:
+  # Service Discovery Handler
+  serviceDiscovery:
+    handler: src/handlers/discovery.getServices
+    events:
+      - http:
+          path: /services
+          method: get
+          cors: true
+
+  # Health Check Handler
+  healthCheck:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    # Main API Gateway
+    MainApiGateway:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: manpower-api-${self:provider.stage}
+        Description: Main API Gateway for Manpower Platform
+        EndpointConfiguration:
+          Types:
+            - REGIONAL
+
+    # Cognito Authorizer
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer-${self:provider.stage}
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+        RestApiId:
+          Ref: MainApiGateway
+        IdentitySource: method.request.header.Authorization
+
+    # Auth Service Proxy Resource
+    AuthResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: auth
+
+    AuthProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: AuthResource
+        PathPart: "{proxy+}"
+
+    AuthProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: AuthProxyResource
+        HttpMethod: ANY
+        AuthorizationType: NONE
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://#{AuthServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+
+    # Files Service Proxy Resource
+    FilesResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: files
+
+    FilesProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: FilesResource
+        PathPart: "{proxy+}"
+
+    FilesProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: FilesProxyResource
+        HttpMethod: ANY
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId:
+          Ref: CognitoAuthorizer
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://#{FilesServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+
+    # Folders Service Proxy Resource
+    FoldersResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: folders
+
+    FoldersProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: FoldersResource
+        PathPart: "{proxy+}"
+
+    FoldersProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: FoldersProxyResource
+        HttpMethod: ANY
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId:
+          Ref: CognitoAuthorizer
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://#{FoldersServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+
+    # Jobs Service Proxy Resource
+    JobsResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: jobs
+
+    JobsProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: JobsResource
+        PathPart: "{proxy+}"
+
+    JobsProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: JobsProxyResource
+        HttpMethod: ANY
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId:
+          Ref: CognitoAuthorizer
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://#{JobsServiceApiId}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+
+    # Deployment
+    ApiGatewayDeployment:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn:
+        - AuthProxyMethod
+        - FilesProxyMethod
+        - FoldersProxyMethod
+        - JobsProxyMethod
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        StageName: ${self:provider.stage}
+
+  Outputs:
+    MainApiGatewayUrl:
+      Description: Main API Gateway URL
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: MainApiGateway
+            - ".execute-api."
+            - ${self:provider.region}
+            - ".amazonaws.com/"
+            - ${self:provider.stage}
+      Export:
+        Name: MainApiGatewayUrl-${self:provider.stage}
+
+    ApiGatewayId:
+      Description: Main API Gateway ID
+      Value:
+        Ref: MainApiGateway
+      Export:
+        Name: MainApiGatewayId-${self:provider.stage}
+
+plugins:
+  - serverless-plugin-typescript

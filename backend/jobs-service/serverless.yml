@@ -1,0 +1,133 @@
+service: jobs-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    JOB_POSTINGS_TABLE: manpower-job-postings-${self:provider.stage}
+    FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'http://localhost:3004'}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOB_POSTINGS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOB_POSTINGS_TABLE}/index/*
+
+functions:
+  # Health Check
+  checkHealth:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # Job Management
+  getAllJobs:
+    handler: src/handlers/jobs.getAllJobs
+    events:
+      - http:
+          path: /jobs
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  getPublishedJobs:
+    handler: src/handlers/jobs.getPublishedJobs
+    events:
+      - http:
+          path: /jobs/published
+          method: get
+          cors: true
+
+  getJob:
+    handler: src/handlers/jobs.getJob
+    events:
+      - http:
+          path: /jobs/{jobId}
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  getJobsByFolder:
+    handler: src/handlers/jobs.getJobsByFolder
+    events:
+      - http:
+          path: /jobs/folder/{folderId}
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  createJob:
+    handler: src/handlers/jobs.createJob
+    events:
+      - http:
+          path: /jobs
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  updateJob:
+    handler: src/handlers/jobs.updateJob
+    events:
+      - http:
+          path: /jobs/{jobId}
+          method: put
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  deleteJob:
+    handler: src/handlers/jobs.deleteJob
+    events:
+      - http:
+          path: /jobs/{jobId}
+          method: delete
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+
+resources:
+  Resources:
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+        RestApiId:
+          Ref: RestApiApigEvent
+        IdentitySource: method.request.header.Authorization
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline

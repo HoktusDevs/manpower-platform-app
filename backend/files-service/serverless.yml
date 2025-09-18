@@ -1,0 +1,274 @@
+service: files-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    DOCUMENTS_TABLE: manpower-documents-${self:provider.stage}
+    S3_BUCKET: manpower-files-${self:provider.stage}
+    S3_REGION: ${self:provider.region}
+    MAX_FILE_SIZE: 52428800  # 50MB
+    UPLOAD_EXPIRATION: 900   # 15 minutes
+  iamRoleStatements:
+    # DynamoDB permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DOCUMENTS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DOCUMENTS_TABLE}/index/*
+    # S3 permissions
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:DeleteObject
+        - s3:GetObjectVersion
+        - s3:ListBucket
+      Resource:
+        - arn:aws:s3:::${self:provider.environment.S3_BUCKET}
+        - arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+
+functions:
+  # Health Check
+  healthCheck:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # File Management
+  getAllFiles:
+    handler: src/handlers/files.getAllFiles
+    events:
+      - http:
+          path: /files
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  getFile:
+    handler: src/handlers/files.getFile
+    events:
+      - http:
+          path: /files/{fileId}
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  getFilesByFolder:
+    handler: src/handlers/files.getFilesByFolder
+    events:
+      - http:
+          path: /files/folder/{folderId}
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  # File Upload (Presigned URLs)
+  getUploadUrl:
+    handler: src/handlers/files.getUploadUrl
+    events:
+      - http:
+          path: /files/upload-url
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  confirmUpload:
+    handler: src/handlers/files.confirmUpload
+    events:
+      - http:
+          path: /files/confirm-upload
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  # Bulk Upload
+  getBulkUploadUrls:
+    handler: src/handlers/files.getBulkUploadUrls
+    events:
+      - http:
+          path: /files/bulk-upload-urls
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  # File Operations
+  updateFile:
+    handler: src/handlers/files.updateFile
+    events:
+      - http:
+          path: /files/{fileId}
+          method: put
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  deleteFile:
+    handler: src/handlers/files.deleteFile
+    events:
+      - http:
+          path: /files/{fileId}
+          method: delete
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  deleteFiles:
+    handler: src/handlers/files.deleteFiles
+    events:
+      - http:
+          path: /files/bulk-delete
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  # File Download
+  getDownloadUrl:
+    handler: src/handlers/files.getDownloadUrl
+    events:
+      - http:
+          path: /files/{fileId}/download
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+  # Public Files (for shared documents)
+  getPublicFile:
+    handler: src/handlers/files.getPublicFile
+    events:
+      - http:
+          path: /public/files/{fileId}
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    # Cognito Authorizer
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+        RestApiId:
+          Ref: RestApiApigEvent
+        IdentitySource: method.request.header.Authorization
+
+    # S3 Bucket for file storage
+    FilesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        VersioningConfiguration:
+          Status: Enabled
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - HEAD
+              AllowedOrigins:
+                - "*"
+              MaxAge: 3000
+
+    # DynamoDB Table for file metadata
+    DocumentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DOCUMENTS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: fileId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: folderId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: fileId
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: FolderIndex
+            KeySchema:
+              - AttributeName: folderId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3006
+    lambdaPort: 3016
+  dynamodb:
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+    stages:
+      - local

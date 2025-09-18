@@ -1,0 +1,60 @@
+service: manpower-backend
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    APPLICATIONS_TABLE: manpower-applications-${self:provider.stage}
+    JOB_POSTINGS_TABLE: manpower-job-postings-${self:provider.stage}
+    DOCUMENTS_TABLE: manpower-documents-${self:provider.stage}
+    FORMS_TABLE: manpower-forms-${self:provider.stage}
+    FORM_SUBMISSIONS_TABLE: manpower-form-submissions-${self:provider.stage}
+    FOLDERS_TABLE: manpower-folders-${self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPLICATIONS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOB_POSTINGS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DOCUMENTS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FORMS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FORM_SUBMISSIONS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FOLDERS_TABLE}
+
+functions:
+  graphql:
+    handler: src/handler.graphql
+    events:
+      - http:
+          path: graphql
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+resources:
+  Resources:
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+        RestApiId:
+          Ref: RestApiApigEvent
+        IdentitySource: method.request.header.Authorization
+
+plugins:
+  - serverless-plugin-typescript

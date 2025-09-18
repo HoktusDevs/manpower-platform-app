@@ -1,0 +1,161 @@
+service: auth-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    COGNITO_USER_POOL_ID: us-east-1_kQKPPUqRO
+    COGNITO_CLIENT_ID: ${self:custom.cognitoClientId}
+    AWS_REGION: ${self:provider.region}
+  iamRoleStatements:
+    # Cognito permissions
+    - Effect: Allow
+      Action:
+        - cognito-idp:AdminCreateUser
+        - cognito-idp:AdminSetUserPassword
+        - cognito-idp:AdminInitiateAuth
+        - cognito-idp:AdminGetUser
+        - cognito-idp:AdminUpdateUserAttributes
+        - cognito-idp:AdminDeleteUser
+        - cognito-idp:ForgotPassword
+        - cognito-idp:ConfirmForgotPassword
+        - cognito-idp:ConfirmSignUp
+        - cognito-idp:ResendConfirmationCode
+      Resource:
+        - arn:aws:cognito-idp:${self:provider.region}:*:userpool/us-east-1_kQKPPUqRO
+
+custom:
+  cognitoClientId: ${env:COGNITO_CLIENT_ID, 'YOUR_COGNITO_CLIENT_ID'}
+
+functions:
+  # Health Check
+  healthCheck:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # Authentication
+  registerAdmin:
+    handler: src/handlers/auth.registerAdmin
+    events:
+      - http:
+          path: /auth/register/admin
+          method: post
+          cors: true
+
+  registerEmployee:
+    handler: src/handlers/auth.registerEmployee
+    events:
+      - http:
+          path: /auth/register/postulante
+          method: post
+          cors: true
+
+  login:
+    handler: src/handlers/auth.login
+    events:
+      - http:
+          path: /auth/login
+          method: post
+          cors: true
+
+  refreshToken:
+    handler: src/handlers/auth.refreshToken
+    events:
+      - http:
+          path: /auth/refresh
+          method: post
+          cors: true
+
+  logout:
+    handler: src/handlers/auth.logout
+    events:
+      - http:
+          path: /auth/logout
+          method: post
+          cors: true
+
+  # Password Management
+  forgotPassword:
+    handler: src/handlers/auth.forgotPassword
+    events:
+      - http:
+          path: /auth/forgot-password
+          method: post
+          cors: true
+
+  resetPassword:
+    handler: src/handlers/auth.resetPassword
+    events:
+      - http:
+          path: /auth/reset-password
+          method: post
+          cors: true
+
+  # Email Verification
+  verifyEmail:
+    handler: src/handlers/auth.verifyEmail
+    events:
+      - http:
+          path: /auth/verify
+          method: post
+          cors: true
+
+  # Profile Management (Protected)
+  getProfile:
+    handler: src/handlers/auth.getProfile
+    events:
+      - http:
+          path: /auth/profile
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: CognitoAuthorizer
+
+resources:
+  Resources:
+    # Cognito Authorizer
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
+        RestApiId:
+          Ref: RestApiApigEvent
+        IdentitySource: method.request.header.Authorization
+
+  Outputs:
+    AuthServiceUrl:
+      Description: Auth Service API Gateway URL
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: RestApiApigEvent
+            - ".execute-api."
+            - ${self:provider.region}
+            - ".amazonaws.com/"
+            - ${self:provider.stage}
+      Export:
+        Name: AuthServiceUrl-${self:provider.stage}
+
+    AuthServiceApiId:
+      Description: Auth Service API Gateway ID
+      Value:
+        Ref: RestApiApigEvent
+      Export:
+        Name: AuthServiceApiId-${self:provider.stage}
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline

@@ -1,0 +1,52 @@
+{
+  "name": "manpower-backend",
+  "version": "1.0.0",
+  "description": "Manpower Platform Backend - Microservices Architecture",
+  "main": "index.js",
+  "scripts": {
+    "dev": "docker-compose up -d && npm run setup:local && npm run start:local",
+    "setup:local": "./scripts/setup-local-aws.sh",
+    "start:local": "concurrently \"npm run start:files\" \"npm run start:auth\" \"npm run start:folders\" \"npm run start:jobs\" \"npm run start:config\" \"npm run start:gateway\"",
+    "start:files": "cd files-service && npm install && serverless offline --stage local --httpPort 3001",
+    "start:auth": "cd auth-service && npm install && serverless offline --stage local --httpPort 3002",
+    "start:folders": "cd folders-service && npm install && serverless offline --stage local --httpPort 3003",
+    "start:jobs": "cd jobs-service && npm install && serverless offline --stage local --httpPort 3004",
+    "start:config": "cd config-service && npm install && serverless offline --stage local --httpPort 3005",
+    "start:gateway": "cd api-gateway-service && npm install && serverless offline --stage local --httpPort 3000",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "reset": "docker-compose down -v && docker-compose up -d && npm run setup:local",
+    "deploy:dev": "./deploy.sh dev",
+    "deploy:prod": "./deploy.sh prod",
+    "test:local": "npm run test:files && npm run test:auth && npm run test:folders && npm run test:jobs",
+    "test:files": "cd files-service && npm test",
+    "test:auth": "cd auth-service && npm test",
+    "test:folders": "cd folders-service && npm test",
+    "test:jobs": "cd jobs-service && npm test",
+    "lint": "npm run lint:files && npm run lint:auth && npm run lint:folders && npm run lint:jobs",
+    "lint:files": "cd files-service && npm run lint",
+    "lint:auth": "cd auth-service && npm run lint",
+    "lint:folders": "cd folders-service && npm run lint",
+    "lint:jobs": "cd jobs-service && npm run lint",
+    "generate:config": "cd scripts && node generate-frontend-config.js"
+  },
+  "keywords": ["serverless", "microservices", "aws", "nodejs", "typescript"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^24.5.1",
+    "serverless": "^3.40.0",
+    "serverless-plugin-typescript": "^2.1.5",
+    "serverless-offline": "^13.8.0",
+    "typescript": "^5.9.2",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.890.0",
+    "@aws-sdk/lib-dynamodb": "^3.890.0",
+    "@aws-sdk/client-cloudformation": "^3.890.0",
+    "uuid": "^13.0.0"
+  }
+}
