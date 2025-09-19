@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { redirectByRole } from '../utils/redirectUtils';
 
 interface LoginFormData {
   email: string;
@@ -35,8 +36,7 @@ export const LoginPage: React.FC = () => {
       });
 
       if (response.success) {
-        const redirectUrl = determineRedirectUrl(response.user?.['custom:role']);
-        window.location.href = redirectUrl;
+        redirectByRole(response.user?.['custom:role'] || 'postulante');
       } else {
         setError(response.message || 'Error en el inicio de sesión');
       }
@@ -47,15 +47,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const determineRedirectUrl = (role?: string): string => {
-    const baseUrl = import.meta.env['VITE_MAIN_APP_URL'] || 'http://localhost:3000';
-
-    if (role === 'admin') {
-      return `${baseUrl}/admin/dashboard`;
-    } else {
-      return `${baseUrl}/postulante/dashboard`;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { redirectByRole } from '../utils/redirectUtils';
 
 interface RegisterFormData {
   email: string;
@@ -70,8 +71,12 @@ export const RegisterPage: React.FC = () => {
           setSuccess('Registro exitoso. Por favor verifica tu email.');
           navigate('/confirm-signup', { state: { email: formData.email } });
         } else {
-          setSuccess('Registro exitoso. Puedes iniciar sesión.');
-          navigate('/login');
+          setSuccess(`Registro exitoso. Redirigiendo al panel de ${formData.role === 'admin' ? 'administración' : 'postulante'}...`);
+
+          // Redirect to appropriate frontend based on role
+          setTimeout(() => {
+            redirectByRole(formData.role);
+          }, 1500); // Small delay to show success message
         }
       } else {
         setError(response.message || 'Error en el registro');
