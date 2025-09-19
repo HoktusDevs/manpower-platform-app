@@ -338,7 +338,7 @@ export const verifyEmail: APIGatewayProxyHandler = async (event) => {
   }
 };
 
-export const getProfile = async (event: APIGatewayProxyEventWithAuth) => {
+export const getProfile = async (event: APIGatewayProxyEventWithAuth): Promise<APIGatewayProxyResult> => {
   try {
     const { email } = extractUserFromEvent(event);
 

@@ -44,7 +44,7 @@ functions:
     handler: src/handlers/auth.registerAdmin
     events:
       - http:
-          path: /auth/register/admin
+          path: /auth/registro/admin
           method: post
           cors: true
 
@@ -52,7 +52,7 @@ functions:
     handler: src/handlers/auth.registerEmployee
     events:
       - http:
-          path: /auth/register/postulante
+          path: /auth/registro
           method: post
           cors: true
 
@@ -102,7 +102,7 @@ functions:
     handler: src/handlers/auth.verifyEmail
     events:
       - http:
-          path: /auth/verify
+          path: /auth/verify-email
           method: post
           cors: true
 
