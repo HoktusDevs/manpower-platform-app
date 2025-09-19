@@ -27,7 +27,7 @@ provider:
         - arn:aws:cognito-idp:${self:provider.region}:*:userpool/us-east-1_kQKPPUqRO
 
 custom:
-  cognitoClientId: ${env:COGNITO_CLIENT_ID, 'YOUR_COGNITO_CLIENT_ID'}
+  cognitoClientId: ${env:COGNITO_CLIENT_ID, '37t0pkhu9kdrf01lqqoj0e911f'}
 
 functions:
   # Health Check

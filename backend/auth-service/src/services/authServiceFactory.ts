@@ -1,15 +1,14 @@
 import { CognitoService } from './cognitoService';
-import { MockCognitoService } from './mockCognitoService';
 
-export type AuthServiceInterface = CognitoService | MockCognitoService;
+export type AuthServiceInterface = CognitoService;
 
 export class AuthServiceFactory {
   static create(): AuthServiceInterface {
     const isLocal = process.env.STAGE === 'local';
 
     if (isLocal) {
-      console.log('🧪 Creating Mock Cognito Service for local development');
-      return new MockCognitoService();
+      console.log('🧪 Local development detected, but using AWS Cognito Service for consistency');
+      return new CognitoService();
     } else {
       console.log('☁️ Creating AWS Cognito Service for production');
       return new CognitoService();
