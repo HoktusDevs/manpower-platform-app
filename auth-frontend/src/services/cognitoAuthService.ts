@@ -19,6 +19,7 @@ import {
   type UpdatePasswordInput,
 } from 'aws-amplify/auth';
 import { awsConfig } from '../config/aws-config';
+import type { AuthRepository } from '../types/repositories';
 import type {
   User,
   RegisterRequest,
@@ -30,7 +31,7 @@ import type {
   ChangePasswordRequest,
 } from '../types/auth';
 
-class CognitoAuthService {
+class CognitoAuthRepository implements AuthRepository {
   constructor() {
     Amplify.configure(awsConfig);
   }
@@ -262,4 +263,4 @@ class CognitoAuthService {
   }
 }
 
-export const cognitoAuthService = new CognitoAuthService();
+export const cognitoAuthRepository = new CognitoAuthRepository();

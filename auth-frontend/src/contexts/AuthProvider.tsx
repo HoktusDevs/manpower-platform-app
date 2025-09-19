@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type ReactNode } from 'react';
-import { cognitoAuthService } from '../services/cognitoAuthService';
+import { authRepository } from '../services/authFactory';
 import { AuthContext } from './AuthContext';
 import type {
   User,
@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const currentUser = await cognitoAuthService.getCurrentUser();
+      const currentUser = await authRepository.getCurrentUser();
       setUser(currentUser);
     } catch {
       setUser(null);
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (request: LoginRequest): Promise<AuthResponse> => {
-    const response = await cognitoAuthService.login(request);
+    const response = await authRepository.login(request);
     if (response.success && response.user) {
       setUser(response.user);
     }
@@ -45,32 +45,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (request: RegisterRequest): Promise<AuthResponse> => {
-    return await cognitoAuthService.register(request);
+    return await authRepository.register(request);
   };
 
   const logout = async () => {
-    await cognitoAuthService.logout();
+    await authRepository.logout();
     setUser(null);
   };
 
   const confirmSignUp = async (request: ConfirmSignUpRequest): Promise<AuthResponse> => {
-    return await cognitoAuthService.confirmSignUp(request);
+    return await authRepository.confirmSignUp(request);
   };
 
   const forgotPassword = async (request: ForgotPasswordRequest): Promise<AuthResponse> => {
-    return await cognitoAuthService.forgotPassword(request);
+    return await authRepository.forgotPassword(request);
   };
 
   const resetPassword = async (request: ResetPasswordRequest): Promise<AuthResponse> => {
-    return await cognitoAuthService.resetPassword(request);
+    return await authRepository.resetPassword(request);
   };
 
   const changePassword = async (request: ChangePasswordRequest): Promise<AuthResponse> => {
-    return await cognitoAuthService.changePassword(request);
+    return await authRepository.changePassword(request);
   };
 
   const refreshToken = async (): Promise<boolean> => {
-    return await cognitoAuthService.refreshToken();
+    return await authRepository.refreshToken();
   };
 
   const contextValue: AuthContextType = {
