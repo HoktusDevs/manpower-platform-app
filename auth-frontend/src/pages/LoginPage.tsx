@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { redirectByRole } from '../utils/redirectUtils';
+import { getRedirectUrlByRole } from '../utils/redirectUtils';
 
 interface LoginFormData {
   email: string;
@@ -15,6 +15,7 @@ export const LoginPage: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState<{role: string} | null>(null);
 
   const { login } = useAuth();
 
@@ -35,8 +36,17 @@ export const LoginPage: React.FC = () => {
         password: formData.password,
       });
 
-      if (response.success) {
-        redirectByRole(response.user?.['custom:role'] || 'postulante');
+      if (response.success && response.user && response.sessionKey) {
+        const userRole = response.user['custom:role'] || 'postulante';
+        setLoginSuccess({ role: userRole });
+
+        // Wait briefly to show success message
+        setTimeout(() => {
+          const redirectUrl = getRedirectUrlByRole(userRole);
+          // Pass sessionKey as URL parameter for DynamoDB verification
+          const urlWithSessionKey = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}sessionKey=${encodeURIComponent(response.sessionKey)}`;
+          window.location.href = urlWithSessionKey;
+        }, 1500); // Show success message briefly before redirecting
       } else {
         setError(response.message || 'Error en el inicio de sesión');
       }
@@ -47,6 +57,36 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+
+  if (loginSuccess) {
+    const roleName = loginSuccess.role === 'admin' ? 'Administrador' : 'Postulante';
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">¡Login exitoso!</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Has iniciado sesión como <strong>{roleName}</strong>
+              </p>
+              <p className="mt-4 text-sm text-gray-500">
+                Redirigiendo automáticamente...
+              </p>
+              <div className="mt-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

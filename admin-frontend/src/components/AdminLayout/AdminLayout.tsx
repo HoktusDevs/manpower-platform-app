@@ -33,7 +33,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     );
   }
 
-  if (user?.role !== 'admin') {
+  if (user?.['custom:role'] !== 'admin') {
     return (
       <AccessDenied
         message="Solo los administradores pueden acceder a este panel."

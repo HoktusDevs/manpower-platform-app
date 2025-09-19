@@ -160,43 +160,25 @@ class HttpAuthRepository implements AuthRepository {
         body: request,
       });
 
-      if (response.success && response.tokens?.accessToken) {
-        this.accessToken = response.tokens.accessToken;
-        localStorage.setItem('accessToken', response.tokens.accessToken);
-
-        if (response.user) {
-          const user = {
-            sub: response.user.id,
-            email: response.user.email,
-            'custom:role': response.user.userType,
-            email_verified: true,
-          };
-          localStorage.setItem('user', JSON.stringify(user));
-        }
-      }
-
-      if (response.user) {
-        const authResponse: AuthResponse = {
-          success: response.success,
-          user: {
-            sub: response.user.id,
-            email: response.user.email,
-            'custom:role': response.user.userType,
-            email_verified: true,
-          },
-          message: response.message,
+      if (response.success && response.user && response.sessionKey) {
+        const user = {
+          sub: response.user.id,
+          email: response.user.email,
+          'custom:role': response.user.userType,
+          email_verified: true,
         };
 
-        if (response.tokens?.accessToken) {
-          authResponse.accessToken = response.tokens.accessToken;
-        }
-
-        return authResponse;
+        return {
+          success: true,
+          user,
+          message: response.message,
+          sessionKey: response.sessionKey,
+        };
       }
 
       return {
-        success: response.success,
-        message: response.message,
+        success: false,
+        message: response.message || 'Login failed - missing user data or token',
       };
     } catch (error) {
       console.error('Login error:', error);
@@ -287,6 +269,7 @@ class HttpAuthRepository implements AuthRepository {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async changePassword(_request: ChangePasswordRequest): Promise<AuthResponse> {
     console.warn('changePassword: HTTP auth service does not support password change yet');
     return {

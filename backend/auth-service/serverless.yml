@@ -9,6 +9,7 @@ provider:
     STAGE: ${self:provider.stage}
     COGNITO_USER_POOL_ID: us-east-1_kQKPPUqRO
     COGNITO_CLIENT_ID: ${self:custom.cognitoClientId}
+    SESSIONS_TABLE: ${self:custom.sessionsTable}
   iamRoleStatements:
     # Cognito permissions
     - Effect: Allow
@@ -25,9 +26,20 @@ provider:
         - cognito-idp:ResendConfirmationCode
       Resource:
         - arn:aws:cognito-idp:${self:provider.region}:*:userpool/us-east-1_kQKPPUqRO
+    # DynamoDB permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:DeleteItem
+        - dynamodb:Scan
+        - dynamodb:Query
+      Resource:
+        - Fn::GetAtt: [SessionsTable, Arn]
 
 custom:
   cognitoClientId: ${env:COGNITO_CLIENT_ID, '37t0pkhu9kdrf01lqqoj0e911f'}
+  sessionsTable: auth-sessions-${self:provider.stage}
 
 functions:
   # Health Check
@@ -69,6 +81,14 @@ functions:
     events:
       - http:
           path: /auth/refresh
+          method: post
+          cors: true
+
+  exchangeSession:
+    handler: src/handlers/auth.exchangeSession
+    events:
+      - http:
+          path: /auth/exchange-session
           method: post
           cors: true
 
@@ -115,41 +135,23 @@ functions:
           method: get
           cors: true
 
-# resources:
-#   Resources:
-#     # Cognito Authorizer
-#     CognitoAuthorizer:
-#       Type: AWS::ApiGateway::Authorizer
-#       Properties:
-#         Name: CognitoAuthorizer
-#         Type: COGNITO_USER_POOLS
-#         ProviderARNs:
-#           - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/us-east-1_kQKPPUqRO
-#         RestApiId:
-#           Ref: RestApi
-#         IdentitySource: method.request.header.Authorization
-#
-#   Outputs:
-#     AuthServiceUrl:
-#       Description: Auth Service API Gateway URL
-#       Value:
-#         Fn::Join:
-#           - ""
-#           - - "https://"
-#             - Ref: RestApi
-#             - ".execute-api."
-#             - ${self:provider.region}
-#             - ".amazonaws.com/"
-#             - ${self:provider.stage}
-#       Export:
-#         Name: AuthServiceUrl-${self:provider.stage}
-#
-#     AuthServiceApiId:
-#       Description: Auth Service API Gateway ID
-#       Value:
-#         Ref: RestApi
-#       Export:
-#         Name: AuthServiceApiId-${self:provider.stage}
+resources:
+  Resources:
+    # DynamoDB Table for Sessions
+    SessionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.sessionsTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: sessionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sessionId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
 
 plugins:
   - serverless-plugin-typescript

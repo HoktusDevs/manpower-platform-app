@@ -28,6 +28,7 @@ export interface AuthResponse {
   success: boolean;
   user?: User;
   accessToken?: string;
+  sessionKey?: string;
   message?: string;
   requiresConfirmation?: boolean;
 }

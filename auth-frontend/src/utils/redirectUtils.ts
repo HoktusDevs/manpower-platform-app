@@ -2,6 +2,8 @@
  * Utility functions for handling user redirections based on roles
  */
 
+import { APP_CONFIG } from '../config/app-config';
+
 export interface User {
   'custom:role': string;
   email: string;
@@ -17,12 +19,12 @@ export interface User {
 export const getRedirectUrlByRole = (userRole: string): string => {
   switch (userRole) {
     case 'admin':
-      return 'http://localhost:6000'; // admin-frontend
+      return APP_CONFIG.ADMIN_FRONTEND_URL;
     case 'postulante':
-      return 'http://localhost:6200'; // applicant-frontend
+      return APP_CONFIG.APPLICANT_FRONTEND_URL;
     default:
       // Fallback to applicant-frontend for unknown roles
-      return 'http://localhost:6200';
+      return APP_CONFIG.APPLICANT_FRONTEND_URL;
   }
 };
 
@@ -44,5 +46,5 @@ export const redirectToUserDashboard = (user: User): void => {
  */
 export const redirectByRole = (role: string): void => {
   const redirectUrl = getRedirectUrlByRole(role);
-  window.location.replace(redirectUrl);
+  window.open(redirectUrl, '_self');
 };

@@ -37,40 +37,47 @@ function AppContent() {
     window.location.href = 'http://localhost:6100/login';
   };
 
-  // SECURITY: Check authentication status on app load
+  // Check for sessionKey first, then existing tokens
   useEffect(() => {
-    const checkAuthentication = () => {
-      console.log('🔐 Checking authentication status...');
+    const checkAuthentication = async () => {
+      // Import here to avoid circular dependency
+      const { SessionExchangeService } = await import('./services/sessionExchangeService');
 
-      // Initialize Cognito service first
-      cognitoAuthService.initialize();
+      // Check if we have a sessionKey from URL
+      const sessionKey = SessionExchangeService.getSessionKeyFromURL();
 
-      // Check if user is authenticated with valid token
-      const isAuthenticated = cognitoAuthService.isAuthenticated();
-      const isTokenValid = cognitoAuthService.isTokenValid();
+      if (sessionKey) {
+        const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
 
-      console.log('🔍 Auth check results:', { isAuthenticated, isTokenValid });
-
-      if (!isAuthenticated || !isTokenValid) {
-        console.log('❌ No valid authentication found - redirecting to auth-frontend');
-        // Clear any invalid data
-        localStorage.clear();
-        // Redirect to auth-frontend
-        window.location.href = 'http://localhost:6100/login?redirect=admin';
-        return;
+        if (result.success && result.user?.userType === 'admin') {
+          setIsAuthChecked(true);
+          return;
+        } else {
+          localStorage.clear();
+          window.location.href = 'http://localhost:6100/login?redirect=admin&error=session_exchange_failed';
+          return;
+        }
       }
 
-      // Check user role for admin access
-      const user = cognitoAuthService.getCurrentUser();
-      if (!user || user.role !== 'admin') {
-        console.log('❌ User is not admin - redirecting to auth-frontend');
-        localStorage.clear();
-        window.location.href = 'http://localhost:6100/login?redirect=admin&error=access_denied';
-        return;
+      // Check existing tokens (using same keys as sessionExchange)
+      const authToken = localStorage.getItem('cognito_access_token');
+      const authUser = localStorage.getItem('user');
+
+      if (authToken && authUser) {
+        try {
+          const user = JSON.parse(authUser);
+          if (user['custom:role'] === 'admin') {
+            setIsAuthChecked(true);
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
       }
 
-      console.log('✅ Valid admin authentication found');
-      setIsAuthChecked(true);
+      // No valid authentication, redirect to login
+      localStorage.clear();
+      window.location.href = 'http://localhost:6100/login?redirect=admin';
     };
 
     checkAuthentication();
@@ -137,7 +144,7 @@ function AppContent() {
       />
 
       <Routes>
-        {/* Redirect root to admin dashboard */}
+        {/* Root route - redirect to admin dashboard after auth */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
 
         {/* Redirect authentication routes to auth-frontend */}

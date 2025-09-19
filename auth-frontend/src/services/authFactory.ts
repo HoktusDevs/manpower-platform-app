@@ -17,6 +17,6 @@ export class AuthRepositoryFactory {
   }
 }
 
-const AUTH_PROVIDER: AuthProvider = (process.env['VITE_AUTH_PROVIDER'] as AuthProvider) || 'http';
+const AUTH_PROVIDER: AuthProvider = (import.meta.env['VITE_AUTH_PROVIDER'] as AuthProvider) || 'http';
 
 export const authRepository = AuthRepositoryFactory.create(AUTH_PROVIDER);

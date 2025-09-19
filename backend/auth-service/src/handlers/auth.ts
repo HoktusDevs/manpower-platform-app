@@ -1,5 +1,6 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { AuthServiceFactory } from '../services/authServiceFactory';
+import { DynamoSessionService } from '../services/dynamoSessionService';
 import {
   RegisterAdminInput,
   RegisterEmployeeInput,
@@ -8,6 +9,7 @@ import {
   ForgotPasswordInput,
   ResetPasswordInput,
   VerifyEmailInput,
+  ExchangeSessionInput,
   AuthResponse,
   APIGatewayProxyEventWithAuth
 } from '../types';
@@ -160,6 +162,14 @@ export const login: APIGatewayProxyHandler = async (event) => {
 
     const { user, tokens } = await cognitoService.login(input);
 
+    // Generate session key for frontend redirection
+    const sessionKey = await DynamoSessionService.createSession(
+      user.cognitoSub,
+      user.email,
+      user.userType,
+      tokens
+    );
+
     const response: AuthResponse = {
       success: true,
       message: 'Login successful',
@@ -169,7 +179,7 @@ export const login: APIGatewayProxyHandler = async (event) => {
         userType: user.userType,
         cognitoSub: user.cognitoSub,
       },
-      tokens,
+      sessionKey,
     };
 
     return createResponse(200, response);
@@ -362,6 +372,58 @@ export const getProfile = async (event: APIGatewayProxyEventWithAuth): Promise<A
     const response: AuthResponse = {
       success: false,
       message: error.message || 'Failed to get profile',
+    };
+
+    return createResponse(400, response);
+  }
+};
+
+export const exchangeSession: APIGatewayProxyHandler = async (event) => {
+  try {
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required',
+      });
+    }
+
+    const input: ExchangeSessionInput = JSON.parse(event.body);
+
+    if (!input.sessionKey) {
+      return createResponse(400, {
+        success: false,
+        message: 'Session key is required',
+      });
+    }
+
+    console.log('🔄 Exchange session attempt for sessionKey:', input.sessionKey.substring(0, 20) + '...');
+
+    const sessionData = await DynamoSessionService.exchangeSession(input.sessionKey);
+
+    if (!sessionData) {
+      console.log('❌ Session exchange failed - invalid or expired session key');
+      return createResponse(401, {
+        success: false,
+        message: 'Invalid or expired session key',
+      });
+    }
+
+    console.log('✅ Session exchange successful for user:', sessionData.user.email);
+
+    const response: AuthResponse = {
+      success: true,
+      message: 'Session exchanged successfully',
+      user: sessionData.user,
+      tokens: sessionData.tokens,
+    };
+
+    return createResponse(200, response);
+  } catch (error: any) {
+    console.error('Error in exchangeSession:', error);
+
+    const response: AuthResponse = {
+      success: false,
+      message: error.message || 'Failed to exchange session',
     };
 
     return createResponse(400, response);

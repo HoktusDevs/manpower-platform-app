@@ -39,6 +39,7 @@ export interface AuthResponse {
     idToken: string;
     expiresIn: number;
   };
+  sessionKey?: string;
 }
 
 export interface RefreshTokenInput {
@@ -58,6 +59,10 @@ export interface ResetPasswordInput {
 export interface VerifyEmailInput {
   email: string;
   code: string;
+}
+
+export interface ExchangeSessionInput {
+  sessionKey: string;
 }
 
 export interface CognitoUser {

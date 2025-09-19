@@ -1,29 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getRedirectUrlByRole } from '../utils/redirectUtils';
+import { redirectByRole } from '../utils/redirectUtils';
 
-interface RegisterFormData {
+interface AdminRegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  given_name: string;
-  family_name: string;
-  ci: string;
-  telefono: string;
-  role: string;
 }
 
-export const RegisterPage: React.FC = () => {
-  const [formData, setFormData] = useState<RegisterFormData>({
+export const AdminRegisterPage: React.FC = () => {
+  const [formData, setFormData] = useState<AdminRegisterFormData>({
     email: '',
     password: '',
     confirmPassword: '',
-    given_name: '',
-    family_name: '',
-    ci: '',
-    telefono: '',
-    role: 'postulante',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +22,7 @@ export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setError(null);
@@ -59,11 +49,7 @@ export const RegisterPage: React.FC = () => {
       const response = await register({
         email: formData.email,
         password: formData.password,
-        given_name: formData.given_name,
-        family_name: formData.family_name,
-        ci: formData.ci,
-        telefono: formData.telefono,
-        role: formData.role,
+        role: 'admin',
       });
 
       if (response.success) {
@@ -71,13 +57,8 @@ export const RegisterPage: React.FC = () => {
           setSuccess('Registro exitoso. Por favor verifica tu email.');
           navigate('/confirm-signup', { state: { email: formData.email } });
         } else {
-          setSuccess(`Registro exitoso. Redirigiendo al panel de ${formData.role === 'admin' ? 'administración' : 'postulante'}...`);
-
-          // Redirect to appropriate frontend based on role
-          setTimeout(() => {
-            const redirectUrl = getRedirectUrlByRole(formData.role);
-            window.location.href = redirectUrl;
-          }, 1500); // Small delay to show success message
+          setSuccess('Registro de administrador exitoso. Redirigiendo al panel de administración...');
+          redirectByRole('admin');
         }
       } else {
         setError(response.message || 'Error en el registro');
@@ -93,12 +74,18 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Crear nueva cuenta
+          Registro de Administrador
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           ¿Ya tienes una cuenta?{' '}
           <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
             Inicia sesión
+          </Link>
+        </p>
+        <p className="mt-1 text-center text-sm text-gray-500">
+          ¿Eres postulante?{' '}
+          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Registro de postulante
           </Link>
         </p>
       </div>
@@ -118,43 +105,9 @@ export const RegisterPage: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="given_name" className="block text-sm font-medium text-gray-700">
-                  Nombre
-                </label>
-                <input
-                  id="given_name"
-                  name="given_name"
-                  type="text"
-                  required
-                  value={formData.given_name}
-                  onChange={handleInputChange}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Tu nombre"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="family_name" className="block text-sm font-medium text-gray-700">
-                  Apellido
-                </label>
-                <input
-                  id="family_name"
-                  name="family_name"
-                  type="text"
-                  required
-                  value={formData.family_name}
-                  onChange={handleInputChange}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Tu apellido"
-                />
-              </div>
-            </div>
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                Email Administrativo
               </label>
               <input
                 id="email"
@@ -165,56 +118,8 @@ export const RegisterPage: React.FC = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="tu@email.com"
+                placeholder="admin@empresa.com"
               />
-            </div>
-
-            <div>
-              <label htmlFor="ci" className="block text-sm font-medium text-gray-700">
-                Cédula de Identidad
-              </label>
-              <input
-                id="ci"
-                name="ci"
-                type="text"
-                required
-                value={formData.ci}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="12345678"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
-                Teléfono
-              </label>
-              <input
-                id="telefono"
-                name="telefono"
-                type="tel"
-                required
-                value={formData.telefono}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="09xxxxxxxx"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Tipo de cuenta
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              >
-                <option value="postulante">Postulante</option>
-                <option value="admin">Administrador</option>
-              </select>
             </div>
 
             <div>
@@ -251,13 +156,20 @@ export const RegisterPage: React.FC = () => {
               />
             </div>
 
+            <div className="rounded-md bg-blue-50 p-4">
+              <div className="text-sm text-blue-700">
+                <strong>Nota:</strong> Las cuentas de administrador tienen acceso completo al sistema.
+                Solo personal autorizado debe crear cuentas administrativas.
+              </div>
+            </div>
+
             <div>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+                {isLoading ? 'Creando cuenta de administrador...' : 'Crear cuenta de administrador'}
               </button>
             </div>
           </form>

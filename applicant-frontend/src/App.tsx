@@ -4,40 +4,51 @@ import { JobSearchPage } from './pages/JobSearchPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { CompletarAplicacionesPage } from './pages/CompletarAplicacionesPage';
 import { MiPerfilPage } from './pages/MiPerfilPage';
-import { cognitoAuthService } from './services/cognitoAuthService';
 import { useEffect, useState } from 'react';
 
 function AppContent() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   useEffect(() => {
-    const checkAuthentication = () => {
-      console.log('🔐 Checking authentication status...');
+    const checkAuthentication = async () => {
+      // Import here to avoid circular dependency
+      const { SessionExchangeService } = await import('./services/sessionExchangeService');
 
-      cognitoAuthService.initialize();
+      // Check if we have a sessionKey from URL
+      const sessionKey = SessionExchangeService.getSessionKeyFromURL();
 
-      const isAuthenticated = cognitoAuthService.isAuthenticated();
-      const isTokenValid = cognitoAuthService.isTokenValid();
+      if (sessionKey) {
+        const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
 
-      console.log('🔍 Auth check results:', { isAuthenticated, isTokenValid });
-
-      if (!isAuthenticated || !isTokenValid) {
-        console.log('❌ No valid authentication found - redirecting to auth-frontend');
-        localStorage.clear();
-        window.location.href = 'http://localhost:6100/login?redirect=applicant';
-        return;
+        if (result.success && result.user?.userType === 'postulante') {
+          setIsAuthChecked(true);
+          return;
+        } else {
+          localStorage.clear();
+          window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_failed';
+          return;
+        }
       }
 
-      const user = cognitoAuthService.getCurrentUser();
-      if (!user || user.role !== 'postulante') {
-        console.log('❌ User is not postulante - redirecting to auth-frontend');
-        localStorage.clear();
-        window.location.href = 'http://localhost:6100/login?redirect=applicant&error=access_denied';
-        return;
+      // Check existing tokens (using same keys as sessionExchange)
+      const authToken = localStorage.getItem('cognito_access_token');
+      const authUser = localStorage.getItem('user');
+
+      if (authToken && authUser) {
+        try {
+          const user = JSON.parse(authUser);
+          if (user['custom:role'] === 'postulante') {
+            setIsAuthChecked(true);
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
       }
 
-      console.log('✅ Valid postulante authentication found');
-      setIsAuthChecked(true);
+      // No valid authentication, redirect to login
+      localStorage.clear();
+      window.location.href = 'http://localhost:6100/login?redirect=applicant';
     };
 
     checkAuthentication();

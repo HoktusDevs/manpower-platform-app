@@ -66,7 +66,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
         if (!authenticated) {
           // Not authenticated, redirect to auth frontend
-          const authUrl = redirectUrl || 'http://localhost:5173/login';
+          const authUrl = redirectUrl || 'http://localhost:6100/login';
           window.location.replace(authUrl);
           return;
         }

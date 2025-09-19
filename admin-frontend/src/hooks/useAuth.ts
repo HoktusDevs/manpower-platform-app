@@ -50,9 +50,18 @@ export const useAuth = (): UseAuthReturn => {
         });
 
         if (idToken || accessToken) {
-          const currentUser = cognitoAuthService.getCurrentUser();
-          setUser(currentUser);
-          setIdToken(idToken);
+          // Get user from localStorage (saved during sessionExchange)
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) {
+            try {
+              const user = JSON.parse(savedUser);
+              setUser(user);
+              setIdToken(idToken);
+              console.log('✅ User loaded from localStorage:', user.email);
+            } catch (error) {
+              console.error('Error parsing saved user:', error);
+            }
+          }
         }
 
         setIsInitialized(true);

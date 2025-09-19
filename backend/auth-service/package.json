@@ -14,12 +14,14 @@
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^24.5.1",
     "serverless": "^3.40.0",
-    "serverless-plugin-typescript": "^2.1.5",
     "serverless-offline": "^13.8.0",
+    "serverless-plugin-typescript": "^2.1.5",
     "typescript": "^5.9.2"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.890.0",
+    "@aws-sdk/client-dynamodb": "^3.893.0",
+    "@aws-sdk/lib-dynamodb": "^3.893.0",
     "uuid": "^13.0.0"
   }
 }

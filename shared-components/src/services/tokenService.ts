@@ -238,7 +238,7 @@ export class TokenService {
     this.clearAuth();
 
     // Redirect to auth frontend
-    const authFrontendUrl = 'http://localhost:5173'; // auth-frontend port
+    const authFrontendUrl = 'http://localhost:6100'; // auth-frontend port
     window.location.replace(`${authFrontendUrl}/login`);
   }
 }
