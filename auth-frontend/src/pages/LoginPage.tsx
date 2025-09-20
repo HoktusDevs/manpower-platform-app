@@ -36,15 +36,27 @@ export const LoginPage: React.FC = () => {
         password: formData.password,
       });
 
+      console.log('🔍 DEBUG LOGIN: Full response:', response);
+      console.log('🔍 DEBUG LOGIN: Conditions:', {
+        success: response.success,
+        hasUser: !!response.user,
+        hasSessionKey: !!response.sessionKey
+      });
+
       if (response.success && response.user && response.sessionKey) {
         const userRole = response.user['custom:role'] || 'postulante';
+        console.log('🔍 DEBUG LOGIN: User role detected:', userRole);
         setLoginSuccess({ role: userRole });
 
         // Wait briefly to show success message
         setTimeout(() => {
           const redirectUrl = getRedirectUrlByRole(userRole);
+          console.log('🔍 DEBUG LOGIN: User role for redirect:', userRole);
+          console.log('🔍 DEBUG LOGIN: Redirect URL:', redirectUrl);
           // Pass sessionKey as URL parameter for DynamoDB verification
           const urlWithSessionKey = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}sessionKey=${encodeURIComponent(response.sessionKey)}`;
+          console.log('🔍 DEBUG LOGIN: Final URL with sessionKey:', urlWithSessionKey);
+          console.log('🔍 DEBUG LOGIN: About to redirect...');
           window.location.href = urlWithSessionKey;
         }, 1500); // Show success message briefly before redirecting
       } else {

@@ -102,13 +102,6 @@ export class CognitoService {
           { Name: 'custom:role', Value: 'postulante' },
           { Name: 'name', Value: input.fullName },
           { Name: 'phone_number', Value: input.phone },
-          { Name: 'custom:rut', Value: input.rut },
-          { Name: 'custom:dateOfBirth', Value: input.dateOfBirth },
-          { Name: 'custom:address', Value: input.address },
-          { Name: 'custom:city', Value: input.city },
-          { Name: 'custom:educationLevel', Value: input.educationLevel },
-          { Name: 'custom:workExperience', Value: input.workExperience },
-          { Name: 'custom:skills', Value: JSON.stringify(input.skills) },
         ],
       });
 
@@ -203,7 +196,8 @@ export class CognitoService {
         }
       });
 
-      const userType = attributes['custom:role'] as 'admin' | 'postulante' || 'postulante';
+      const userType = (attributes['custom:role'] as 'admin' | 'postulante') || 'postulante';
+      console.log('🔍 DEBUG COGNITO: Email:', email, 'UserType detected:', userType, 'Raw custom:role:', attributes['custom:role']);
 
       const user: CognitoUser = {
         cognitoSub: result.Username || '',

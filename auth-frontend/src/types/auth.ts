@@ -1,6 +1,7 @@
 export interface User {
   sub: string;
   email: string;
+  userType?: string;
   given_name?: string | undefined;
   family_name?: string | undefined;
   'custom:role'?: string | undefined;

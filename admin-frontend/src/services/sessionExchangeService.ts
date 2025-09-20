@@ -54,6 +54,7 @@ export class SessionExchangeService {
         localStorage.setItem('user', JSON.stringify({
           sub: data.user.id,
           email: data.user.email,
+          fullName: data.user.email.split('@')[0], // Use email prefix as fullName
           'custom:role': data.user.userType,
           email_verified: true,
         }));

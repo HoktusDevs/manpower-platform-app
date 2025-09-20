@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getRedirectUrlByRole } from '../utils/redirectUtils';
 
 interface RegisterFormData {
   email: string;
@@ -29,7 +28,7 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -71,13 +70,24 @@ export const RegisterPage: React.FC = () => {
           setSuccess('Registro exitoso. Por favor verifica tu email.');
           navigate('/confirm-signup', { state: { email: formData.email } });
         } else {
-          setSuccess(`Registro exitoso. Redirigiendo al panel de ${formData.role === 'admin' ? 'administración' : 'postulante'}...`);
+          setSuccess('Registro exitoso. Iniciando sesión...');
 
-          // Redirect to appropriate frontend based on role
-          setTimeout(() => {
-            const redirectUrl = getRedirectUrlByRole(formData.role);
-            window.location.href = redirectUrl;
-          }, 1500); // Small delay to show success message
+          // Auto-login after successful registration
+          const loginResponse = await login({
+            email: formData.email,
+            password: formData.password,
+          });
+
+          if (loginResponse.success && loginResponse.sessionKey) {
+            // Redirect to applicant frontend with sessionKey
+            window.location.href = `http://localhost:6200?sessionKey=${loginResponse.sessionKey}`;
+          } else {
+            // If auto-login fails, redirect to login page
+            setSuccess('Registro exitoso. Por favor inicia sesión.');
+            setTimeout(() => {
+              navigate('/login');
+            }, 1500);
+          }
         }
       } else {
         setError(response.message || 'Error en el registro');
@@ -201,21 +211,6 @@ export const RegisterPage: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Tipo de cuenta
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              >
-                <option value="postulante">Postulante</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">

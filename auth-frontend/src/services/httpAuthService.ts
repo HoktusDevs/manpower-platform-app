@@ -81,12 +81,12 @@ class HttpAuthRepository implements AuthRepository {
             password: request.password,
             confirmPassword: request.password,
             fullName: request.given_name || 'Usuario',
-            phone: request.telefono || '000000000',
+            phone: request.telefono ? `+56${request.telefono.replace(/^\+56/, '')}` : '+56900000000',
             rut: request.ci || '00000000-0',
             dateOfBirth: '1990-01-01',
             address: 'Dirección no especificada',
             city: 'Ciudad no especificada',
-            educationLevel: 'Educación Media',
+            educationLevel: 'Media',
             workExperience: 'Sin experiencia laboral previa',
             skills: ['Habilidades básicas'],
           } as RegisterEmployeeRequest;
@@ -158,6 +158,13 @@ class HttpAuthRepository implements AuthRepository {
       const response = await this.makeRequest<AuthServiceResponse>(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         body: request,
+      });
+
+      console.log('🔍 DEBUG AUTH SERVICE: Backend response:', response);
+      console.log('🔍 DEBUG AUTH SERVICE: Conditions:', {
+        success: response.success,
+        hasUser: !!response.user,
+        hasSessionKey: !!response.sessionKey
       });
 
       if (response.success && response.user && response.sessionKey) {

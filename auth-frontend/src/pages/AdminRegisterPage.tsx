@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { redirectByRole } from '../utils/redirectUtils';
 
 interface AdminRegisterFormData {
   email: string;
@@ -19,7 +18,7 @@ export const AdminRegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,8 +56,24 @@ export const AdminRegisterPage: React.FC = () => {
           setSuccess('Registro exitoso. Por favor verifica tu email.');
           navigate('/confirm-signup', { state: { email: formData.email } });
         } else {
-          setSuccess('Registro de administrador exitoso. Redirigiendo al panel de administración...');
-          redirectByRole('admin');
+          setSuccess('Registro de administrador exitoso. Iniciando sesión...');
+
+          // Auto-login after successful registration
+          const loginResponse = await login({
+            email: formData.email,
+            password: formData.password,
+          });
+
+          if (loginResponse.success && loginResponse.sessionKey) {
+            // Redirect to admin frontend with sessionKey
+            window.location.href = `http://localhost:6500?sessionKey=${loginResponse.sessionKey}`;
+          } else {
+            // If auto-login fails, redirect to login page
+            setSuccess('Registro exitoso. Por favor inicia sesión.');
+            setTimeout(() => {
+              navigate('/login');
+            }, 1500);
+          }
         }
       } else {
         setError(response.message || 'Error en el registro');
