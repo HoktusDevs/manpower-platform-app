@@ -10,15 +10,36 @@ import { useEffect } from 'react';
 function AppContent() {
   // NO VALIDATION AT ALL - just show the app
   useEffect(() => {
-    console.log('🔍 APPLICANT-FRONTEND: Loading app without any validation');
-    console.log('🔍 APPLICANT-FRONTEND: URL:', window.location.href);
+    const handleSessionKey = async () => {
+      console.log('🔍 APPLICANT-FRONTEND: URL:', window.location.href);
 
-    // Clean URL if it has sessionKey
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('sessionKey')) {
-      console.log('✅ APPLICANT-FRONTEND: Cleaning sessionKey from URL');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+      // Extract sessionKey from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionKey = urlParams.get('sessionKey');
+
+      if (sessionKey) {
+        console.log('✅ APPLICANT-FRONTEND: SessionKey found, processing...');
+
+        // Import and use SessionExchangeService to process sessionKey
+        const { SessionExchangeService } = await import('./services/sessionExchangeService');
+        const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
+
+        console.log('🔍 APPLICANT-FRONTEND: Exchange result:', result);
+
+        // Clean URL after processing
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        if (result.success) {
+          console.log('✅ APPLICANT-FRONTEND: SessionKey exchange successful');
+        } else {
+          console.log('❌ APPLICANT-FRONTEND: SessionKey exchange failed, but continuing anyway');
+        }
+      } else {
+        console.log('🔍 APPLICANT-FRONTEND: No sessionKey in URL');
+      }
+    };
+
+    handleSessionKey();
   }, []);
 
   return (
