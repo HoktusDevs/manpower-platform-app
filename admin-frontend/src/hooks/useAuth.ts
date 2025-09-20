@@ -9,6 +9,7 @@ interface UseAuthReturn {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   authSystem: AuthSystem;
   idToken: string | null;
   
@@ -345,6 +346,7 @@ export const useAuth = (): UseAuthReturn => {
     isLoading,
     error,
     isAuthenticated: !!user,
+    isInitialized,
     authSystem: 'cognito',
     idToken,
     login,

@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../core-ui';
 import type { SelectOption } from '../../core-ui';
-import { graphqlService } from '../../services/graphqlService';
-import type { Application } from '../../services/graphqlService';
 
 type ActivityFilter = 'postulaciones' | 'usuarios' | 'sistema';
 type TimeGranularity = 'daily' | 'weekly' | 'quarterly';
@@ -106,130 +104,6 @@ const getEmptyDetails = (filter: ActivityFilter): string => {
   }
 };
 
-// FUNCIÓN ELIMINADA - YA NO SE USA - CAUSABA LLAMADAS DUPLICADAS
-
-// Función para procesar datos reales de aplicaciones según granularidad
-const processApplicationsData = (applications: Application[], granularity: TimeGranularity): ActivityData[] => {
-  if (!applications.length) return [];
-  
-  const now = new Date();
-  const data: ActivityData[] = [];
-  
-  // Agrupar aplicaciones por fecha de creación
-  const groupedByDate = new Map<string, number>();
-  
-  applications.forEach(app => {
-    const createdDate = new Date(app.createdAt);
-    let groupKey = '';
-    
-    switch (granularity) {
-      case 'daily': {
-        // Agrupar por día de la semana de esta semana
-        const currentWeekStart = new Date(now);
-        const currentDay = now.getDay();
-        const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
-        currentWeekStart.setDate(now.getDate() - mondayOffset);
-        currentWeekStart.setHours(0, 0, 0, 0);
-        
-        if (createdDate >= currentWeekStart) {
-          groupKey = createdDate.toISOString().split('T')[0];
-        }
-        break;
-      }
-      case 'weekly': {
-        // Agrupar por semana de este mes
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        if (createdDate >= currentMonthStart) {
-          const weekOfMonth = Math.ceil(createdDate.getDate() / 7);
-          groupKey = `${now.getFullYear()}-${now.getMonth()}-W${weekOfMonth}`;
-        }
-        break;
-      }
-      case 'quarterly': {
-        // Agrupar por cuatrimestre de este año
-        const currentYearStart = new Date(now.getFullYear(), 0, 1);
-        if (createdDate >= currentYearStart) {
-          const quarter = Math.floor(createdDate.getMonth() / 4) + 1;
-          groupKey = `${now.getFullYear()}-Q${quarter}`;
-        }
-        break;
-      }
-    }
-    
-    if (groupKey) {
-      groupedByDate.set(groupKey, (groupedByDate.get(groupKey) || 0) + 1);
-    }
-  });
-  
-  // Convertir los datos agrupados al formato requerido
-  switch (granularity) {
-    case 'daily': {
-      // Generar datos para los 5 días laborables de esta semana
-      const currentDay = now.getDay();
-      const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
-      
-      for (let i = 0; i < 5; i++) {
-        const date = new Date(now);
-        date.setDate(now.getDate() - mondayOffset + i);
-        const dateKey = date.toISOString().split('T')[0];
-        const count = groupedByDate.get(dateKey) || 0;
-        
-        data.push({
-          date: dateKey,
-          count,
-          type: 'postulaciones',
-          details: `${count} aplicaciones recibidas`,
-          period: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()
-        });
-      }
-      break;
-    }
-    
-    case 'weekly': {
-      // Generar datos para las 4 semanas de este mes
-      for (let week = 1; week <= 4; week++) {
-        const weekKey = `${now.getFullYear()}-${now.getMonth()}-W${week}`;
-        const count = groupedByDate.get(weekKey) || 0;
-        const weekStart = new Date(now.getFullYear(), now.getMonth(), (week - 1) * 7 + 1);
-        
-        data.push({
-          date: weekStart.toISOString().split('T')[0],
-          count,
-          type: 'postulaciones',
-          details: `${count} aplicaciones en semana ${week}`,
-          period: `S${week}`
-        });
-      }
-      break;
-    }
-    
-    case 'quarterly': {
-      // Generar datos para los 3 cuatrimestres del año
-      const quarters = [
-        { months: [0, 1, 2, 3], label: 'Q1', name: 'Ene-Abr' },
-        { months: [4, 5, 6, 7], label: 'Q2', name: 'May-Ago' },
-        { months: [8, 9, 10, 11], label: 'Q3', name: 'Sep-Dic' }
-      ];
-      
-      quarters.forEach((quarter, index) => {
-        const quarterKey = `${now.getFullYear()}-Q${index + 1}`;
-        const count = groupedByDate.get(quarterKey) || 0;
-        const quarterStart = new Date(now.getFullYear(), quarter.months[0], 1);
-        
-        data.push({
-          date: quarterStart.toISOString().split('T')[0],
-          count,
-          type: 'postulaciones',
-          details: `${count} aplicaciones en ${quarter.name}`,
-          period: quarter.label
-        });
-      });
-      break;
-    }
-  }
-  
-  return data;
-};
 
 const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], granularity: TimeGranularity, filter: ActivityFilter }) => {
   const maxCount = Math.max(...data.map(item => item.count));
@@ -457,13 +331,7 @@ export function RecentActivity(): ReactNode {
   const loadActivityData = async (filter: ActivityFilter, granularity: TimeGranularity) => {
     setIsLoading(true);
     try {
-      if (filter === 'postulaciones') {
-        const applications = await graphqlService.getAllApplications();
-        const processedData = processApplicationsData(applications, granularity);
-        setActivityData(processedData);
-      } else {
-        setActivityData(generateEmptyData(filter, granularity));
-      }
+      setActivityData(generateEmptyData(filter, granularity));
       setHasLoadedData(true);
     } catch (error) {
       console.error('Error loading activity data:', error);

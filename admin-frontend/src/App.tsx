@@ -9,6 +9,7 @@ import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
 import { RoleGuard } from './components/RoleGuard';
 import { SessionRenewalModal } from './components/SessionRenewalModal';
+import { RedirectToLogin } from './components/RedirectToLogin';
 import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
 import { AWS_CONFIG } from './config/aws-config';
@@ -188,9 +189,7 @@ function AppContent() {
         </Route>
 
         {/* Catch-all route - redirect to auth-frontend login */}
-        <Route path="*" element={
-          <Navigate to="http://localhost:6100/login" replace />
-        } />
+        <Route path="*" element={<RedirectToLogin />} />
       </Routes>
     </ToastProvider>
   );
