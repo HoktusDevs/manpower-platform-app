@@ -48,24 +48,50 @@ export class SessionExchangeService {
       }
 
       if (data.success && data.user && data.tokens) {
-        // Store tokens in localStorage using same keys as useAuth
-        localStorage.setItem('cognito_access_token', data.tokens.accessToken);
-        localStorage.setItem('cognito_id_token', data.tokens.idToken);
-        localStorage.setItem('user', JSON.stringify({
-          sub: data.user.id,
-          email: data.user.email,
-          'custom:role': data.user.userType,
-          email_verified: true,
-        }));
+        try {
+          // Store tokens in localStorage using same keys as useAuth
+          localStorage.setItem('cognito_access_token', data.tokens.accessToken);
+          localStorage.setItem('cognito_id_token', data.tokens.idToken);
+          localStorage.setItem('cognito_refresh_token', data.tokens.refreshToken);
 
-        console.log('✅ Session exchanged successfully for user:', data.user.email);
+          const userData = {
+            sub: data.user.id,
+            email: data.user.email,
+            fullName: data.user.email.split('@')[0], // Use email prefix as fullName
+            'custom:role': data.user.userType,
+            email_verified: true,
+          };
 
-        return {
-          success: true,
-          message: 'Session exchanged successfully',
-          tokens: data.tokens,
-          user: data.user,
-        };
+          localStorage.setItem('user', JSON.stringify(userData));
+
+          // Verify data was saved correctly
+          const verifyToken = localStorage.getItem('cognito_access_token');
+          const verifyUser = localStorage.getItem('user');
+
+          if (!verifyToken || !verifyUser) {
+            console.error('❌ Failed to save tokens to localStorage');
+            return {
+              success: false,
+              message: 'Failed to save authentication data',
+            };
+          }
+
+          console.log('✅ Session exchanged successfully for user:', data.user.email);
+          console.log('✅ Tokens saved and verified in localStorage');
+
+          return {
+            success: true,
+            message: 'Session exchanged successfully',
+            tokens: data.tokens,
+            user: data.user,
+          };
+        } catch (error) {
+          console.error('❌ Error saving tokens to localStorage:', error);
+          return {
+            success: false,
+            message: 'Failed to save authentication data',
+          };
+        }
       }
 
       return {

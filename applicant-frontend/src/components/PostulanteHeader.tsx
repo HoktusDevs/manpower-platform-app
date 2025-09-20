@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export const PostulanteHeader = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
 
-  const handleLogout = (): void => {
+  const handleLogout = async (): Promise<void> => {
+    await logout();
+    navigate('/');
     setIsOpen(false);
   };
 
@@ -35,7 +41,7 @@ export const PostulanteHeader = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <span className="text-sm text-gray-700">Usuario</span>
+            <span className="text-sm text-gray-700">{user?.fullName || user?.email || 'Usuario'}</span>
             <svg
               className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
               fill="none"
@@ -47,7 +53,7 @@ export const PostulanteHeader = () => {
           </button>
 
           {isOpen && (
-            <div className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+            <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
               <button
                 onClick={handleLogout}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
