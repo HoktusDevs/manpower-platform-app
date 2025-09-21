@@ -214,6 +214,7 @@ export class FolderService {
       const updates: Partial<Folder> = {};
 
       if (input.name !== undefined) updates.name = input.name;
+      if (input.type !== undefined) updates.type = input.type;
       if (input.metadata !== undefined) {
         updates.metadata = { ...existingFolder.metadata, ...input.metadata };
       }

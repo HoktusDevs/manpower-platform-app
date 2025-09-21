@@ -10,6 +10,7 @@ export interface CreateFolderInput {
 export interface UpdateFolderInput {
   folderId: string;
   name?: string;
+  type?: string;
   metadata?: { [key: string]: any };
 }
 
