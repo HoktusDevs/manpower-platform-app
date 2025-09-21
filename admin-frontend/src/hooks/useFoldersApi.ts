@@ -163,7 +163,7 @@ export const useCreateFolder = () => {
           } else if (old && typeof old === 'object' && 'folders' in old) {
             return {
               ...old,
-              folders: [...(old.folders || []), optimisticFolder]
+              folders: [...((old as { folders?: unknown[] }).folders || []), optimisticFolder]
             };
           }
           return old;
@@ -191,7 +191,7 @@ export const useCreateFolder = () => {
           } else if (old && typeof old === 'object' && 'folders' in old) {
             return {
               ...old,
-              folders: old.folders.map((folder: unknown) => 
+              folders: (old as { folders: unknown[] }).folders.map((folder: unknown) => 
                 folder && typeof folder === 'object' && 'folderId' in folder && 
                 typeof folder.folderId === 'string' && folder.folderId.startsWith('temp-') 
                   ? data.folder : folder
@@ -294,7 +294,7 @@ export const useDeleteFolder = () => {
           } else if (old && typeof old === 'object' && 'folders' in old) {
             return {
               ...old,
-              folders: old.folders.filter((folder: unknown) => 
+              folders: (old as { folders: unknown[] }).folders.filter((folder: unknown) => 
                 folder && typeof folder === 'object' && 'folderId' in folder && 
                 typeof folder.folderId === 'string' && folder.folderId !== folderId
               )
@@ -329,7 +329,7 @@ export const useDeleteFolder = () => {
 /**
  * Hook to delete multiple folders with optimistic updates
  */
-export const useDeleteFolders = () => {
+export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error) => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -369,7 +369,7 @@ export const useDeleteFolders = () => {
           } else if (old && typeof old === 'object' && 'folders' in old) {
             return {
               ...old,
-              folders: old.folders.filter((folder: unknown) => 
+              folders: (old as { folders: unknown[] }).folders.filter((folder: unknown) => 
                 folder && typeof folder === 'object' && 'folderId' in folder && 
                 typeof folder.folderId === 'string' && !folderIds.includes(folder.folderId)
               )
@@ -383,6 +383,7 @@ export const useDeleteFolders = () => {
     },
     onSuccess: (data) => {
       console.log('Folders deleted successfully:', data);
+      onSuccess?.();
     },
     onError: (error, _variables, context) => {
       // Rollback on error
@@ -392,6 +393,7 @@ export const useDeleteFolders = () => {
         });
       }
       console.error('Error deleting folders:', error);
+      onError?.(error);
     },
     onSettled: () => {
       // Don't invalidate - we already updated optimistically

@@ -248,22 +248,76 @@ export class FolderService {
         };
       }
 
-      // Check if folder has children
-      const children = await this.dynamoService.getFoldersByParent(folderId, userId);
+      // Get all descendants recursively
+      const getAllDescendants = async (parentId: string): Promise<string[]> => {
+        const children = await this.dynamoService.getFoldersByParent(parentId, userId);
+        let descendants = children.map(c => c.folderId);
+        
+        for (const child of children) {
+          const childDescendants = await getAllDescendants(child.folderId);
+          descendants = [...descendants, ...childDescendants];
+        }
+        
+        return descendants;
+      };
 
-      if (children.length > 0) {
+      // Get all descendants
+      const descendants = await getAllDescendants(folderId);
+      const allFoldersToDelete = [folderId, ...descendants];
+
+      // Sort by depth (deepest first)
+      const getFolderDepth = async (folderId: string): Promise<number> => {
+        const folder = await this.dynamoService.getFolder(folderId, userId);
+        if (!folder) return 0;
+        
+        let depth = 0;
+        let currentParent = folder.parentId;
+        while (currentParent) {
+          depth++;
+          const parentFolder = await this.dynamoService.getFolder(currentParent, userId);
+          currentParent = parentFolder?.parentId || null;
+        }
+        return depth;
+      };
+
+      // Sort folders by depth (descending - deepest first)
+      const sortedFolders = await Promise.all(
+        allFoldersToDelete.map(async (id) => ({
+          id,
+          depth: await getFolderDepth(id)
+        }))
+      );
+
+      const sortedFolderIds = sortedFolders
+        .sort((a, b) => b.depth - a.depth)
+        .map(f => f.id);
+
+      console.log('Deleting folders in order:', sortedFolderIds);
+
+      // Delete folders one by one in the correct order
+      const deletedFolders = [];
+      const errors = [];
+
+      for (const id of sortedFolderIds) {
+        try {
+          await this.dynamoService.updateFolder(id, userId, { isActive: false });
+          deletedFolders.push(id);
+        } catch (error) {
+          console.error(`Error deleting folder ${id}:`, error);
+          errors.push(`${id}: ${error}`);
+        }
+      }
+
+      if (errors.length > 0) {
         return {
           success: false,
-          message: 'Cannot delete folder with children. Delete children first.',
+          message: `Partially deleted. Errors: ${errors.join(', ')}`,
         };
       }
 
-      // Mark as inactive instead of deleting
-      await this.dynamoService.updateFolder(folderId, userId, { isActive: false });
-
       return {
         success: true,
-        message: 'Folder deleted successfully',
+        message: `Folder and ${descendants.length} subfolders deleted successfully`,
       };
     } catch (error) {
       console.error('Error deleting folder:', error);
@@ -276,10 +330,41 @@ export class FolderService {
 
   async deleteFolders(folderIds: string[], userId: string): Promise<FolderResponse> {
     try {
+      // Get all folders to calculate depth
+      const allFoldersResult = await this.dynamoService.getFoldersByUser(userId);
+      const allFolders = allFoldersResult.folders;
+      
+      // Calculate depth for each folder
+      const getFolderDepth = (folderId: string): number => {
+        const folder = allFolders.find((f: any) => f.folderId === folderId);
+        if (!folder) return 0;
+        
+        let depth = 0;
+        let currentParent = folder.parentId;
+        while (currentParent) {
+          depth++;
+          const parentFolder = allFolders.find((f: any) => f.folderId === currentParent);
+          currentParent = parentFolder?.parentId || undefined;
+        }
+        return depth;
+      };
+
+      // Sort folders by depth (descending - deepest first)
+      const sortedFolderIds = folderIds.sort((a, b) => {
+        const depthA = getFolderDepth(a);
+        const depthB = getFolderDepth(b);
+        return depthB - depthA; // Deeper folders first
+      });
+
+      console.log('Deleting folders in order:', sortedFolderIds.map(id => {
+        const folder = allFolders.find((f: any) => f.folderId === id);
+        return { id, name: folder?.name, depth: getFolderDepth(id) };
+      }));
+
       const deletedFolders = [];
       const errors = [];
 
-      for (const folderId of folderIds) {
+      for (const folderId of sortedFolderIds) {
         const result = await this.deleteFolder(folderId, userId);
         if (result.success) {
           deletedFolders.push(folderId);

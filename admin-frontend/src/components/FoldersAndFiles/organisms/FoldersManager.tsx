@@ -37,6 +37,7 @@ export const FoldersManager: React.FC = () => {
     navigateToRoot,
     getBreadcrumbPath,
     setSearchTerm,
+    refreshFolders,
   } = useFoldersContext();
 
   const {
@@ -104,15 +105,15 @@ export const FoldersManager: React.FC = () => {
       variant: 'danger',
       onConfirm: async () => {
         const deletedIds = deleteSelected();
-        // Use bulk delete instead of individual deletes
-        try {
-          await deleteFolders(deletedIds);
-          closeConfirmModal();
-        } catch (error) {
-          console.error('Error deleting folders:', error);
-          alert('Error al eliminar las carpetas seleccionadas');
-          closeConfirmModal();
-        }
+        // Close modal immediately after optimistic deletion
+        closeConfirmModal();
+        // Execute server deletion in background (no await)
+        deleteFolders(deletedIds)
+          .catch(error => {
+            console.error('Error deleting folders:', error);
+            // Rollback the optimistic deletion
+            refreshFolders();
+          });
       }
     });
   };

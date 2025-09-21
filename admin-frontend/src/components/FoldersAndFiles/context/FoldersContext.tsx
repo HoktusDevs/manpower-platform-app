@@ -5,12 +5,18 @@ import type { UseFoldersStateReturn } from '../types';
 
 interface FoldersProviderProps {
   children: ReactNode;
+  onDeleteSuccess?: () => void;
+  onDeleteError?: (error: Error) => void;
 }
 
 const FoldersContext = createContext<UseFoldersStateReturn | null>(null);
 
-export const FoldersProvider: React.FC<FoldersProviderProps> = ({ children }) => {
-  const foldersState = useFoldersState();
+export const FoldersProvider: React.FC<FoldersProviderProps> = ({ 
+  children, 
+  onDeleteSuccess, 
+  onDeleteError 
+}) => {
+  const foldersState = useFoldersState(onDeleteSuccess, onDeleteError);
   
   return (
     <FoldersContext.Provider value={foldersState}>

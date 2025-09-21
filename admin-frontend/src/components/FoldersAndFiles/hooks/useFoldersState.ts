@@ -26,7 +26,10 @@ const folderToFolderRow = (folder: { folderId: string; name: string; type: strin
   parentId: folder.parentId || null,
 });
 
-export const useFoldersState = (): UseFoldersStateReturn => {
+export const useFoldersState = (
+  onDeleteSuccess?: () => void,
+  onDeleteError?: (error: Error) => void
+): UseFoldersStateReturn => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
@@ -35,7 +38,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
   const createFolderMutation = useCreateFolder();
   const updateFolderMutation = useUpdateFolder();
   const deleteFolderMutation = useDeleteFolder();
-  const deleteFoldersMutation = useDeleteFolders();
+  const deleteFoldersMutation = useDeleteFolders(onDeleteSuccess, onDeleteError);
 
   // Convert backend folders to frontend format
   const folders = useMemo(() => {
@@ -152,7 +155,34 @@ export const useFoldersState = (): UseFoldersStateReturn => {
         throw new Error('No folders to delete');
       }
       
-      await deleteFoldersMutation.mutateAsync(allIdsToDelete);
+      // Sort folders by depth (children first, parents last)
+      const getFolderDepth = (folderId: string): number => {
+        const folder = folders.find(f => f.id === folderId);
+        if (!folder) return 0;
+        
+        let depth = 0;
+        let currentParent = folder.parentId;
+        while (currentParent) {
+          depth++;
+          const parentFolder = folders.find(f => f.id === currentParent);
+          currentParent = parentFolder?.parentId || null;
+        }
+        return depth;
+      };
+
+      // Sort by depth (descending - deepest first)
+      const sortedIdsToDelete = allIdsToDelete.sort((a, b) => {
+        const depthA = getFolderDepth(a);
+        const depthB = getFolderDepth(b);
+        return depthB - depthA; // Deeper folders first
+      });
+
+      console.log('Deleting folders in order:', sortedIdsToDelete.map(id => {
+        const folder = folders.find(f => f.id === id);
+        return { id, name: folder?.name, depth: getFolderDepth(id) };
+      }));
+      
+      await deleteFoldersMutation.mutateAsync(sortedIdsToDelete);
     } catch (error) {
       console.error('Error deleting folders:', error);
       throw error;
