@@ -73,7 +73,7 @@ export const FoldersManager: React.FC = () => {
 
   // Click outside detection hooks
   const actionsMenuRef = useClickOutside<HTMLDivElement>(
-    () => setRowActionsMenu(null),
+    () => toggleActionsMenu(),
     showActionsMenu
   );
 

@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+// Removed unused imports - RoleGuard no longer needs useEffect or useLocation
 
 interface RoleGuardProps {
   children: React.ReactNode;

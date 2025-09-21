@@ -21,6 +21,8 @@ provider:
         - dynamodb:DeleteItem
         - dynamodb:BatchGetItem
         - dynamodb:BatchWriteItem
+        - dynamodb:CreateTable
+        - dynamodb:DescribeTable
       Resource:
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}/index/*

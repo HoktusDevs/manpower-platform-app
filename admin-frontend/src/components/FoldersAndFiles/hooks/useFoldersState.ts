@@ -1,9 +1,15 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
-import { graphqlService, type Folder, type CreateFolderInput, type UpdateFolderInput } from '../../../services/graphqlService';
-import type { 
-  FolderRow, 
-  CreateFolderData, 
+import {
+  useGetAllFolders,
+  useCreateFolder,
+  useUpdateFolder,
+  useDeleteFolder,
+  useDeleteFolders,
+} from '../../../hooks/useFoldersApi';
+import type {
+  FolderRow,
+  CreateFolderData,
   UseFoldersStateReturn
 } from '../types';
 
@@ -12,7 +18,7 @@ import type {
  * Follows Single Responsibility Principle - only handles folder data
  */
 // Helper function to convert backend Folder to frontend FolderRow
-const folderToFolderRow = (folder: Folder): FolderRow => ({
+const folderToFolderRow = (folder: { folderId: string; name: string; type: string; createdAt: string; parentId?: string | null }): FolderRow => ({
   id: folder.folderId,
   name: folder.name,
   type: folder.type,
@@ -20,40 +26,21 @@ const folderToFolderRow = (folder: Folder): FolderRow => ({
   parentId: folder.parentId || null,
 });
 
-// Helper function to convert frontend CreateFolderData to backend CreateFolderInput
-const createFolderDataToInput = (data: CreateFolderData, parentId?: string | null): CreateFolderInput => ({
-  name: data.name,
-  type: data.type,
-  parentId: parentId || undefined,
-});
-
 export const useFoldersState = (): UseFoldersStateReturn => {
-  const [folders, setFolders] = useState<FolderRow[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  /**
-   * Load folders from backend
-   */
-  const loadFolders = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      const backendFolders = await graphqlService.getAllFolders();
-      const frontendFolders = backendFolders.map(folderToFolderRow);
-      setFolders(frontendFolders);
-    } catch (error) {
-      console.error('Error loading folders:', error);
-      // Keep existing folders on error
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // React Query hooks
+  const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
+  const createFolderMutation = useCreateFolder();
+  const updateFolderMutation = useUpdateFolder();
+  const deleteFolderMutation = useDeleteFolder();
+  const deleteFoldersMutation = useDeleteFolders();
 
-  // Load folders on component mount
-  useEffect(() => {
-    loadFolders();
-  }, []);
+  // Convert backend folders to frontend format
+  const folders = useMemo(() => {
+    return backendFolders.map(folderToFolderRow);
+  }, [backendFolders]);
 
   // Memoized filtered folders for performance
   const filteredFolders = useMemo(() => {
@@ -81,19 +68,23 @@ export const useFoldersState = (): UseFoldersStateReturn => {
    */
   const createFolder = async (data: CreateFolderData, parentId: string | null = null): Promise<void> => {
     try {
-      const input = createFolderDataToInput(data, parentId);
-      const backendFolder = await graphqlService.createFolder(input);
-      
-      // Reload all folders from backend to avoid duplicates
-      await loadFolders();
-      
+      const input = {
+        name: data.name,
+        type: data.type,
+        parentId: parentId || undefined,
+      };
+
+      const result = await createFolderMutation.mutateAsync(input);
+
       // Console.log for tracking
-      console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
-        id: backendFolder.folderId,
-        name: backendFolder.name,
-        type: backendFolder.type,
-        createdAt: backendFolder.createdAt
-      });
+      if (result.folder) {
+        console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
+          id: result.folder.folderId,
+          name: result.folder.name,
+          type: result.folder.type,
+          createdAt: result.folder.createdAt
+        });
+      }
     } catch (error) {
       console.error('Error creating folder:', error);
       throw error;
@@ -108,10 +99,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     if (!folderToDelete) return;
 
     try {
-      await graphqlService.deleteFolder(folderId);
-      
-      // Reload all folders from backend to ensure consistency
-      await loadFolders();
+      await deleteFolderMutation.mutateAsync(folderId);
       
       // Console.log for tracking
       console.log(FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS, {
@@ -164,8 +152,7 @@ export const useFoldersState = (): UseFoldersStateReturn => {
         throw new Error('No folders to delete');
       }
       
-      await graphqlService.deleteFolders(allIdsToDelete);
-      await loadFolders();
+      await deleteFoldersMutation.mutateAsync(allIdsToDelete);
     } catch (error) {
       console.error('Error deleting folders:', error);
       throw error;
@@ -181,16 +168,12 @@ export const useFoldersState = (): UseFoldersStateReturn => {
     if (folderIndex === -1) return;
 
     try {
-      const input: UpdateFolderInput = {
-        folderId: folderId,
+      const input = {
         name: data.name,
         type: data.type
       };
-      
-      await graphqlService.updateFolder(input);
-      
-      // Reload all folders from backend to ensure consistency
-      await loadFolders();
+
+      await updateFolderMutation.mutateAsync({ folderId, input });
       
       // Console.log for tracking
       console.log('📝 Carpeta actualizada', {
