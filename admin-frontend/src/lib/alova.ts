@@ -19,10 +19,14 @@ export const foldersAlova = createAlova({
   timeout: 30000,
 
   beforeRequest: (method) => {
+    // Get access token from localStorage
+    const accessToken = localStorage.getItem('cognito_access_token');
+    
     // Add common headers
     method.config.headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
       ...method.config.headers,
     };
   },

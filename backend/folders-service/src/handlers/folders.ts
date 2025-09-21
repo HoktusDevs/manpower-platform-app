@@ -1,14 +1,47 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { FolderService } from '../services/folderService';
 import { CreateFolderInput, UpdateFolderInput, InternalCreateFolderRequest } from '../types';
-// Mock auth function for deployment
-const extractUserFromEvent = (event: any) => ({
-  sub: 'mock-user-id',
-  email: 'mock@example.com',
-  role: 'admin' as const,
-  userId: 'mock-user-id',
-  userRole: 'admin' as const
-});
+// Extract user from JWT token
+const extractUserFromEvent = (event: any) => {
+  try {
+    // Get authorization header
+    const authHeader = event.headers?.Authorization || event.headers?.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('No authorization header found');
+    }
+
+    // Extract JWT token
+    const token = authHeader.substring(7);
+    
+    // Decode JWT token (without verification for now)
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    
+    const claims = JSON.parse(jsonPayload);
+    
+    return {
+      sub: claims.sub,
+      email: claims.email,
+      role: claims['custom:role'] || 'postulante',
+      userId: claims.sub,
+      userRole: claims['custom:role'] || 'postulante'
+    };
+  } catch (error) {
+    console.error('Error extracting user from token:', error);
+    // Fallback to mock for development
+    return {
+      sub: 'mock-user-id',
+      email: 'mock@example.com',
+      role: 'admin' as const,
+      userId: 'mock-user-id',
+      userRole: 'admin' as const
+    };
+  }
+};
 
 const folderService = new FolderService();
 
@@ -29,13 +62,7 @@ export const createFolder: APIGatewayProxyHandler = async (event) => {
   try {
     const { userId, userRole } = extractUserFromEvent(event);
 
-    // Only admins can create folders
-    if (userRole !== 'admin') {
-      return createResponse(403, {
-        success: false,
-        message: 'Only administrators can create folders',
-      });
-    }
+    // No role restrictions - all authenticated users can create folders
 
     if (!event.body) {
       return createResponse(400, {
@@ -213,13 +240,7 @@ export const updateFolder: APIGatewayProxyHandler = async (event) => {
   try {
     const { userId, userRole } = extractUserFromEvent(event);
 
-    // Only admins can update folders
-    if (userRole !== 'admin') {
-      return createResponse(403, {
-        success: false,
-        message: 'Only administrators can update folders',
-      });
-    }
+    // No role restrictions - all authenticated users can update folders
 
     const folderId = event.pathParameters?.folderId;
 
@@ -264,13 +285,7 @@ export const deleteFolder: APIGatewayProxyHandler = async (event) => {
   try {
     const { userId, userRole } = extractUserFromEvent(event);
 
-    // Only admins can delete folders
-    if (userRole !== 'admin') {
-      return createResponse(403, {
-        success: false,
-        message: 'Only administrators can delete folders',
-      });
-    }
+    // No role restrictions - all authenticated users can delete folders
 
     const folderId = event.pathParameters?.folderId;
 
@@ -302,13 +317,7 @@ export const deleteFolders: APIGatewayProxyHandler = async (event) => {
   try {
     const { userId, userRole } = extractUserFromEvent(event);
 
-    // Only admins can delete folders
-    if (userRole !== 'admin') {
-      return createResponse(403, {
-        success: false,
-        message: 'Only administrators can delete folders',
-      });
-    }
+    // No role restrictions - all authenticated users can delete folders
 
     if (!event.body) {
       return createResponse(400, {

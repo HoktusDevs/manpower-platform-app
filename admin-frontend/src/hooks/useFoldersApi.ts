@@ -237,14 +237,64 @@ export const useUpdateFolder = () => {
         throw error;
       }
     },
-    onSuccess: (data, variables) => {
-      // Invalidate specific folder and lists
-      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.detail(variables.folderId) });
-      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.lists() });
+    onMutate: async ({ folderId, input }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
+
+      // Get all existing folder queries
+      const existingQueries = queryClient.getQueryCache().findAll({
+        queryKey: FOLDERS_QUERY_KEYS.all
+      });
+
+      // Snapshot all previous values
+      const previousData = new Map();
+      existingQueries.forEach(query => {
+        previousData.set(query.queryKey, query.state.data);
+      });
+
+      // Update all folder queries optimistically
+      existingQueries.forEach(query => {
+        queryClient.setQueryData(query.queryKey, (old: unknown) => {
+          if (!old) return old;
+          
+          if (Array.isArray(old)) {
+            return old.map((folder: unknown) => 
+              folder && typeof folder === 'object' && 'folderId' in folder && 
+              typeof folder.folderId === 'string' && folder.folderId === folderId
+                ? { ...folder, name: input.name || (folder as any).name, type: input.type || (folder as any).type }
+                : folder
+            );
+          } else if (old && typeof old === 'object' && 'folders' in old) {
+            return {
+              ...old,
+              folders: (old as { folders: unknown[] }).folders.map((folder: unknown) => 
+                folder && typeof folder === 'object' && 'folderId' in folder && 
+                typeof folder.folderId === 'string' && folder.folderId === folderId
+                  ? { ...folder, name: input.name || (folder as any).name, type: input.type || (folder as any).type }
+                  : folder
+              )
+            };
+          }
+          return old;
+        });
+      });
+
+      return { previousData };
+    },
+    onSuccess: (data) => {
       console.log('Folder updated successfully:', data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach((data, queryKey) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       console.error('Error updating folder:', error);
+    },
+    onSettled: () => {
+      // Don't invalidate - we already updated optimistically
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
