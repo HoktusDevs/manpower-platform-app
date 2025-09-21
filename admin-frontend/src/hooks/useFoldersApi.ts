@@ -38,7 +38,7 @@ export const useGetAllFolders = (limit?: number, nextToken?: string) => {
         throw error;
       }
     },
-    staleTime: 0, // Always refetch for immediate updates
+    staleTime: 30 * 1000, // 30 seconds - short enough to allow refetch when needed
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnWindowFocus: false,
@@ -116,7 +116,7 @@ export const useGetRootFolders = () => {
 /**
  * Hook to create a folder with optimistic updates
  */
-export const useCreateFolder = () => {
+export const useCreateFolder = (onSuccess?: () => void, onError?: (error: Error) => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -183,6 +183,7 @@ export const useCreateFolder = () => {
           if (!old) return old;
           
           if (Array.isArray(old)) {
+            // Replace optimistic folder with real data
             return old.map((folder: unknown) => 
               folder && typeof folder === 'object' && 'folderId' in folder && 
               typeof folder.folderId === 'string' && folder.folderId.startsWith('temp-') 
@@ -203,6 +204,7 @@ export const useCreateFolder = () => {
       });
       
       console.log('Folder created successfully:', data);
+      onSuccess?.();
     },
     onError: (error, _variables, context) => {
       // Rollback on error
@@ -212,6 +214,7 @@ export const useCreateFolder = () => {
         });
       }
       console.error('Error creating folder:', error);
+      onError?.(error);
     },
     onSettled: () => {
       // Don't invalidate - we already updated optimistically and with real data
@@ -294,7 +297,8 @@ export const useUpdateFolder = () => {
       console.error('Error updating folder:', error);
     },
     onSettled: () => {
-      // Don't invalidate - we already updated optimistically
+      // Don't invalidate - we already updated optimistically and with real data
+      // queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -358,6 +362,8 @@ export const useDeleteFolder = () => {
     },
     onSuccess: (data) => {
       console.log('Folder deleted successfully:', data);
+      // The optimistic update already removed the folder, so we just confirm success
+      // No need to update cache again since deletion is already reflected
     },
     onError: (error, _variables, context) => {
       // Rollback on error
@@ -369,7 +375,8 @@ export const useDeleteFolder = () => {
       console.error('Error deleting folder:', error);
     },
     onSettled: () => {
-      // Don't invalidate - we already updated optimistically
+      // Don't invalidate - we already updated optimistically and with real data
+      // queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -433,6 +440,8 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
     },
     onSuccess: (data) => {
       console.log('Folders deleted successfully:', data);
+      // The optimistic update already removed the folders, so we just confirm success
+      // No need to update cache again since deletion is already reflected
       onSuccess?.();
     },
     onError: (error, _variables, context) => {
@@ -446,7 +455,8 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
       onError?.(error);
     },
     onSettled: () => {
-      // Don't invalidate - we already updated optimistically
+      // Don't invalidate - we already updated optimistically and with real data
+      // queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),

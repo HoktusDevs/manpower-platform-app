@@ -116,7 +116,7 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
 
   return {
     selectedRows,
-    selectedCount: visibleSelectedCount, // Use visible count for UI display
+    selectedCount: selectedRows.size, // Use total count to show delete button for all selected items
     totalSelectedCount: selectedRows.size, // Keep total for deletion operations
     isAllSelected,
     selectRow,

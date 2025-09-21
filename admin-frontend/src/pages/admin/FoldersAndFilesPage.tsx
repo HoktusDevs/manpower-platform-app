@@ -18,10 +18,21 @@ export const FoldersAndFilesPage: React.FC = () => {
     showError('Error al eliminar', 'No se pudieron eliminar las carpetas seleccionadas');
   };
 
+  const handleCreateSuccess = () => {
+    showSuccess('Carpeta creada', 'La carpeta se creó exitosamente');
+  };
+
+  const handleCreateError = (error: Error) => {
+    console.error('Error creating folder:', error);
+    showError('Error al crear', 'No se pudo crear la carpeta');
+  };
+
   return (
     <FoldersProvider 
       onDeleteSuccess={handleDeleteSuccess}
       onDeleteError={handleDeleteError}
+      onCreateSuccess={handleCreateSuccess}
+      onCreateError={handleCreateError}
     >
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Directorios y Archivos</h1>

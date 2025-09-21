@@ -28,14 +28,16 @@ const folderToFolderRow = (folder: { folderId: string; name: string; type: strin
 
 export const useFoldersState = (
   onDeleteSuccess?: () => void,
-  onDeleteError?: (error: Error) => void
+  onDeleteError?: (error: Error) => void,
+  onCreateSuccess?: () => void,
+  onCreateError?: (error: Error) => void
 ): UseFoldersStateReturn => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
   // React Query hooks
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
-  const createFolderMutation = useCreateFolder();
+  const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
   const updateFolderMutation = useUpdateFolder();
   const deleteFolderMutation = useDeleteFolder();
   const deleteFoldersMutation = useDeleteFolders(onDeleteSuccess, onDeleteError);

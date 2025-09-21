@@ -7,6 +7,8 @@ interface FoldersProviderProps {
   children: ReactNode;
   onDeleteSuccess?: () => void;
   onDeleteError?: (error: Error) => void;
+  onCreateSuccess?: () => void;
+  onCreateError?: (error: Error) => void;
 }
 
 const FoldersContext = createContext<UseFoldersStateReturn | null>(null);
@@ -14,9 +16,11 @@ const FoldersContext = createContext<UseFoldersStateReturn | null>(null);
 export const FoldersProvider: React.FC<FoldersProviderProps> = ({ 
   children, 
   onDeleteSuccess, 
-  onDeleteError 
+  onDeleteError,
+  onCreateSuccess,
+  onCreateError
 }) => {
-  const foldersState = useFoldersState(onDeleteSuccess, onDeleteError);
+  const foldersState = useFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
   
   return (
     <FoldersContext.Provider value={foldersState}>
