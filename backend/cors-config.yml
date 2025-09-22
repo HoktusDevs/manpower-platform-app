@@ -1,0 +1,33 @@
+# CORS Configuration for All Microservices
+# This file contains the CORS settings needed for S3/CloudFront deployment
+
+# CORS Headers for CloudFront/S3 Frontends
+CORS_HEADERS:
+  # Standard CORS headers
+  Access-Control-Allow-Origin: "*"
+  Access-Control-Allow-Methods: "GET, POST, PUT, DELETE, OPTIONS"
+  Access-Control-Allow-Headers: "Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token, X-Amz-User-Agent, X-User-Id"
+  Access-Control-Allow-Credentials: "true"
+  Access-Control-Max-Age: "86400"
+
+# CloudFront Origins that need to be allowed
+CLOUDFRONT_ORIGINS:
+  - "https://d1234567890abc.cloudfront.net"  # Admin Frontend
+  - "https://d0987654321xyz.cloudfront.net"  # Applicant Frontend  
+  - "https://d1111111111def.cloudfront.net"  # Auth Frontend
+
+# Production Origins (replace with actual CloudFront URLs)
+PRODUCTION_ORIGINS:
+  - "https://admin.manpower-platform.com"
+  - "https://applicant.manpower-platform.com"
+  - "https://auth.manpower-platform.com"
+
+# Development Origins (for local testing)
+DEVELOPMENT_ORIGINS:
+  - "http://localhost:6100"  # Auth Frontend
+  - "http://localhost:6200"  # Applicant Frontend
+  - "http://localhost:6500"  # Admin Frontend
+  - "http://localhost:3000"  # Alternative ports
+  - "http://localhost:3001"
+  - "http://localhost:5173"  # Vite default
+  - "http://localhost:8080"

@@ -161,16 +161,8 @@ export const checkApplicationExists: APIGatewayProxyHandler = async (event) => {
 // Get all applications (admin only)
 export const getAllApplications: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userRole } = extractUserFromEvent(event);
-
-    // Verificar que el usuario es admin
-    if (userRole !== 'admin') {
-      return createResponse(403, {
-        success: false,
-        message: 'Acceso denegado. Solo administradores pueden ver todas las aplicaciones',
-      });
-    }
-
+    console.log('📋 Getting all applications (no auth required)');
+    
     const limit = event.queryStringParameters?.limit ? parseInt(event.queryStringParameters.limit) : undefined;
     const nextToken = event.queryStringParameters?.nextToken;
 

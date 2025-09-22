@@ -2,15 +2,21 @@ import { randomUUID } from 'crypto';
 import { Application, ApplicationModel } from '../models/Application';
 import { DynamoService } from './dynamoService';
 import { FoldersServiceClient } from './foldersServiceClient';
+import { UserService } from './userService';
+import { CompanyService } from './companyService';
 import { CreateApplicationInput, ApplicationResponse, ApplicationQuery } from '../types';
 
 export class ApplicationService {
   private dynamoService: DynamoService;
   private foldersServiceClient: FoldersServiceClient;
+  private userService: UserService;
+  private companyService: CompanyService;
 
   constructor() {
     this.dynamoService = new DynamoService();
     this.foldersServiceClient = new FoldersServiceClient();
+    this.userService = new UserService();
+    this.companyService = new CompanyService();
   }
 
   async createApplication(input: CreateApplicationInput, userId: string, userEmail?: string): Promise<ApplicationResponse> {
@@ -264,62 +270,109 @@ export class ApplicationService {
     try {
       const result = await this.dynamoService.getAllApplications(limit, nextToken);
 
-      // Enriquecer aplicaciones con datos del job desde DynamoDB
+      // Obtener datos únicos para cruces
+      const uniqueUserIds = [...new Set(result.applications.map(app => app.userId))];
+      const uniqueJobIds = [...new Set(result.applications.map(app => app.jobId))];
+      
+      console.log('🔄 Enriching applications with user and company data...');
+      console.log('👥 Unique users:', uniqueUserIds.length);
+      console.log('💼 Unique jobs:', uniqueJobIds.length);
+
+      // Obtener datos de usuarios y trabajos en paralelo
+      const [usersMap, jobsMap] = await Promise.all([
+        this.userService.getUsersByIds(uniqueUserIds),
+        this.getJobsData(uniqueJobIds)
+      ]);
+
+      // Obtener datos de empresas desde las carpetas de los trabajos
+      const folderIds = Array.from(jobsMap.values())
+        .map(job => job.folderId)
+        .filter(Boolean);
+      
+      const companiesMap = await this.companyService.getCompaniesFromFolders(folderIds);
+
+      // Enriquecer aplicaciones con todos los datos
       const enrichedApplications = await Promise.all(
         result.applications.map(async (application) => {
           try {
-            // Obtener datos del job directamente desde DynamoDB
-            const jobData = await this.dynamoService.getJobData(application.jobId);
+            // Datos del usuario
+            const userData = usersMap.get(application.userId);
             
-            if (jobData) {
-              return {
-                ...application,
-                // Datos del job
-                title: jobData.title,
-                description: jobData.description,
-                companyName: jobData.companyName,
-                location: jobData.location,
-                salary: jobData.salary,
-                employmentType: jobData.employmentType,
-                experienceLevel: jobData.experienceLevel,
-                requirements: jobData.requirements,
-                folderId: jobData.folderId,
-                status: jobData.status,
-                isActive: jobData.isActive,
-                updatedAt: jobData.updatedAt,
-                // Mantener campos de la aplicación
-                jobTitle: jobData.title, // Para compatibilidad
-              };
-            }
+            // Datos del trabajo
+            const jobData = jobsMap.get(application.jobId);
+            
+            // Datos de la empresa
+            const companyData = jobData?.folderId ? companiesMap.get(jobData.folderId) : null;
+            
+            return {
+              ...application,
+              // Usuario: nombre y apellido por userId
+              userName: userData?.name || `Usuario-${application.userId.slice(-8)}`,
+              userEmail: userData?.email || 'email@no-especificado.com',
+              userRole: userData?.role || 'postulante',
+              userRut: userData?.rut,
+              userPhone: userData?.phone,
+              userAddress: userData?.address,
+              
+              // Posición: datos del trabajo por jobId
+              jobTitle: jobData?.title || 'Trabajo no encontrado',
+              jobDescription: jobData?.description || 'No se pudo obtener información del trabajo',
+              jobLocation: jobData?.location || 'No especificada',
+              jobSalary: jobData?.salary || 'No especificada',
+              jobEmploymentType: jobData?.employmentType || 'No especificado',
+              jobExperienceLevel: jobData?.experienceLevel || 'No especificado',
+              jobRequirements: jobData?.requirements || [],
+              jobBenefits: jobData?.benefits || [],
+              jobSkills: jobData?.skills || [],
+              jobCreatedAt: jobData?.createdAt,
+              jobUpdatedAt: jobData?.updatedAt,
+              jobStatus: jobData?.status || 'UNKNOWN',
+              
+              // Empresa: carpeta padre por folderId
+              companyName: companyData?.companyName || jobData?.companyName || 'Empresa no especificada',
+              companyId: companyData?.companyId || jobData?.companyId,
+              companyLocation: companyData?.location || jobData?.location,
+              companyDescription: companyData?.description || jobData?.companyDescription,
+              parentCompany: companyData?.parentCompany,
+              
+              // Metadatos adicionales
+              folderId: jobData?.folderId,
+              companyWebsite: jobData?.companyWebsite,
+              companySize: jobData?.companySize,
+              companyIndustry: jobData?.companyIndustry
+            };
           } catch (error) {
-            console.warn(`Error obteniendo datos del job ${application.jobId}:`, error);
+            console.error(`Error enriching application ${application.applicationId}:`, error);
+            return {
+              ...application,
+              userName: `Usuario-${application.userId.slice(-8)}`,
+              userEmail: 'email@no-especificado.com',
+              userRole: 'postulante',
+              jobTitle: 'Error al obtener datos',
+              jobDescription: 'Error al obtener información del trabajo',
+              companyName: 'Error',
+              jobLocation: 'Error',
+              jobSalary: 'Error',
+              jobEmploymentType: 'Error',
+              jobExperienceLevel: 'Error',
+              jobRequirements: [],
+              jobBenefits: [],
+              jobSkills: [],
+              jobCreatedAt: null,
+              jobUpdatedAt: null,
+              jobStatus: 'ERROR'
+            };
           }
-          
-          // Fallback si no se pueden obtener los datos del job
-          return {
-            ...application,
-            title: 'Trabajo no encontrado',
-            description: 'Descripción no disponible',
-            companyName: 'Empresa no especificada',
-            location: 'Ubicación no especificada',
-            salary: undefined,
-            employmentType: 'FULL_TIME',
-            experienceLevel: 'ENTRY_LEVEL',
-            requirements: 'No especificados',
-            folderId: '',
-            status: 'DRAFT',
-            isActive: false,
-            updatedAt: application.updatedAt,
-            jobTitle: 'Trabajo no encontrado', // Para compatibilidad
-          };
         })
       );
 
+      console.log(`✅ Enriched ${enrichedApplications.length} applications with user and company data`);
+
       return {
         success: true,
-        message: 'Todas las aplicaciones obtenidas exitosamente',
         applications: enrichedApplications,
         nextToken: result.nextToken,
+        message: 'Todas las aplicaciones obtenidas exitosamente'
       };
     } catch (error) {
       console.error('Error in getAllApplications:', error);
@@ -328,5 +381,30 @@ export class ApplicationService {
         message: 'Error interno del servidor al obtener todas las aplicaciones',
       };
     }
+  }
+
+  /**
+   * Get jobs data for multiple job IDs
+   */
+  private async getJobsData(jobIds: string[]): Promise<Map<string, any>> {
+    const jobsMap = new Map<string, any>();
+    
+    try {
+      const promises = jobIds.map(jobId => 
+        this.dynamoService.getJobData(jobId).then(jobData => ({ jobId, jobData }))
+      );
+      
+      const results = await Promise.all(promises);
+      
+      results.forEach(({ jobId, jobData }) => {
+        if (jobData) {
+          jobsMap.set(jobId, jobData);
+        }
+      });
+    } catch (error) {
+      console.error('Error getting jobs data:', error);
+    }
+    
+    return jobsMap;
   }
 }

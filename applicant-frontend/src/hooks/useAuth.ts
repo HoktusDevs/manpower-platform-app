@@ -84,7 +84,7 @@ export const useAuth = (): UseAuthReturn => {
       setError(null);
 
       // Redirect to auth-frontend
-      window.location.href = 'http://localhost:6100/login';
+      window.location.href = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login';
     } catch (error) {
       console.error('Logout error:', error);
       setError('Error during logout');

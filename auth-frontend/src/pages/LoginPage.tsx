@@ -48,7 +48,7 @@ export const LoginPage: React.FC = () => {
         setLoginSuccess({ role: userRole });
 
         // Redirect based on user role only
-        const redirectUrl = userRole === 'admin' ? 'http://localhost:6500' : 'http://localhost:6200';
+        const redirectUrl = userRole === 'admin' ? 'http://manpower-admin-frontend-dev.s3-website-us-east-1.amazonaws.com' : 'http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com';
         const urlWithSessionKey = `${redirectUrl}?sessionKey=${encodeURIComponent(response.sessionKey)}`;
         window.location.href = urlWithSessionKey;
       } else {

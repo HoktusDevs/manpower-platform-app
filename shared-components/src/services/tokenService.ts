@@ -238,7 +238,7 @@ export class TokenService {
     this.clearAuth();
 
     // Redirect to auth frontend
-    const authFrontendUrl = 'http://localhost:6100'; // auth-frontend port
+    const authFrontendUrl = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com'; // auth-frontend S3 URL
     window.location.replace(`${authFrontendUrl}/login`);
   }
 }

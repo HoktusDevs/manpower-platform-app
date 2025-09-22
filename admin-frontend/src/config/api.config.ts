@@ -13,6 +13,15 @@ export const API_CONFIG = {
       byId: (folderId: string) => `/folders/${folderId}`,
       children: (folderId: string) => `/folders/${folderId}/children`,
     }
+  },
+  applications: {
+    baseUrl: import.meta.env.VITE_APPLICATIONS_API_URL || 'https://8lmunkvdd5.execute-api.us-east-1.amazonaws.com/dev',
+    endpoints: {
+      base: '/applications',
+      my: '/applications/my',
+      byId: (applicationId: string) => `/applications/${applicationId}`,
+      stats: '/applications/stats'
+    }
   }
 } as const;
 

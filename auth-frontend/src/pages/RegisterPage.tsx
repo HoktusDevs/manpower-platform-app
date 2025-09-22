@@ -80,7 +80,7 @@ export const RegisterPage: React.FC = () => {
 
           if (loginResponse.success && loginResponse.sessionKey) {
             // Redirect to applicant frontend with sessionKey
-            window.location.href = `http://localhost:6200?sessionKey=${loginResponse.sessionKey}`;
+            window.location.href = `http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com?sessionKey=${loginResponse.sessionKey}`;
           } else {
             // If auto-login fails, redirect to login page
             setSuccess('Registro exitoso. Por favor inicia sesión.');

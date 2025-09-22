@@ -44,7 +44,7 @@ function AppContent() {
   const handleLogout = () => {
     dismissModal();
     cognitoAuthService.logout();
-    window.location.href = 'http://localhost:6100/login';
+    window.location.href = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login';
   };
 
   // Check for sessionKey first, then existing tokens
@@ -64,7 +64,7 @@ function AppContent() {
           return;
         } else {
           localStorage.clear();
-          window.location.href = 'http://localhost:6100/login?redirect=admin&error=session_exchange_failed';
+          window.location.href = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login?redirect=admin&error=session_exchange_failed';
           return;
         }
       }
@@ -87,7 +87,7 @@ function AppContent() {
 
       // No valid authentication, redirect to login
       localStorage.clear();
-      window.location.href = 'http://localhost:6100/login?redirect=admin';
+      window.location.href = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login?redirect=admin';
     };
 
     checkAuthentication();
@@ -158,14 +158,14 @@ function AppContent() {
         <Route path="/" element={<Navigate to="/admin" replace />} />
 
         {/* Redirect authentication routes to auth-frontend */}
-        <Route path="/login" element={<Navigate to="http://localhost:6100/login" replace />} />
-        <Route path="/register/*" element={<Navigate to="http://localhost:6100/register" replace />} />
-        <Route path="/forgot-password" element={<Navigate to="http://localhost:6100/forgot-password" replace />} />
+        <Route path="/login" element={<Navigate to="http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login" replace />} />
+        <Route path="/register/*" element={<Navigate to="http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/register" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/forgot-password" replace />} />
 
         {/* Redirect postulante routes to applicant-frontend */}
-        <Route path="/aplicar" element={<Navigate to="http://localhost:6200/aplicar" replace />} />
-        <Route path="/postulante/*" element={<Navigate to="http://localhost:6200/postulante" replace />} />
-        <Route path="/completar-aplicaciones" element={<Navigate to="http://localhost:6200/completar-aplicaciones" replace />} />
+        <Route path="/aplicar" element={<Navigate to="http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com/aplicar" replace />} />
+        <Route path="/postulante/*" element={<Navigate to="http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com/postulante" replace />} />
+        <Route path="/completar-aplicaciones" element={<Navigate to="http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com/completar-aplicaciones" replace />} />
 
         {/* ADMIN: Only admin routes remain in main frontend */}
         <Route path="/admin/*" element={<AdminLayout />}>

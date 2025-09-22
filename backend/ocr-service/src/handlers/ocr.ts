@@ -355,6 +355,21 @@ export const callback = async (
       });
     } else if (hoktusResult.final_decision === 'REJECTED') {
       document.updateStatus('failed', 'Document rejected by Hoktus');
+    } else if (hoktusResult.final_decision === 'MANUAL_REVIEW') {
+      // MANUAL_REVIEW significa que el documento fue procesado pero necesita revisión manual
+      document.updateStatus('completed');
+      document.setOCRResult({
+        success: true,
+        confidence: 85, // Lower confidence for manual review
+        extractedText: JSON.stringify(hoktusResult.data_structure),
+        language: 'es',
+        processingTime: 0,
+        metadata: {
+          format: hoktusResult.original_file_name?.split('.').pop() || 'pdf',
+          size: 0
+        } as any,
+        fields: hoktusResult.data_structure
+      });
     } else {
       document.updateStatus('failed', `Unknown decision: ${hoktusResult.final_decision}`);
     }

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 export const RedirectToLogin = () => {
   useEffect(() => {
     // Redirect to auth-frontend login page
-    window.location.href = 'http://localhost:6100/login?redirect=admin';
+    window.location.href = 'http://manpower-auth-frontend-dev.s3-website-us-east-1.amazonaws.com/login?redirect=admin';
   }, []);
 
   return (

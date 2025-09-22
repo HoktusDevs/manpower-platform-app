@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 Buckets for Manpower Platform Frontends - Buckets Only'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+Resources:
+  # S3 Bucket for Admin Frontend
+  AdminFrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manpower-admin-frontend-${Environment}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket for Applicant Frontend
+  ApplicantFrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manpower-applicant-frontend-${Environment}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket for Auth Frontend
+  AuthFrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manpower-auth-frontend-${Environment}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # Bucket Policies for Public Access
+  AdminFrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AdminFrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${AdminFrontendBucket}/*'
+
+  ApplicantFrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ApplicantFrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${ApplicantFrontendBucket}/*'
+
+  AuthFrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AuthFrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${AuthFrontendBucket}/*'
+
+Outputs:
+  AdminFrontendBucketName:
+    Description: Admin Frontend S3 Bucket Name
+    Value: !Ref AdminFrontendBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminFrontendBucket'
+
+  AdminFrontendURL:
+    Description: Admin Frontend S3 Website URL
+    Value: !Sub 'http://${AdminFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminFrontendURL'
+
+  ApplicantFrontendBucketName:
+    Description: Applicant Frontend S3 Bucket Name
+    Value: !Ref ApplicantFrontendBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicantFrontendBucket'
+
+  ApplicantFrontendURL:
+    Description: Applicant Frontend S3 Website URL
+    Value: !Sub 'http://${ApplicantFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicantFrontendURL'
+
+  AuthFrontendBucketName:
+    Description: Auth Frontend S3 Bucket Name
+    Value: !Ref AuthFrontendBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AuthFrontendBucket'
+
+  AuthFrontendURL:
+    Description: Auth Frontend S3 Website URL
+    Value: !Sub 'http://${AuthFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-AuthFrontendURL'
