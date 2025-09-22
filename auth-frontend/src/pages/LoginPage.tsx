@@ -57,6 +57,8 @@ export const LoginPage: React.FC = () => {
           const urlWithSessionKey = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}sessionKey=${encodeURIComponent(response.sessionKey)}`;
           console.log('🔍 DEBUG LOGIN: Final URL with sessionKey:', urlWithSessionKey);
           console.log('🔍 DEBUG LOGIN: About to redirect...');
+          console.log('🔍 DEBUG LOGIN: SessionKey length:', response.sessionKey.length);
+          console.log('🔍 DEBUG LOGIN: SessionKey preview:', response.sessionKey.substring(0, 50) + '...');
           window.location.href = urlWithSessionKey;
         }, 1500); // Show success message briefly before redirecting
       } else {
