@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 interface PostulanteSidebarProps {
   onNavigate: (path: string) => void;
@@ -63,7 +64,17 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 export const PostulanteSidebar = ({ onNavigate }: PostulanteSidebarProps) => {
+  const location = useLocation();
   const [activeItem, setActiveItem] = useState<string>('buscar-empleos');
+
+  // Sincronizar activeItem con la URL actual
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const currentItem = sidebarItems.find(item => item.path === currentPath);
+    if (currentItem) {
+      setActiveItem(currentItem.id);
+    }
+  }, [location.pathname]);
 
   const handleItemClick = (item: SidebarItem) => {
     setActiveItem(item.id);
