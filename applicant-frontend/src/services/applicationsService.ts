@@ -48,6 +48,9 @@ class ApplicationsService {
     try {
       console.log('ApplicationsService: Obteniendo aplicaciones del usuario');
       
+      // TODO: Obtener userId real del contexto de autenticación
+      const mockUserId = 'mock-user-id';
+      
       const params = new URLSearchParams();
       if (limit) params.append('limit', limit.toString());
       if (nextToken) params.append('nextToken', nextToken);
@@ -56,6 +59,7 @@ class ApplicationsService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': mockUserId,
           // TODO: Agregar token de autorización cuando esté implementado
           // 'Authorization': `Bearer ${token}`
         },
@@ -85,10 +89,14 @@ class ApplicationsService {
     try {
       console.log('ApplicationsService: Creando nueva aplicación', request.jobId);
       
+      // TODO: Obtener userId real del contexto de autenticación
+      const mockUserId = 'mock-user-id';
+      
       const response = await fetch(`${this.baseUrl}/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': mockUserId,
           // TODO: Agregar token de autorización cuando esté implementado
           // 'Authorization': `Bearer ${token}`
         },
@@ -119,10 +127,14 @@ class ApplicationsService {
     try {
       console.log('ApplicationsService: Eliminando aplicación', applicationId);
       
+      // TODO: Obtener userId real del contexto de autenticación
+      const mockUserId = 'mock-user-id';
+      
       const response = await fetch(`${this.baseUrl}/applications/${applicationId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': mockUserId,
           // TODO: Agregar token de autorización cuando esté implementado
           // 'Authorization': `Bearer ${token}`
         },
@@ -152,10 +164,14 @@ class ApplicationsService {
     try {
       console.log('ApplicationsService: Verificando si existe aplicación para job:', jobId);
       
+      // TODO: Obtener userId real del contexto de autenticación
+      const mockUserId = 'mock-user-id';
+      
       const response = await fetch(`${this.baseUrl}/applications/check/${jobId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': mockUserId,
           // TODO: Agregar token de autorización cuando esté implementado
           // 'Authorization': `Bearer ${token}`
         },
