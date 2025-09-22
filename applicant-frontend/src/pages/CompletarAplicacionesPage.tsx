@@ -88,24 +88,7 @@ export const CompletarAplicacionesPage = () => {
     );
   };
 
-  // Mostrar loading
-  if (loading) {
-    return (
-      <div className="h-full bg-gray-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md">
-            <div className="px-6 py-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Completar Aplicaciones</h2>
-            </div>
-            <div className="px-6 py-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Cargando datos...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No hay loading state - formulario siempre disponible
 
   return (
     <div className="h-full bg-gray-100 p-6">
