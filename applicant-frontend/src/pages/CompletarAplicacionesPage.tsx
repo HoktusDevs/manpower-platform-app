@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
 export const CompletarAplicacionesPage = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [selectedJobs, setSelectedJobs] = useState<JobPosting[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('puestos');
   const [applicationData, setApplicationData] = useState<UserApplicationData>({
@@ -28,8 +30,25 @@ export const CompletarAplicacionesPage = () => {
     }
   }, [location.state]);
 
-  // No cargar datos del usuario - formulario vacío por defecto
-  // TODO: Implementar carga de datos del usuario cuando esté disponible el user-service
+  // Cargar datos del usuario autenticado
+  useEffect(() => {
+    console.log('🔍 Debug useAuth - user:', user);
+    console.log('🔍 Debug useAuth - localStorage user:', localStorage.getItem('user'));
+    
+    if (user) {
+      console.log('✅ Cargando datos del usuario autenticado:', user);
+      
+      // Pre-llenar formulario con datos del usuario
+      setApplicationData(prev => ({
+        ...prev,
+        nombre: user.fullName || '',
+        email: user.email || '',
+        // Los demás campos se mantienen vacíos para que el usuario los complete
+      }));
+    } else {
+      console.log('❌ No hay usuario autenticado disponible');
+    }
+  }, [user]);
 
   const handleInputChange = (field: keyof UserApplicationData, value: string): void => {
     setApplicationData(prev => ({ ...prev, [field]: value }));

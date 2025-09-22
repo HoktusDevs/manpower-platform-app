@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { PostulanteLayout } from './components/PostulanteLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { CompletarAplicacionesPage } from './pages/CompletarAplicacionesPage';
@@ -9,7 +10,7 @@ import { RedirectToLogin } from './components/RedirectToLogin';
 import { useEffect } from 'react';
 
 function AppContent() {
-  // NO VALIDATION AT ALL - just show the app
+  // Manejar sessionKey para autenticación
   useEffect(() => {
     const handleSessionKey = async () => {
       console.log('🔍 APPLICANT-FRONTEND: URL:', window.location.href);
@@ -48,46 +49,60 @@ function AppContent() {
       <Route
         path="/"
         element={
-          <PostulanteLayout>
-            <Navigate to="/buscar-empleos" replace />
-          </PostulanteLayout>
+          <ProtectedRoute>
+            <PostulanteLayout>
+              <Navigate to="/buscar-empleos" replace />
+            </PostulanteLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/buscar-empleos"
         element={
-          <PostulanteLayout>
-            <JobSearchPage />
-          </PostulanteLayout>
+          <ProtectedRoute>
+            <PostulanteLayout>
+              <JobSearchPage />
+            </PostulanteLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/mis-aplicaciones"
         element={
-          <PostulanteLayout>
-            <ApplicationsPage />
-          </PostulanteLayout>
+          <ProtectedRoute>
+            <PostulanteLayout>
+              <ApplicationsPage />
+            </PostulanteLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/completar-aplicaciones"
         element={
-          <PostulanteLayout>
-            <CompletarAplicacionesPage />
-          </PostulanteLayout>
+          <ProtectedRoute>
+            <PostulanteLayout>
+              <CompletarAplicacionesPage />
+            </PostulanteLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/perfil"
         element={
-          <PostulanteLayout>
-            <MiPerfilPage />
-          </PostulanteLayout>
+          <ProtectedRoute>
+            <PostulanteLayout>
+              <MiPerfilPage />
+            </PostulanteLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/aplicar"
-        element={<AplicarPage />}
+        element={
+          <ProtectedRoute>
+            <AplicarPage />
+          </ProtectedRoute>
+        }
       />
 
       {/* Catch-all route - redirect to auth-frontend login */}
