@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useGraphQL } from '../../hooks/useGraphQL';
 import { UniversalTableManager } from '../../components/UniversalTable';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable';
-import type { Application } from '../../services/graphqlService';
+
+// Tipos básicos para Application (sin dependencia de GraphQL)
+interface Application {
+  applicationId: string;
+  userId: string;
+  companyName: string;
+  position: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'INTERVIEW_SCHEDULED' | 'HIRED';
+  description?: string;
+  salary?: string;
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
+  companyId?: string;
+}
 
 const getStatusColor = (status: Application['status']) => {
   switch (status) {
@@ -29,25 +42,57 @@ const getStatusText = (status: Application['status']) => {
 };
 
 export const ApplicationsManagementPage: React.FC = () => {
-  const {
-    applications,
-    loading,
-    error,
-    fetchAllApplications,
-    updateApplicationStatus,
-    clearError,
-    isGraphQLAvailable
-  } = useGraphQL();
+  // Estado local para applications (sin GraphQL)
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'accordion'>('table');
 
+  // Cargar datos iniciales
   useEffect(() => {
-    if (isGraphQLAvailable()) {
-      fetchAllApplications();
+    loadApplications();
+  }, []);
+
+  // Función para cargar applications
+  const loadApplications = async () => {
+    setLoading(true);
+    try {
+      // TODO: Implementar carga real de datos desde API REST
+      // Por ahora, tabla vacía
+      setApplications([]);
+    } catch (error) {
+      console.error('Error loading applications:', error);
+      setError('Error al cargar aplicaciones');
+    } finally {
+      setLoading(false);
     }
-  }, []); // Empty dependency array - only run once on mount
+  };
+
+  // Función para actualizar estado de aplicación
+  const updateApplicationStatus = async (applicationId: string, status: Application['status']): Promise<boolean> => {
+    try {
+      // TODO: Implementar actualización real con API REST
+      setApplications(prev => 
+        prev.map(app => 
+          app.applicationId === applicationId 
+            ? { ...app, status, updatedAt: new Date().toISOString() }
+            : app
+        )
+      );
+      return true;
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      return false;
+    }
+  };
+
+  // Función para limpiar errores
+  const clearError = () => {
+    setError(null);
+  };
 
   // Filter applications by search term
   const filteredApplications = applications.filter(app => 

@@ -1,24 +1,17 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { Job, JobModel } from '../models/Job';
-import { MockDynamoService } from './mockDynamoService';
+import { DynamoService } from './dynamoService';
 import { FoldersServiceClient } from './foldersServiceClient';
 import { CreateJobInput, UpdateJobInput, JobResponse, JobQuery } from '../types';
 
 export class JobService {
-  private dynamoService: MockDynamoService;
+  private dynamoService: DynamoService;
   private foldersClient: FoldersServiceClient;
 
   constructor() {
     console.log('JobService: Environment STAGE =', process.env.STAGE);
-    const isLocal = process.env.STAGE === 'local';
-    if (isLocal) {
-      console.log('JobService: Using MockDynamoService for local development');
-      this.dynamoService = new MockDynamoService();
-    } else {
-      console.log('JobService: Using real DynamoService for production');
-      // TODO: Implement real DynamoService when needed
-      this.dynamoService = new MockDynamoService();
-    }
+    console.log('JobService: Using real DynamoService for production');
+    this.dynamoService = new DynamoService();
 
     this.foldersClient = new FoldersServiceClient();
   }
@@ -26,7 +19,7 @@ export class JobService {
   async createJob(input: CreateJobInput, userId: string): Promise<JobResponse> {
     try {
       // Generate unique job ID
-      const jobId = uuidv4();
+      const jobId = randomUUID();
 
       // Create job model
       const jobModel = new JobModel({
@@ -56,36 +49,13 @@ export class JobService {
       // Create the job in database first
       const createdJob = await this.dynamoService.createJob(jobModel);
 
-      // Generate folder name for this job
-      const jobFolderName = jobModel.generateJobFolderName();
-
-      // Create dedicated folder for this job
-      const folderResult = await this.foldersClient.createJobFolder(
-        jobFolderName,
-        input.folderId,
-        userId
-      );
-
-      if (folderResult.success && folderResult.folder) {
-        // Update job with the created folder ID
-        const updatedJob = await this.dynamoService.updateJob(jobId, {
-          jobFolderId: folderResult.folder.folderId
-        });
-
-        return {
-          success: true,
-          message: 'Job created successfully with dedicated folder',
-          job: updatedJob || createdJob,
-        };
-      } else {
-        // Job was created but folder creation failed
-        console.warn('Job created but folder creation failed:', folderResult.message);
-        return {
-          success: true,
-          message: 'Job created successfully (folder creation pending)',
-          job: createdJob,
-        };
-      }
+      // Job created successfully - folder creation is handled by frontend
+      console.log('Job created successfully:', jobId);
+      return {
+        success: true,
+        message: 'Job created successfully',
+        job: createdJob,
+      };
     } catch (error) {
       console.error('Error in createJob:', error);
       return {
@@ -95,9 +65,9 @@ export class JobService {
     }
   }
 
-  async getJob(jobId: string): Promise<JobResponse> {
+  async getJob(jobId: string, userId: string): Promise<JobResponse> {
     try {
-      const job = await this.dynamoService.getJob(jobId);
+      const job = await this.dynamoService.getJob(jobId, userId);
 
       if (!job) {
         return {
@@ -126,7 +96,7 @@ export class JobService {
 
       // If status is being updated, validate the transition
       if (updates.status) {
-        const existingJob = await this.dynamoService.getJob(jobId);
+        const existingJob = await this.dynamoService.getJob(jobId, userId);
         if (!existingJob) {
           return {
             success: false,
@@ -145,7 +115,7 @@ export class JobService {
         }
       }
 
-      const updatedJob = await this.dynamoService.updateJob(jobId, updates);
+      const updatedJob = await this.dynamoService.updateJob(jobId, userId, updates);
 
       if (!updatedJob) {
         return {
@@ -168,9 +138,9 @@ export class JobService {
     }
   }
 
-  async deleteJob(jobId: string): Promise<JobResponse> {
+  async deleteJob(jobId: string, userId: string): Promise<JobResponse> {
     try {
-      const job = await this.dynamoService.getJob(jobId);
+      const job = await this.dynamoService.getJob(jobId, userId);
       if (!job) {
         return {
           success: false,
@@ -179,7 +149,7 @@ export class JobService {
       }
 
       // Soft delete by setting isActive to false
-      const updatedJob = await this.dynamoService.updateJob(jobId, {
+      const updatedJob = await this.dynamoService.updateJob(jobId, userId, {
         isActive: false,
         status: 'CLOSED'
       });

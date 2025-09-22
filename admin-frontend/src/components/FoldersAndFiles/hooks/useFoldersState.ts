@@ -7,6 +7,7 @@ import {
   useDeleteFolder,
   useDeleteFolders,
 } from '../../../hooks/useFoldersApi';
+import { useFolderJobSync } from '../../../hooks/useFolderJobSync';
 import type {
   FolderRow,
   CreateFolderData,
@@ -37,9 +38,10 @@ export const useFoldersState = (
 
   // React Query hooks
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
+  const { syncJobsAfterFolderDeletion } = useFolderJobSync();
   const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
   const updateFolderMutation = useUpdateFolder();
-  const deleteFolderMutation = useDeleteFolder();
+  const deleteFolderMutation = useDeleteFolder(syncJobsAfterFolderDeletion);
   const deleteFoldersMutation = useDeleteFolders(onDeleteSuccess, onDeleteError);
 
   // Convert backend folders to frontend format

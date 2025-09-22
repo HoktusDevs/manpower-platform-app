@@ -7,8 +7,8 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     STAGE: ${self:provider.stage}
-    JOB_POSTINGS_TABLE: manpower-job-postings-${self:provider.stage}
-    FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'http://localhost:3004'}
+    JOBS_TABLE: manpower-jobs-${self:provider.stage}
+    FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -20,8 +20,8 @@ provider:
         - dynamodb:DeleteItem
         - dynamodb:BatchGetItem
       Resource:
-        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOB_POSTINGS_TABLE}
-        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOB_POSTINGS_TABLE}/index/*
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOBS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOBS_TABLE}/index/*
 
 functions:
   # Health Check
@@ -113,6 +113,14 @@ functions:
           #   type: COGNITO_USER_POOLS
           #   authorizerId:
           #     Ref: CognitoAuthorizer
+
+  deleteJobsByFolder:
+    handler: src/handlers/jobs.deleteJobsByFolder
+    events:
+      - http:
+          path: /jobs/folder/{folderId}
+          method: delete
+          cors: true
 
 
 # resources:

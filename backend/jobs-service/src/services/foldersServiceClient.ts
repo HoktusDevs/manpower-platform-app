@@ -19,12 +19,12 @@ export class FoldersServiceClient {
         userId: userId,
         folderData: {
           name: folderName,
-          type: 'job',
+          type: 'Cargo',
           parentId: parentFolderId
         }
       };
 
-      const response = await fetch(`${this.baseUrl}/local/folders/internal`, {
+      const response = await fetch(`${this.baseUrl}/folders/internal`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -302,6 +302,32 @@ export const deleteFolder: APIGatewayProxyHandler = async (event) => {
       return createResponse(404, result);
     }
 
+    // If deleted folder was of type "Cargo", delete associated job
+    if (result.folder && result.folder.type === 'Cargo') {
+      try {
+        console.log('Carpeta de tipo "Cargo" eliminada, buscando job asociado...', folderId);
+        
+        // Call jobs-service to delete associated job
+        const jobsServiceUrl = process.env.JOBS_SERVICE_URL || 'https://pa3itplx4f.execute-api.us-east-1.amazonaws.com/dev';
+        const response = await fetch(`${jobsServiceUrl}/jobs/folder/${folderId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': userId
+          }
+        });
+        
+        if (response.ok) {
+          console.log('Job asociado eliminado exitosamente');
+        } else {
+          console.warn('No se pudo eliminar el job asociado o no existía');
+        }
+      } catch (error) {
+        console.warn('Error eliminando job asociado:', error);
+        // Don't fail the folder deletion if job deletion fails
+      }
+    }
+
     return createResponse(200, result);
   } catch (error) {
     console.error('Error in deleteFolder:', error);

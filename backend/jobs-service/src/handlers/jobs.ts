@@ -2,14 +2,30 @@ import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { JobService } from '../services/jobService';
 import { CreateJobInput, UpdateJobInput } from '../types';
 
-// Mock auth function for deployment
-const extractUserFromEvent = (event: any) => ({
-  sub: 'mock-user-id',
-  email: 'mock@example.com',
-  role: 'admin' as const,
-  userId: 'mock-user-id',
-  userRole: 'admin' as const
-});
+// Extract user from event headers or JWT token
+const extractUserFromEvent = (event: any) => {
+  // Try to get userId from headers first
+  const userIdFromHeaders = event.headers?.['x-user-id'] || event.headers?.['X-User-Id'];
+  
+  if (userIdFromHeaders) {
+    return {
+      sub: userIdFromHeaders,
+      email: 'user@example.com',
+      role: 'admin' as const,
+      userId: userIdFromHeaders,
+      userRole: 'admin' as const
+    };
+  }
+  
+  // Fallback to mock for development
+  return {
+    sub: 'b41824b8-70d1-7052-4d26-cbfaefcac8ed',
+    email: 'user@example.com',
+    role: 'admin' as const,
+    userId: 'b41824b8-70d1-7052-4d26-cbfaefcac8ed',
+    userRole: 'admin' as const
+  };
+};
 
 const jobService = new JobService();
 
@@ -130,7 +146,7 @@ export const getJob: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const result = await jobService.getJob(jobId);
+    const result = await jobService.getJob(jobId, userId);
 
     if (!result.success) {
       return createResponse(404, result);
@@ -229,7 +245,7 @@ export const deleteJob: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const result = await jobService.deleteJob(jobId);
+    const result = await jobService.deleteJob(jobId, userId);
 
     if (!result.success) {
       return createResponse(404, result);
@@ -274,6 +290,57 @@ export const getJobsByFolder: APIGatewayProxyHandler = async (event) => {
     return createResponse(200, result);
   } catch (error) {
     console.error('Error in getJobsByFolder:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+// Delete jobs by folder - INTERNAL SERVICE CALL
+export const deleteJobsByFolder: APIGatewayProxyHandler = async (event) => {
+  try {
+    // This endpoint is for internal service calls only
+    const folderId = event.pathParameters?.folderId;
+
+    if (!folderId) {
+      return createResponse(400, {
+        success: false,
+        message: 'Folder ID is required',
+      });
+    }
+
+    // Get all jobs in this folder
+    const jobsResult = await jobService.getJobsByFolder(folderId);
+    
+    if (!jobsResult.success || !jobsResult.jobs || jobsResult.jobs.length === 0) {
+      return createResponse(200, {
+        success: true,
+        message: 'No jobs found for this folder',
+        deletedCount: 0
+      });
+    }
+
+    // Delete all jobs in this folder
+    let deletedCount = 0;
+    for (const job of jobsResult.jobs) {
+      try {
+        const deleteResult = await jobService.deleteJob(job.jobId, job.createdBy);
+        if (deleteResult.success) {
+          deletedCount++;
+        }
+      } catch (error) {
+        console.warn(`Failed to delete job ${job.jobId}:`, error);
+      }
+    }
+
+    return createResponse(200, {
+      success: true,
+      message: `Deleted ${deletedCount} jobs from folder`,
+      deletedCount
+    });
+  } catch (error) {
+    console.error('Error in deleteJobsByFolder:', error);
     return createResponse(500, {
       success: false,
       message: 'Internal server error',

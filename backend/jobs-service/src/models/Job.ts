@@ -76,7 +76,8 @@ export class JobModel {
 
   // Generate folder name for this job
   public generateJobFolderName(): string {
-    return `${this.title} - ${this.companyName}`;
+    // Include location in folder name for better hierarchy
+    return `${this.title} - ${this.companyName} - ${this.location}`;
   }
 
   // Update status with validation

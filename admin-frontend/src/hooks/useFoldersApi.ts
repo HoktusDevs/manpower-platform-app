@@ -308,7 +308,7 @@ export const useUpdateFolder = () => {
 /**
  * Hook to delete a folder with optimistic updates
  */
-export const useDeleteFolder = () => {
+export const useDeleteFolder = (onJobSync?: (folderId: string, folderType: string) => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -360,10 +360,15 @@ export const useDeleteFolder = () => {
 
       return { previousData };
     },
-    onSuccess: (data) => {
+    onSuccess: (data, folderId) => {
       console.log('Folder deleted successfully:', data);
       // The optimistic update already removed the folder, so we just confirm success
       // No need to update cache again since deletion is already reflected
+      
+      // Trigger job sync if callback provided
+      if (onJobSync && data?.folder) {
+        onJobSync(folderId, data.folder.type);
+      }
     },
     onError: (error, _variables, context) => {
       // Rollback on error

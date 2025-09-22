@@ -35,13 +35,20 @@ function AppContent() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   // Token expiration monitoring with reactive authentication state
-  const {
-    showRenewalModal,
-    timeRemaining,
-    isRenewing,
-    renewSession,
-    dismissModal
-  } = useTokenMonitor();
+  // Temporalmente deshabilitado el monitoreo de tokens
+  // const {
+  //   showRenewalModal,
+  //   timeRemaining,
+  //   isRenewing,
+  //   renewSession,
+  //   dismissModal
+  // } = useTokenMonitor();
+  
+  const showRenewalModal = false;
+  const timeRemaining = 0;
+  const isRenewing = false;
+  const renewSession = async () => {};
+  const dismissModal = () => {};
 
   const handleLogout = () => {
     dismissModal();

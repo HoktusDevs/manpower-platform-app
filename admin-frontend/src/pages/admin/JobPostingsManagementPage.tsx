@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useGraphQL } from '../../hooks/useGraphQL';
 import { useToast } from '../../core-ui/useToast';
 import { ConfirmModal } from '../../core-ui/ConfirmModal';
-import type { JobPosting, CreateJobPostingInput } from '../../services/graphqlService';
 import { 
   validateJobPostingBasic, 
   formatZodErrors
@@ -10,8 +8,25 @@ import {
 import { CompanySelector } from '../../components/CompanySelector';
 import { FoldersProvider } from '../../components/FoldersAndFiles';
 import { useFolderJobSync } from '../../hooks/useFolderJobSync';
+import { useCreateFolder } from '../../hooks/useFoldersApi';
 import { UniversalTableManager } from '../../components/UniversalTable/UniversalTableManager';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable/UniversalTableManager';
+import { jobsService, type JobPosting, type CreateJobInput, type UpdateJobInput } from '../../services/jobsService';
+
+// Tipos locales para compatibilidad con la UI
+interface CreateJobPostingInput {
+  title: string;
+  description: string;
+  companyName: string;
+  requirements: string;
+  salary?: string;
+  location: string;
+  employmentType: JobPosting['employmentType'];
+  experienceLevel: JobPosting['experienceLevel'];
+  benefits?: string;
+  expiresAt?: string;
+  fieldValues?: Record<string, unknown>;
+}
 
 const getStatusColor = (status: JobPosting['status']) => {
   switch (status) {
@@ -119,22 +134,20 @@ const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
 
 export const JobPostingsManagementPage: React.FC = () => {
   const { showSuccess, showError } = useToast();
-  const {
-    jobPostings,
-    forms,
-    loading,
-    // error,
-    fetchAllJobPostings,
-    fetchAllForms,
-    createJobPosting,
-    updateJobPosting,
-    deleteJobPosting,
-    // clearError,
-    isGraphQLAvailable
-  } = useGraphQL();
+  
+  // Estado local para job postings (sin GraphQL)
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [forms, setForms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Hook for syncing folders with job operations
-  const { syncFoldersAfterJobOperation } = useFolderJobSync();
+  const { syncFoldersAfterJobOperation, syncJobsAfterFolderDeletion } = useFolderJobSync();
+  
+  // Hook para creación optimista de carpetas
+  const createFolderMutation = useCreateFolder(
+    () => console.log('Carpeta creada exitosamente'),
+    (error) => console.error('Error creando carpeta:', error)
+  );
 
   const [selectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -187,13 +200,46 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [showFieldConfigModal, setShowFieldConfigModal] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
+  // Cargar datos iniciales
   useEffect(() => {
-    if (isGraphQLAvailable()) {
-      const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-      fetchAllJobPostings(statusFilter);
-      fetchAllForms(); // Load forms for the modal
+    loadJobPostings();
+    loadForms();
+  }, [selectedStatus]);
+
+  // Función para cargar job postings desde jobs-service
+  const loadJobPostings = async () => {
+    setLoading(true);
+    try {
+      console.log('Cargando jobs desde jobs-service...');
+      const response = await jobsService.getAllJobs();
+      
+      if (response.success && response.jobs) {
+        console.log('Jobs cargados exitosamente:', response.jobs);
+        setJobPostings(response.jobs);
+        showSuccess('Jobs cargados exitosamente');
+      } else {
+        console.error('Error en respuesta del servidor:', response.message);
+        showError(response.message || 'Error al cargar empleos');
+        setJobPostings([]);
+      }
+    } catch (error) {
+      console.error('Error loading job postings:', error);
+      showError('Error de conexión al cargar empleos');
+      setJobPostings([]);
+    } finally {
+      setLoading(false);
     }
-  }, [selectedStatus]); // Removed functions from dependencies to prevent infinite loops
+  };
+
+  // Función para cargar formularios (mock data por ahora)
+  const loadForms = async () => {
+    try {
+      // TODO: Implementar carga real de formularios
+      setForms([]);
+    } catch (error) {
+      console.error('Error loading forms:', error);
+    }
+  };
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job => 
@@ -428,8 +474,7 @@ export const JobPostingsManagementPage: React.FC = () => {
         }
 
         // Refresh the list
-        const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-        await fetchAllJobPostings(statusFilter);
+        await loadJobPostings();
 
         // Sync folders to maintain consistency (non-blocking)
         if (successCount > 0) {
@@ -472,8 +517,7 @@ export const JobPostingsManagementPage: React.FC = () => {
             showSuccess('Oferta eliminada', 'La oferta de trabajo se eliminó correctamente');
 
             // Refresh the list
-            const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-            await fetchAllJobPostings(statusFilter);
+            await loadJobPostings();
 
             // Sync folders to maintain consistency (non-blocking)
             await syncFoldersAfterJobOperation();
@@ -639,15 +683,14 @@ export const JobPostingsManagementPage: React.FC = () => {
           ...(selectedFolderId && { folderId: selectedFolderId }),
         };
 
-        const success = await updateJobPosting(updateJobData);
+        const success = await updateJobPosting(editingJobId, updateJobData);
         if (success) {
           showSuccess('Oferta actualizada', 'La oferta de trabajo se actualizó correctamente');
           setShowCreateModal(false);
           resetModalState();
 
           // Refresh the job postings list
-          const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-          await fetchAllJobPostings(statusFilter);
+          await loadJobPostings();
 
           // Sync folders to maintain consistency (non-blocking)
           await syncFoldersAfterJobOperation();
@@ -679,8 +722,7 @@ export const JobPostingsManagementPage: React.FC = () => {
           resetModalState();
 
           // Refresh the job postings list
-          const statusFilter = selectedStatus === 'ALL' ? undefined : selectedStatus;
-          await fetchAllJobPostings(statusFilter);
+          await loadJobPostings();
 
           // Sync folders to maintain consistency (non-blocking)
           await syncFoldersAfterJobOperation();
@@ -698,18 +740,149 @@ export const JobPostingsManagementPage: React.FC = () => {
     }
   };
 
-  if (!isGraphQLAvailable()) {
-    return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-          <h3 className="text-yellow-800 font-medium">🚀 Sistema de Gestión</h3>
-          <p className="text-yellow-700 mt-1">
-            La gestión de empleos requiere GraphQL. Verifica la configuración.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Función para crear job posting usando jobs-service con creación optimista de carpeta
+  const createJobPosting = async (input: CreateJobPostingInput): Promise<boolean> => {
+    setIsCreating(true);
+    let optimisticFolderId: string | null = null;
+    
+    try {
+      console.log('Creando job con jobs-service:', input);
+      
+      // Obtener folderId real - usar la primera carpeta disponible
+      let folderId = selectedFolderId;
+      if (!folderId) {
+        // Si no hay carpeta seleccionada, usar la primera carpeta disponible
+        // Usar la carpeta de Walmart que existe en la base de datos
+        folderId = '188c08ba-a66c-4cfe-8fc4-8fd4f7c6678f';
+      }
+      
+      // Generar nombre de carpeta optimista
+      const jobFolderName = `${input.title} - ${input.companyName} - ${input.location || 'Por definir'}`;
+      
+      // Crear carpeta optimista ANTES de crear el job
+      console.log('Creando carpeta optimista:', jobFolderName);
+      const folderResult = await createFolderMutation.mutateAsync({
+        name: jobFolderName,
+        type: 'Cargo',
+        parentId: folderId,
+        metadata: {
+          jobTitle: input.title,
+          companyName: input.companyName,
+          location: input.location || 'Por definir'
+        }
+      });
+      
+      if (folderResult.success && folderResult.folder) {
+        optimisticFolderId = folderResult.folder.folderId;
+        console.log('Carpeta optimista creada:', optimisticFolderId);
+      }
+      
+      // Convertir input local a formato del servicio
+      const createJobInput: CreateJobInput = {
+        title: input.title,
+        description: input.description,
+        companyName: input.companyName,
+        location: input.location || 'Por definir',
+        salary: input.salary,
+        employmentType: input.employmentType,
+        experienceLevel: input.experienceLevel,
+        requirements: input.requirements,
+        folderId: folderId
+      };
+
+      console.log('Enviando datos al jobs-service:', createJobInput);
+      const response = await jobsService.createJob(createJobInput);
+      
+      if (response.success && response.job) {
+        console.log('Job creado exitosamente:', response.job);
+        setJobPostings(prev => [...prev, response.job!]);
+        showSuccess('Empleo creado exitosamente con carpeta automática');
+        return true;
+      } else {
+        console.error('Error creando job:', response.message);
+        showError(response.message || 'Error al crear empleo');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error creating job posting:', error);
+      showError('Error de conexión al crear empleo');
+      return false;
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Función para actualizar job posting usando jobs-service
+  const updateJobPosting = async (jobId: string, input: Partial<CreateJobPostingInput>): Promise<boolean> => {
+    try {
+      console.log('Actualizando job con jobs-service:', jobId, input);
+      
+      // Convertir input local a formato del servicio
+      const updateJobInput: UpdateJobInput = {
+        jobId,
+        title: input.title,
+        description: input.description,
+        companyName: input.companyName,
+        location: input.location,
+        salary: input.salary,
+        employmentType: input.employmentType,
+        experienceLevel: input.experienceLevel,
+        requirements: input.requirements
+      };
+
+      const response = await jobsService.updateJob(updateJobInput);
+      
+      if (response.success && response.job) {
+        console.log('Job actualizado exitosamente:', response.job);
+        setJobPostings(prev => 
+          prev.map(job => 
+            job.jobId === jobId ? response.job! : job
+          )
+        );
+        showSuccess('Empleo actualizado exitosamente');
+        return true;
+      } else {
+        console.error('Error actualizando job:', response.message);
+        showError(response.message || 'Error al actualizar empleo');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating job posting:', error);
+      showError('Error de conexión al actualizar empleo');
+      return false;
+    }
+  };
+
+  // Función para eliminar job posting usando jobs-service
+  const deleteJobPosting = async (jobId: string): Promise<boolean> => {
+    try {
+      console.log('Eliminando job con jobs-service:', jobId);
+      
+      // Find the job to get its folder info
+      const jobToDelete = jobPostings.find(job => job.jobId === jobId);
+      
+      const response = await jobsService.deleteJob(jobId);
+      
+      if (response.success) {
+        console.log('Job eliminado exitosamente');
+        setJobPostings(prev => prev.filter(job => job.jobId !== jobId));
+        
+        // Sync folders after job deletion
+        await syncFoldersAfterJobOperation();
+        
+        showSuccess('Empleo eliminado exitosamente');
+        return true;
+      } else {
+        console.error('Error eliminando job:', response.message);
+        showError(response.message || 'Error al eliminar empleo');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting job posting:', error);
+      showError('Error de conexión al eliminar empleo');
+      return false;
+    }
+  };
 
   // Define columns for UniversalTableManager
   const columns: TableColumn<JobPosting>[] = [
