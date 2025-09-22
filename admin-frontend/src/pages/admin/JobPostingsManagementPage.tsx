@@ -33,7 +33,7 @@ const getStatusColor = (status: JobPosting['status']) => {
     case 'PUBLISHED': return 'bg-green-100 text-green-800 border-green-200';
     case 'DRAFT': return 'bg-gray-100 text-gray-800 border-gray-200';
     case 'PAUSED': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'EXPIRED': return 'bg-red-100 text-red-800 border-red-200';
+    // case 'EXPIRED': return 'bg-red-100 text-red-800 border-red-200';
     case 'CLOSED': return 'bg-purple-100 text-purple-800 border-purple-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
   }
@@ -44,7 +44,7 @@ const getStatusText = (status: JobPosting['status']) => {
     case 'PUBLISHED': return 'Publicado';
     case 'DRAFT': return 'Borrador';
     case 'PAUSED': return 'Pausado';
-    case 'EXPIRED': return 'Expirado';
+    // case 'EXPIRED': return 'Expirado';
     case 'CLOSED': return 'Cerrado';
     default: return status;
   }
@@ -141,7 +141,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Hook for syncing folders with job operations
-  const { syncFoldersAfterJobOperation, syncJobsAfterFolderDeletion } = useFolderJobSync();
+  const { syncFoldersAfterJobOperation } = useFolderJobSync();
   
   // Hook para creación optimista de carpetas
   const createFolderMutation = useCreateFolder(
@@ -413,9 +413,9 @@ export const JobPostingsManagementPage: React.FC = () => {
       salary: job.salary || '',
       experienceLevel: job.experienceLevel,
       employmentType: job.employmentType,
-      requirements: job.requirements,
-      benefits: job.benefits || '',
-      expiresAt: job.expiresAt || ''
+      requirements: job.requirements || '',
+      benefits: (job as any).benefits || '',
+      expiresAt: (job as any).expiresAt || ''
     });
     
     // If the job has a folderId, set it
@@ -793,9 +793,9 @@ export const JobPostingsManagementPage: React.FC = () => {
       console.log('Enviando datos al jobs-service:', createJobInput);
       const response = await jobsService.createJob(createJobInput);
       
-      if (response.success && response.job) {
-        console.log('Job creado exitosamente:', response.job);
-        setJobPostings(prev => [...prev, response.job!]);
+      if (response.success && (response as any).job) {
+        console.log('Job creado exitosamente:', (response as any).job);
+        setJobPostings(prev => [...prev, (response as any).job!]);
         showSuccess('Empleo creado exitosamente con carpeta automática');
         return true;
       } else {
@@ -832,11 +832,11 @@ export const JobPostingsManagementPage: React.FC = () => {
 
       const response = await jobsService.updateJob(updateJobInput);
       
-      if (response.success && response.job) {
-        console.log('Job actualizado exitosamente:', response.job);
+      if (response.success && (response as any).job) {
+        console.log('Job actualizado exitosamente:', (response as any).job);
         setJobPostings(prev => 
           prev.map(job => 
-            job.jobId === jobId ? response.job! : job
+            job.jobId === jobId ? (response as any).job! : job
           )
         );
         showSuccess('Empleo actualizado exitosamente');
@@ -859,7 +859,7 @@ export const JobPostingsManagementPage: React.FC = () => {
       console.log('Eliminando job con jobs-service:', jobId);
       
       // Find the job to get its folder info
-      const jobToDelete = jobPostings.find(job => job.jobId === jobId);
+      // const jobToDelete = jobPostings.find(job => job.jobId === jobId);
       
       const response = await jobsService.deleteJob(jobId);
       

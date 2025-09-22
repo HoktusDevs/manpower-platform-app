@@ -204,7 +204,7 @@ class GraphQLService {
       if (authErrors.length > 0) {
         // Only redirect to login in userPool mode, not in AWS_IAM mode
         if (authMode === 'userPool') {
-          cognitoAuthService.logout();
+          // cognitoAuthService.logout();
           localStorage.clear();
           window.location.href = '/login?reason=auth_expired';
         }

@@ -32,13 +32,11 @@ export const ApplicationsManagementPage: React.FC = () => {
   // Hook para manejo de applications
   const {
     applications,
-    stats,
     loading,
     error,
     fetchAllApplications,
     updateApplicationStatus,
-    clearError,
-    refresh
+    clearError
   } = useApplications();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,7 +116,7 @@ export const ApplicationsManagementPage: React.FC = () => {
         </svg>
       ),
       onClick: async (app) => {
-        await updateApplicationStatus(app.userId, app.applicationId, 'APPROVED');
+        await updateApplicationStatus(app.applicationId, 'APPROVED');
         await fetchAllApplications(); // Refresh list
       },
       show: (app) => app.status !== 'APPROVED' && app.status !== 'HIRED'
@@ -134,7 +132,7 @@ export const ApplicationsManagementPage: React.FC = () => {
         </svg>
       ),
       onClick: async (app) => {
-        await updateApplicationStatus(app.userId, app.applicationId, 'IN_REVIEW');
+        await updateApplicationStatus(app.applicationId, 'IN_REVIEW');
         await fetchAllApplications(); // Refresh list
       },
       show: (app) => app.status === 'PENDING'
@@ -149,7 +147,7 @@ export const ApplicationsManagementPage: React.FC = () => {
         </svg>
       ),
       onClick: async (app) => {
-        await updateApplicationStatus(app.userId, app.applicationId, 'INTERVIEW_SCHEDULED');
+        await updateApplicationStatus(app.applicationId, 'INTERVIEW_SCHEDULED');
         await fetchAllApplications(); // Refresh list
       },
       show: (app) => app.status === 'APPROVED' || app.status === 'IN_REVIEW'
@@ -164,7 +162,7 @@ export const ApplicationsManagementPage: React.FC = () => {
         </svg>
       ),
       onClick: async (app) => {
-        await updateApplicationStatus(app.userId, app.applicationId, 'HIRED');
+        await updateApplicationStatus(app.applicationId, 'HIRED');
         await fetchAllApplications(); // Refresh list
       },
       show: (app) => app.status === 'INTERVIEW_SCHEDULED' || app.status === 'APPROVED'
@@ -180,7 +178,7 @@ export const ApplicationsManagementPage: React.FC = () => {
       ),
       onClick: async (app) => {
         if (window.confirm(`¿Estás seguro de que deseas rechazar la aplicación de ${app.userId}?`)) {
-          await updateApplicationStatus(app.userId, app.applicationId, 'REJECTED');
+          await updateApplicationStatus(app.applicationId, 'REJECTED');
           await fetchAllApplications(); // Refresh list
         }
       },
@@ -202,7 +200,7 @@ export const ApplicationsManagementPage: React.FC = () => {
       onClick: async (applications) => {
         try {
           await Promise.all(applications.map(app => 
-            updateApplicationStatus(app.userId, app.applicationId, 'APPROVED')
+            updateApplicationStatus(app.applicationId, 'APPROVED')
           ));
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
@@ -223,7 +221,7 @@ export const ApplicationsManagementPage: React.FC = () => {
       onClick: async (applications) => {
         try {
           await Promise.all(applications.map(app => 
-            updateApplicationStatus(app.userId, app.applicationId, 'IN_REVIEW')
+            updateApplicationStatus(app.applicationId, 'IN_REVIEW')
           ));
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
@@ -245,7 +243,7 @@ export const ApplicationsManagementPage: React.FC = () => {
         if (window.confirm(`¿Estás seguro de que deseas rechazar ${applications.length} aplicación(es)?`)) {
           try {
             await Promise.all(applications.map(app => 
-              updateApplicationStatus(app.userId, app.applicationId, 'REJECTED')
+              updateApplicationStatus(app.applicationId, 'REJECTED')
             ));
             await fetchAllApplications(); // Refresh list
             setSelectedItems(new Set()); // Clear selection

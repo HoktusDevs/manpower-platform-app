@@ -3,7 +3,7 @@
  * Provides state and operations for application management
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { applicationsApiService, type Application, type ApplicationStats } from '../services/applicationsApiService';
 
 export const useApplications = () => {
@@ -29,10 +29,10 @@ export const useApplications = () => {
       let applicationsArray = [];
       if (Array.isArray(response)) {
         applicationsArray = response;
-      } else if (response && response.data && Array.isArray(response.data.applications)) {
-        applicationsArray = response.data.applications;
-      } else if (response && Array.isArray(response.applications)) {
-        applicationsArray = response.applications;
+      } else if (response && (response as any).data && Array.isArray((response as any).data.applications)) {
+        applicationsArray = (response as any).data.applications;
+      } else if (response && Array.isArray((response as any).applications)) {
+        applicationsArray = (response as any).applications;
       }
       
       setApplications(applicationsArray);

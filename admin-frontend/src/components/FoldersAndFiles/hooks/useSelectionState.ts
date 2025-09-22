@@ -26,9 +26,9 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
   };
 
   // Count of visible folders that are selected (not including hidden descendants)
-  const visibleSelectedCount = useMemo(() => {
-    return filteredFolders.filter(folder => selectedRows.has(folder.id)).length;
-  }, [filteredFolders, selectedRows]);
+  // const visibleSelectedCount = useMemo(() => {
+  //   return filteredFolders.filter(folder => selectedRows.has(folder.id)).length;
+  // }, [filteredFolders, selectedRows]);
   const isAllSelected = useMemo(() => {
     if (filteredFolders.length === 0) return false;
     

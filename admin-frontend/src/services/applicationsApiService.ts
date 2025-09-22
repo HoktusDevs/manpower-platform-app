@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from '../config/api.config';
-import { cognitoAuthService } from './cognitoAuthService';
+// import { cognitoAuthService } from './cognitoAuthService';
 
 // Types
 export interface Application {

@@ -8,6 +8,7 @@ import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPa
 import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
 import { TestWhatsappPage } from './pages/admin/TestWhatsappPage';
 import { TestOCRPage } from './pages/admin/TestOCRPage';
+import { MessagingPage } from './pages/admin/MessagingPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
 import { RoleGuard } from './components/RoleGuard';
@@ -17,7 +18,7 @@ import { ToastProvider } from './core-ui';
 import { graphqlService } from './services/graphqlService';
 import { AWS_CONFIG } from './config/aws-config';
 import { cognitoAuthService } from './services/cognitoAuthService';
-import { useTokenMonitor } from './hooks/useTokenMonitor';
+// import { useTokenMonitor } from './hooks/useTokenMonitor';
 import { useEffect, useState } from 'react';
 
 // Create a client for React Query
@@ -185,7 +186,7 @@ function AppContent() {
               <JobPostingsManagementPage />
             </RoleGuard>
           } />
-          <Route path="folders&files" element={
+          <Route path="folders" element={
             <RoleGuard requiredRole="admin">
               <FoldersAndFilesPage />
             </RoleGuard>
@@ -198,6 +199,11 @@ function AppContent() {
           <Route path="test-ocr" element={
             <RoleGuard requiredRole="admin">
               <TestOCRPage />
+            </RoleGuard>
+          } />
+          <Route path="messaging" element={
+            <RoleGuard requiredRole="admin">
+              <MessagingPage />
             </RoleGuard>
           } />
           <Route path="settings" element={

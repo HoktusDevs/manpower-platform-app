@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const WHATSAPP_API_BASE = 'https://whatsappchatbothardcoded-production.up.railway.app';
 
