@@ -255,4 +255,25 @@ export class DynamoService {
       nextToken: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64') : undefined
     };
   }
+
+  async getJobData(jobId: string): Promise<any | null> {
+    try {
+      const jobsTableName = process.env.JOBS_TABLE || `manpower-jobs-${process.env.STAGE || 'dev'}`;
+      
+      // Usar Scan para buscar por jobId ya que la tabla tiene clave compuesta (jobId, createdBy)
+      const command = new ScanCommand({
+        TableName: jobsTableName,
+        FilterExpression: 'jobId = :jobId',
+        ExpressionAttributeValues: {
+          ':jobId': jobId
+        }
+      });
+
+      const result = await this.client.send(command);
+      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
+    } catch (error) {
+      console.error('Error getting job data:', error);
+      return null;
+    }
+  }
 }

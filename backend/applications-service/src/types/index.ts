@@ -29,4 +29,8 @@ export interface Application {
   createdAt: string;
   updatedAt: string;
   documents?: string[];
+  // Campos enriquecidos del job
+  jobTitle?: string;
+  companyName?: string;
+  location?: string;
 }
