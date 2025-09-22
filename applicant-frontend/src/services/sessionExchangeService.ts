@@ -39,6 +39,7 @@ export class SessionExchangeService {
 
       const data: ExchangeSessionResponse = await response.json();
 
+
       if (!response.ok) {
         console.error('❌ Session exchange failed:', data.message);
         return {
@@ -48,50 +49,25 @@ export class SessionExchangeService {
       }
 
       if (data.success && data.user && data.tokens) {
-        try {
-          // Store tokens in localStorage using same keys as useAuth
-          localStorage.setItem('cognito_access_token', data.tokens.accessToken);
-          localStorage.setItem('cognito_id_token', data.tokens.idToken);
-          localStorage.setItem('cognito_refresh_token', data.tokens.refreshToken);
+        // Store tokens in localStorage using same keys as useAuth
+        localStorage.setItem('cognito_access_token', data.tokens.accessToken);
+        localStorage.setItem('cognito_id_token', data.tokens.idToken);
+        localStorage.setItem('user', JSON.stringify({
+          sub: data.user.id,
+          email: data.user.email,
+          fullName: data.user.email.split('@')[0], // Use email prefix as fullName
+          'custom:role': data.user.userType,
+          email_verified: true,
+        }));
 
-          const userData = {
-            sub: data.user.id,
-            email: data.user.email,
-            fullName: data.user.email.split('@')[0], // Use email prefix as fullName
-            'custom:role': data.user.userType,
-            email_verified: true,
-          };
+        console.log('✅ Session exchanged successfully for user:', data.user.email);
 
-          localStorage.setItem('user', JSON.stringify(userData));
-
-          // Verify data was saved correctly
-          const verifyToken = localStorage.getItem('cognito_access_token');
-          const verifyUser = localStorage.getItem('user');
-
-          if (!verifyToken || !verifyUser) {
-            console.error('❌ Failed to save tokens to localStorage');
-            return {
-              success: false,
-              message: 'Failed to save authentication data',
-            };
-          }
-
-          console.log('✅ Session exchanged successfully for user:', data.user.email);
-          console.log('✅ Tokens saved and verified in localStorage');
-
-          return {
-            success: true,
-            message: 'Session exchanged successfully',
-            tokens: data.tokens,
-            user: data.user,
-          };
-        } catch (error) {
-          console.error('❌ Error saving tokens to localStorage:', error);
-          return {
-            success: false,
-            message: 'Failed to save authentication data',
-          };
-        }
+        return {
+          success: true,
+          message: 'Session exchanged successfully',
+          tokens: data.tokens,
+          user: data.user,
+        };
       }
 
       return {
@@ -111,21 +87,8 @@ export class SessionExchangeService {
    * Get sessionKey from URL parameters
    */
   static getSessionKeyFromURL(): string | null {
-    console.log('🔍 Current URL:', window.location.href);
-    console.log('🔍 Search params:', window.location.search);
-
     const urlParams = new URLSearchParams(window.location.search);
     const sessionKey = urlParams.get('sessionKey');
-
-    console.log('🔍 Extracted sessionKey:', sessionKey ? `FOUND: ${sessionKey.substring(0, 20)}...` : 'NOT FOUND');
-
-    if (sessionKey) {
-      // Clean up URL after getting sessionKey
-      const newUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, document.title, newUrl);
-      console.log('✨ URL cleaned, sessionKey extracted');
-    }
-
     return sessionKey;
   }
 }

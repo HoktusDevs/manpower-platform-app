@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getRedirectUrlByRole } from '../utils/redirectUtils';
@@ -45,22 +45,12 @@ export const LoginPage: React.FC = () => {
 
       if (response.success && response.user && response.sessionKey) {
         const userRole = response.user['custom:role'] || 'postulante';
-        console.log('🔍 DEBUG LOGIN: User role detected:', userRole);
         setLoginSuccess({ role: userRole });
 
-        // Wait briefly to show success message
-        setTimeout(() => {
-          const redirectUrl = getRedirectUrlByRole(userRole);
-          console.log('🔍 DEBUG LOGIN: User role for redirect:', userRole);
-          console.log('🔍 DEBUG LOGIN: Redirect URL:', redirectUrl);
-          // Pass sessionKey as URL parameter for DynamoDB verification
-          const urlWithSessionKey = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}sessionKey=${encodeURIComponent(response.sessionKey)}`;
-          console.log('🔍 DEBUG LOGIN: Final URL with sessionKey:', urlWithSessionKey);
-          console.log('🔍 DEBUG LOGIN: About to redirect...');
-          console.log('🔍 DEBUG LOGIN: SessionKey length:', response.sessionKey.length);
-          console.log('🔍 DEBUG LOGIN: SessionKey preview:', response.sessionKey.substring(0, 50) + '...');
-          window.location.href = urlWithSessionKey;
-        }, 1500); // Show success message briefly before redirecting
+        // Redirect based on user role only
+        const redirectUrl = userRole === 'admin' ? 'http://localhost:6500' : 'http://localhost:6200';
+        const urlWithSessionKey = `${redirectUrl}?sessionKey=${encodeURIComponent(response.sessionKey)}`;
+        window.location.href = urlWithSessionKey;
       } else {
         setError(response.message || 'Error en el inicio de sesión');
       }
