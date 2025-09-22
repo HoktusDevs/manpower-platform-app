@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
+import { applicationsService } from '../services/applicationsService';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
 export const CompletarAplicacionesPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedJobs, setSelectedJobs] = useState<JobPosting[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('puestos');
@@ -108,24 +110,26 @@ export const CompletarAplicacionesPage = () => {
         return;
       }
 
-      // TODO: Implementar envío de aplicaciones cuando esté disponible el applications-service
-      console.log('Envío de aplicaciones no implementado aún');
-      
-      // Simular éxito por ahora
-      setSuccessMessage('¡Formulario completado! (Envío de aplicaciones pendiente de implementación)');
-      setShowSuccessToast(true);
-      
-      // Limpiar formulario
-      setSelectedJobs([]);
-      setFiles({});
-      setApplicationData({
-        nombre: '',
-        rut: '',
-        email: '',
-        telefono: '',
-        direccion: '',
-        educacion: ''
+      console.log('Enviando aplicaciones para jobs:', selectedJobs.map(job => job.jobId));
+
+      // Enviar aplicaciones al backend
+      const response = await applicationsService.createApplications({
+        jobIds: selectedJobs.map(job => job.jobId),
+        description: `Aplicación de ${applicationData.nombre} (${applicationData.email})`,
+        documents: [] // TODO: Implementar subida de documentos
       });
+
+      if (response.success) {
+        setSuccessMessage(`¡Aplicaciones enviadas exitosamente! Se crearon ${response.applications?.length || 0} aplicaciones.`);
+        setShowSuccessToast(true);
+        
+        // Redirigir a Mis Aplicaciones después de 2 segundos
+        setTimeout(() => {
+          navigate('/mis-aplicaciones');
+        }, 2000);
+      } else {
+        setError(response.message || 'Error al enviar aplicaciones');
+      }
 
     } catch (err) {
       console.error('Error submitting applications:', err);

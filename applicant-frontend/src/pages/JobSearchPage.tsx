@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { JobPosting } from '../types';
 import { jobsService } from '../services/jobsService';
 import { applicationsService } from '../services/applicationsService';
 
 export const JobSearchPage = () => {
+  const navigate = useNavigate();
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
@@ -67,21 +69,14 @@ export const JobSearchPage = () => {
         
         const appliedJobsSet = new Set<string>();
         
-        // Verificar cada job para ver si ya se postuló
-        for (const job of jobPostings) {
-          try {
-            const response = await applicationsService.checkApplicationExists(job.jobId);
-            if (response.success && response.application) {
-              appliedJobsSet.add(job.jobId);
-              console.log(`Ya postulado a: ${job.title}`);
-            }
-          } catch (error) {
-            console.warn(`Error verificando aplicación para job ${job.jobId}:`, error);
-          }
+        // Obtener todas las aplicaciones del usuario
+        const response = await applicationsService.getMyApplications();
+        if (response.success && response.applications) {
+          const appliedJobsSet = new Set(response.applications.map(app => app.jobId));
+          setAppliedJobs(appliedJobsSet);
+          console.log('Jobs ya aplicados:', Array.from(appliedJobsSet));
+          console.log(`Aplicaciones existentes: ${appliedJobsSet.size} de ${jobPostings.length}`);
         }
-        
-        setAppliedJobs(appliedJobsSet);
-        console.log(`Aplicaciones existentes: ${appliedJobsSet.size} de ${jobPostings.length}`);
       } catch (error) {
         console.error('Error verificando aplicaciones existentes:', error);
       } finally {
@@ -133,7 +128,19 @@ export const JobSearchPage = () => {
       alert('Por favor selecciona al menos un puesto');
       return;
     }
-    console.log('Proceeding with selected jobs:', selectedJobs);
+    
+    // Obtener datos completos de los jobs seleccionados
+    const selectedJobData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
+    
+    console.log('Navegando a completar aplicaciones con jobs:', selectedJobData);
+    
+    // Navegar a completar aplicaciones con los jobs seleccionados
+    navigate('/completar-aplicaciones', { 
+      state: { 
+        selectedJobs: selectedJobData,
+        fromJobSearch: true 
+      } 
+    });
   };
 
   const handleDebugAllJobs = async () => {

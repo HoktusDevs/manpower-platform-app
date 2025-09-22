@@ -115,7 +115,11 @@ export class DynamoService {
 
     const command = new PutCommand({
       TableName: this.tableName,
-      Item: application,
+      Item: {
+        ...application,
+        userId: application.userId, // Asegurar que userId esté presente
+        applicationId: application.applicationId
+      },
       ConditionExpression: 'attribute_not_exists(applicationId)'
     });
 
@@ -126,9 +130,15 @@ export class DynamoService {
   async getApplication(applicationId: string): Promise<Application | null> {
     await this.ensureTableExists();
 
+    // Extraer userId del applicationId (formato: jobId_userId)
+    const userId = applicationId.split('_').slice(1).join('_');
+    
     const command = new GetCommand({
       TableName: this.tableName,
-      Key: { applicationId }
+      Key: { 
+        userId: userId,
+        applicationId: applicationId 
+      }
     });
 
     const result = await this.client.send(command);
@@ -138,7 +148,7 @@ export class DynamoService {
   async getApplicationsByUser(userId: string, limit?: number, nextToken?: string): Promise<{ applications: Application[], nextToken?: string }> {
     await this.ensureTableExists();
 
-    // Usar la clave primaria userId para hacer query directo
+    // Usar la clave primaria userId directamente
     const command = new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'userId = :userId',
@@ -222,5 +232,27 @@ export class DynamoService {
 
     const result = await this.client.send(command);
     return !!result.Attributes;
+  }
+
+  async getApplicationsByJob(jobId: string, limit?: number, nextToken?: string): Promise<{ applications: Application[], nextToken?: string }> {
+    await this.ensureTableExists();
+
+    // Usar begins_with para buscar todas las aplicaciones que empiecen con jobId_
+    const command = new ScanCommand({
+      TableName: this.tableName,
+      FilterExpression: 'begins_with(applicationId, :jobId)',
+      ExpressionAttributeValues: {
+        ':jobId': `${jobId}_`
+      },
+      Limit: limit,
+      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined
+    });
+
+    const result = await this.client.send(command);
+
+    return {
+      applications: result.Items as Application[] || [],
+      nextToken: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64') : undefined
+    };
   }
 }

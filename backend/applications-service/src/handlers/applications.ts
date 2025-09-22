@@ -2,22 +2,36 @@ import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { ApplicationService } from '../services/applicationService';
 import { CreateApplicationInput } from '../types';
 
-// Extract user from event headers or JWT token
+// Extract user from JWT token
 const extractUserFromEvent = (event: any) => {
-  // Try to get userId from headers first
-  const userIdFromHeaders = event.headers?.['x-user-id'] || event.headers?.['X-User-Id'];
-  
-  if (!userIdFromHeaders) {
-    throw new Error('User ID is required');
+  // Extract userId from Authorization header (JWT token)
+  const authHeader = event.headers.Authorization || event.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Authorization header required');
   }
   
-  return {
-    sub: userIdFromHeaders,
-    email: 'user@example.com',
-    role: 'postulante' as const,
-    userId: userIdFromHeaders,
-    userRole: 'postulante' as const
-  };
+  const token = authHeader.replace('Bearer ', '');
+  
+  try {
+    // Decode JWT token to get user information
+    const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const userId = decoded.sub; // Cognito sub is the user ID
+    
+    if (!userId) {
+      throw new Error('User ID not found in token');
+    }
+    
+    return {
+      sub: userId,
+      email: decoded.email || 'user@example.com',
+      role: decoded['custom:role'] || 'postulante',
+      userId: userId,
+      userRole: decoded['custom:role'] || 'postulante'
+    };
+  } catch (error) {
+    console.error('Error decoding JWT token:', error);
+    throw new Error('Invalid token');
+  }
 };
 
 const applicationService = new ApplicationService();
@@ -47,10 +61,10 @@ export const createApplication: APIGatewayProxyHandler = async (event) => {
 
     const input: CreateApplicationInput = JSON.parse(event.body);
 
-    if (!input.jobId) {
+    if (!input.jobIds || !Array.isArray(input.jobIds) || input.jobIds.length === 0) {
       return createResponse(400, {
         success: false,
-        message: 'Job ID is required',
+        message: 'Job IDs array is required and must not be empty',
       });
     }
 

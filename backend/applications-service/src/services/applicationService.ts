@@ -12,52 +12,77 @@ export class ApplicationService {
 
   async createApplication(input: CreateApplicationInput, userId: string): Promise<ApplicationResponse> {
     try {
-      // Verificar si ya existe una aplicación para este usuario y job
-      const existingApplication = await this.dynamoService.checkApplicationExists(userId, input.jobId);
-      
-      if (existingApplication) {
+      const createdApplications: Application[] = [];
+      const errors: string[] = [];
+
+      // Procesar cada jobId
+      for (const jobId of input.jobIds) {
+        try {
+          // Generar ID compuesto: jobId_userId
+          const applicationId = `${jobId}_${userId}`;
+          
+          // Verificar si ya existe una aplicación con este ID compuesto
+          const existingApplication = await this.dynamoService.getApplication(applicationId);
+          
+          if (existingApplication) {
+            errors.push(`Ya has postulado al trabajo ${jobId}`);
+            continue;
+          }
+
+          // Crear modelo de aplicación
+          const applicationModel = new ApplicationModel({
+            applicationId,
+            userId,
+            jobId,
+            status: 'PENDING',
+            description: input.description,
+            documents: input.documents || [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+          // Validar datos
+          if (!applicationModel.isValid()) {
+            errors.push(`Datos inválidos para el trabajo ${jobId}`);
+            continue;
+          }
+
+          // Crear aplicación en la base de datos
+          const createdApplication = await this.dynamoService.createApplication(applicationModel);
+          createdApplications.push(createdApplication);
+
+        } catch (error) {
+          console.error(`Error creating application for job ${jobId}:`, error);
+          errors.push(`Error al crear aplicación para el trabajo ${jobId}`);
+        }
+      }
+
+      // Determinar respuesta basada en resultados
+      if (createdApplications.length === 0) {
         return {
           success: false,
-          message: 'Ya has postulado a este trabajo. No puedes postular al mismo trabajo más de una vez.',
+          message: `No se pudieron crear aplicaciones. Errores: ${errors.join(', ')}`,
         };
       }
 
-      // Generar ID único para la aplicación
-      const applicationId = randomUUID();
-
-      // Crear modelo de aplicación
-      const applicationModel = new ApplicationModel({
-        applicationId,
-        userId,
-        jobId: input.jobId,
-        status: 'PENDING',
-        description: input.description,
-        documents: input.documents || [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      // Validar datos
-      if (!applicationModel.isValid()) {
+      if (errors.length > 0) {
         return {
-          success: false,
-          message: 'Datos de aplicación inválidos. Por favor verifica los campos requeridos.',
+          success: true,
+          message: `Se crearon ${createdApplications.length} aplicaciones exitosamente. Algunos trabajos no se pudieron procesar: ${errors.join(', ')}`,
+          applications: createdApplications,
         };
       }
-
-      // Crear aplicación en la base de datos
-      const createdApplication = await this.dynamoService.createApplication(applicationModel);
 
       return {
         success: true,
-        message: 'Aplicación creada exitosamente',
-        application: createdApplication,
+        message: `Se crearon ${createdApplications.length} aplicaciones exitosamente`,
+        applications: createdApplications,
       };
     } catch (error) {
       console.error('Error in createApplication:', error);
       return {
         success: false,
-        message: 'Error interno del servidor al crear aplicación',
+        message: 'Error interno del servidor al crear aplicaciones',
       };
     }
   }

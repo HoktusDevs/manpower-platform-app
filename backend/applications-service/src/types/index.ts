@@ -7,7 +7,7 @@ export interface ApplicationResponse {
 }
 
 export interface CreateApplicationInput {
-  jobId: string;
+  jobIds: string[];
   description?: string;
   documents?: string[];
 }
