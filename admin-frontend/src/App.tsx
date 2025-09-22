@@ -30,19 +30,8 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  // State to track GraphQL initialization
   const [isGraphQLInitialized, setIsGraphQLInitialized] = useState(false);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
-
-  // Token expiration monitoring with reactive authentication state
-  // Temporalmente deshabilitado el monitoreo de tokens
-  // const {
-  //   showRenewalModal,
-  //   timeRemaining,
-  //   isRenewing,
-  //   renewSession,
-  //   dismissModal
-  // } = useTokenMonitor();
   
   const showRenewalModal = false;
   const timeRemaining = 0;
@@ -53,7 +42,6 @@ function AppContent() {
   const handleLogout = () => {
     dismissModal();
     cognitoAuthService.logout();
-    // Redirect to auth-frontend instead of local login
     window.location.href = 'http://localhost:6100/login';
   };
 

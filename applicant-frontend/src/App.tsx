@@ -12,7 +12,42 @@ function AppContent() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   useEffect(() => {
-    setIsAuthChecked(true);
+    const checkAuthentication = async () => {
+      // Import here to avoid circular dependency
+      const { SessionExchangeService } = await import('./services/sessionExchangeService');
+
+      // Check if we have a sessionKey from URL
+      const sessionKey = SessionExchangeService.getSessionKeyFromURL();
+
+      if (sessionKey) {
+        const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
+
+        if (result.success) {
+          setIsAuthChecked(true);
+          return;
+        } 
+        // else {
+        //   localStorage.clear();
+        //   window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_failed';
+        //   return;
+        // }
+      }
+
+      // Check existing tokens
+      const authToken = localStorage.getItem('cognito_access_token');
+      const authUser = localStorage.getItem('user');
+
+      if (authToken && authUser) {
+        setIsAuthChecked(true);
+        return;
+      }
+
+      // No valid authentication, redirect to login
+      // localStorage.clear();
+      // window.location.href = 'http://localhost:6100/login?redirect=applicant';
+    };
+
+    checkAuthentication();
   }, []);
 
   // Mostrar loading mientras se verifica la autenticación

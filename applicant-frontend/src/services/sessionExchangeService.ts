@@ -89,6 +89,14 @@ export class SessionExchangeService {
   static getSessionKeyFromURL(): string | null {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionKey = urlParams.get('sessionKey');
+    
+    if (sessionKey) {
+      // Clean up URL after getting sessionKey
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+      console.log('✨ URL cleaned, sessionKey extracted');
+    }
+
     return sessionKey;
   }
 }
