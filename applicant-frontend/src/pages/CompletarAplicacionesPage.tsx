@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
 export const CompletarAplicacionesPage = () => {
+  const location = useLocation();
   const [selectedJobs, setSelectedJobs] = useState<JobPosting[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('puestos');
   const [applicationData, setApplicationData] = useState<UserApplicationData>({
@@ -17,6 +19,14 @@ export const CompletarAplicacionesPage = () => {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Cargar jobs seleccionados desde la navegación
+  useEffect(() => {
+    if (location.state?.selectedJobs) {
+      console.log('Cargando jobs seleccionados desde /aplicar:', location.state.selectedJobs);
+      setSelectedJobs(location.state.selectedJobs);
+    }
+  }, [location.state]);
 
   // No cargar datos del usuario - formulario vacío por defecto
   // TODO: Implementar carga de datos del usuario cuando esté disponible el user-service

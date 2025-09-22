@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { JobPosting } from '../types';
 import { jobsService } from '../services/jobsService';
 import { applicationsService } from '../services/applicationsService';
 
 export const AplicarPage = () => {
+  const navigate = useNavigate();
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
@@ -130,11 +132,18 @@ export const AplicarPage = () => {
       return;
     }
     
-    // Navegar a completar aplicaciones con los jobs seleccionados
+    // Obtener datos completos de los jobs seleccionados
     const selectedJobData = jobPostings.filter(job => selectedJobs.includes(job.jobId));
     
-    // TODO: Implementar navegación con datos seleccionados
-    console.log('Jobs seleccionados para aplicar:', selectedJobData);
+    console.log('Navegando a completar aplicaciones con jobs:', selectedJobData);
+    
+    // Navegar a completar aplicaciones con los jobs seleccionados
+    navigate('/completar-aplicaciones', { 
+      state: { 
+        selectedJobs: selectedJobData,
+        fromAplicar: true 
+      } 
+    });
   };
 
   // Mostrar loading
