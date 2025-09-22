@@ -350,7 +350,20 @@ export const verifyEmail: APIGatewayProxyHandler = async (event) => {
 
 export const getProfile = async (event: APIGatewayProxyEventWithAuth): Promise<APIGatewayProxyResult> => {
   try {
-    const { email } = extractUserFromEvent(event);
+    // Extract email from Authorization header instead of claims
+    const authHeader = event.headers.Authorization || event.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return createResponse(401, {
+        success: false,
+        message: 'Authorization header required',
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Decode JWT token to get email
+    const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const email = decoded.email;
 
     const user = await cognitoService.getUser(email);
 
@@ -362,6 +375,18 @@ export const getProfile = async (event: APIGatewayProxyEventWithAuth): Promise<A
         email: user.email,
         userType: user.userType,
         cognitoSub: user.cognitoSub,
+        // Incluir atributos adicionales para postulantes
+        ...(user.attributes && {
+          fullName: user.attributes.fullName,
+          phone: user.attributes.phone,
+          rut: user.attributes.rut,
+          address: user.attributes.address,
+          city: user.attributes.city,
+          educationLevel: user.attributes.educationLevel,
+          workExperience: user.attributes.workExperience,
+          skills: user.attributes.skills,
+          dateOfBirth: user.attributes.dateOfBirth,
+        }),
       },
     };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { userService } from '../services/userService';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
 export const CompletarAplicacionesPage = () => {
@@ -30,24 +31,54 @@ export const CompletarAplicacionesPage = () => {
     }
   }, [location.state]);
 
-  // Cargar datos del usuario autenticado
+  // Cargar datos completos del usuario desde el backend
   useEffect(() => {
-    console.log('🔍 Debug useAuth - user:', user);
-    console.log('🔍 Debug useAuth - localStorage user:', localStorage.getItem('user'));
-    
-    if (user) {
-      console.log('✅ Cargando datos del usuario autenticado:', user);
-      
-      // Pre-llenar formulario con datos del usuario
-      setApplicationData(prev => ({
-        ...prev,
-        nombre: user.fullName || '',
-        email: user.email || '',
-        // Los demás campos se mantienen vacíos para que el usuario los complete
-      }));
-    } else {
-      console.log('❌ No hay usuario autenticado disponible');
-    }
+    const loadUserProfile = async () => {
+      try {
+        console.log('🔍 Cargando perfil completo del usuario...');
+        
+        const response = await userService.getProfile();
+        
+        if (response.success && response.user) {
+          console.log('✅ Perfil del usuario cargado:', response.user);
+          
+          // Pre-llenar formulario con todos los datos del usuario
+          setApplicationData(prev => ({
+            ...prev,
+            nombre: response.user!.nombre || '',
+            rut: response.user!.rut || '',
+            email: response.user!.email || '',
+            telefono: response.user!.telefono || '',
+            direccion: response.user!.direccion || '',
+            educacion: response.user!.experienciaLaboral || response.user!.educacionNivel || '',
+          }));
+        } else {
+          console.log('⚠️ No se pudieron cargar los datos del perfil:', response.message);
+          
+          // Fallback: usar datos básicos del useAuth
+          if (user) {
+            setApplicationData(prev => ({
+              ...prev,
+              nombre: user.fullName || user.email?.split('@')[0] || '',
+              email: user.email || '',
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error cargando perfil del usuario:', error);
+        
+        // Fallback: usar datos básicos del useAuth
+        if (user) {
+          setApplicationData(prev => ({
+            ...prev,
+            nombre: user.fullName || user.email?.split('@')[0] || '',
+            email: user.email || '',
+          }));
+        }
+      }
+    };
+
+    loadUserProfile();
   }, [user]);
 
   const handleInputChange = (field: keyof UserApplicationData, value: string): void => {

@@ -214,10 +214,10 @@ export class CognitoService {
           phone: attributes.phone_number,
           rut: attributes['custom:rut'],
           dateOfBirth: attributes['custom:dateOfBirth'],
-          address: attributes['custom:address'],
+          address: attributes.address,  // address es un atributo estándar, no custom
           city: attributes['custom:city'],
-          educationLevel: attributes['custom:educationLevel'],
-          workExperience: attributes['custom:workExperience'],
+          educationLevel: attributes['custom:education_level'],
+          workExperience: attributes['custom:work_experience'],
           skills: attributes['custom:skills'],
         };
       }
