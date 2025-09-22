@@ -11,50 +11,24 @@ import { useEffect, useState } from 'react';
 function AppContent() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
-  // Manejar autenticación de forma secuencial (como admin-frontend)
+  // Check for sessionKey first, then existing tokens (copiado exactamente de admin-frontend)
   useEffect(() => {
     const checkAuthentication = async () => {
-      console.log('🔍 APPLICANT-FRONTEND: Checking authentication...');
-      console.log('🔍 APPLICANT-FRONTEND: Current URL:', window.location.href);
-
-      // Import SessionExchangeService
+      // Import here to avoid circular dependency
       const { SessionExchangeService } = await import('./services/sessionExchangeService');
 
       // Check if we have a sessionKey from URL
       const sessionKey = SessionExchangeService.getSessionKeyFromURL();
-      console.log('🔍 APPLICANT-FRONTEND: SessionKey found:', !!sessionKey);
 
       if (sessionKey) {
-        console.log('✅ APPLICANT-FRONTEND: SessionKey found, processing...');
-        
-        try {
-          const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
-          console.log('🔍 APPLICANT-FRONTEND: Exchange result:', result);
+        const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
 
-          if (result.success && result.user?.userType === 'postulante') {
-            console.log('✅ APPLICANT-FRONTEND: SessionKey exchange successful for postulante');
-            setIsAuthChecked(true);
-            return;
-          } else {
-            console.log('❌ APPLICANT-FRONTEND: SessionKey exchange failed or wrong user type');
-            console.log('🔍 APPLICANT-FRONTEND: Success:', result.success);
-            console.log('🔍 APPLICANT-FRONTEND: User type:', result.user?.userType);
-            
-            // Agregar delay para poder ver los logs
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            localStorage.clear();
-            window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_failed';
-            return;
-          }
-        } catch (error) {
-          console.error('❌ APPLICANT-FRONTEND: Error during session exchange:', error);
-          
-          // Agregar delay para poder ver los logs
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
+        if (result.success && result.user?.userType === 'postulante') {
+          setIsAuthChecked(true);
+          return;
+        } else {
           localStorage.clear();
-          window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_error';
+          window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_failed';
           return;
         }
       }
@@ -62,15 +36,11 @@ function AppContent() {
       // Check existing tokens (using same keys as sessionExchange)
       const authToken = localStorage.getItem('cognito_access_token');
       const authUser = localStorage.getItem('user');
-      console.log('🔍 APPLICANT-FRONTEND: Existing tokens - Token:', !!authToken, 'User:', !!authUser);
 
       if (authToken && authUser) {
         try {
           const user = JSON.parse(authUser);
-          console.log('🔍 APPLICANT-FRONTEND: User role:', user['custom:role']);
-          
           if (user['custom:role'] === 'postulante') {
-            console.log('✅ APPLICANT-FRONTEND: Valid existing tokens found');
             setIsAuthChecked(true);
             return;
           }
@@ -80,11 +50,6 @@ function AppContent() {
       }
 
       // No valid authentication, redirect to login
-      console.log('❌ APPLICANT-FRONTEND: No valid authentication, redirecting to login');
-      
-      // Agregar delay para poder ver los logs
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
       localStorage.clear();
       window.location.href = 'http://localhost:6100/login?redirect=applicant';
     };
