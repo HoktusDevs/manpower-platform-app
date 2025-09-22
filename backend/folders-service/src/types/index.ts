@@ -1,7 +1,8 @@
 import { Folder } from '../models/Folder';
 
 export interface CreateFolderInput {
-  name: string;
+  name?: string; // Opcional cuando se usa applicantUserId
+  applicantUserId?: string; // Para buscar el nombre del usuario por userId
   type: string;
   parentId?: string;
   metadata?: { [key: string]: any };
@@ -61,6 +62,23 @@ export interface APIGatewayProxyEventWithAuth {
       };
     };
   };
+}
+
+// User types for applicant lookup
+export interface User {
+  userId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserResponse {
+  success: boolean;
+  message: string;
+  user?: User;
 }
 
 // Internal API types for inter-service communication

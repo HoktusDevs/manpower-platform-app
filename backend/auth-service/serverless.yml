@@ -10,6 +10,7 @@ provider:
     COGNITO_USER_POOL_ID: us-east-1_kQKPPUqRO
     COGNITO_CLIENT_ID: ${self:custom.cognitoClientId}
     SESSIONS_TABLE: ${self:custom.sessionsTable}
+    INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
   iamRoleStatements:
     # Cognito permissions
     - Effect: Allow
@@ -133,6 +134,15 @@ functions:
       - http:
           path: /auth/profile
           method: get
+          cors: true
+
+  # Internal profile endpoint for inter-service communication
+  getProfileInternal:
+    handler: src/handlers/auth.getProfileInternal
+    events:
+      - http:
+          path: /auth/profile/internal
+          method: post
           cors: true
 
 resources:

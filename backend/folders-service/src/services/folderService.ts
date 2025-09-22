@@ -2,10 +2,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { Folder, FolderModel } from '../models/Folder';
 import { DynamoService } from './dynamoService';
 import { MockDynamoService } from './mockDynamoService';
+import { UserService } from './userService';
 import { CreateFolderInput, UpdateFolderInput, FolderResponse, FolderQuery } from '../types';
 
 export class FolderService {
   private dynamoService: DynamoService | MockDynamoService;
+  private userService: UserService;
 
   constructor() {
     const isLocal = process.env.STAGE === 'local';
@@ -16,6 +18,7 @@ export class FolderService {
       console.log('FolderService: Using real DynamoService for production');
       this.dynamoService = new DynamoService();
     }
+    this.userService = new UserService();
   }
 
   async createFolder(input: CreateFolderInput, userId: string): Promise<FolderResponse> {
@@ -62,14 +65,39 @@ export class FolderService {
 
   async createSystemFolder(input: CreateFolderInput, systemUserId: string): Promise<FolderResponse> {
     try {
-      // This is for internal system calls (e.g., from jobs-service)
+      // This is for internal system calls (e.g., from applications-service)
       // No authorization check needed
       const folderId = uuidv4();
+      
+      let folderName = input.name;
+      
+      // Si se proporciona applicantUserId, buscar el usuario y usar su nombre
+      if (input.applicantUserId && !input.name) {
+        console.log(`FolderService: Looking up applicant user with ID: ${input.applicantUserId}`);
+        const userResult = await this.userService.getUserById(input.applicantUserId);
+        
+        if (userResult.success && userResult.user) {
+          folderName = this.userService.generateFolderName(userResult.user);
+          console.log(`FolderService: Using user name for folder: ${folderName}`);
+        } else {
+          console.warn(`FolderService: Could not find user with ID ${input.applicantUserId}, using fallback name`);
+          folderName = `Postulante-${input.applicantUserId}`;
+        }
+      }
+      
+      // Validar que tenemos un nombre para la carpeta
+      if (!folderName) {
+        return {
+          success: false,
+          message: 'Folder name is required',
+        };
+      }
+
       const folderModel = new FolderModel({
         folderId,
         userId: systemUserId,
-        name: input.name,
-        type: input.type || 'application',
+        name: folderName,
+        type: input.type || 'Postulante',
         parentId: input.parentId,
         metadata: input.metadata,
       });

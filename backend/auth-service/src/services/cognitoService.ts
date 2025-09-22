@@ -349,4 +349,16 @@ export class CognitoService {
       throw new Error(error.message || 'Failed to update user attributes');
     }
   }
+
+  async getUserById(userId: string): Promise<CognitoUser | null> {
+    try {
+      // En Cognito, el userId es el Username (email)
+      // Intentar buscar por email primero
+      const user = await this.getUser(userId);
+      return user;
+    } catch (error: any) {
+      console.error('Error getting user by ID:', error);
+      return null;
+    }
+  }
 }

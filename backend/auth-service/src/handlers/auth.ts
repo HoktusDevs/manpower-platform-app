@@ -474,3 +474,89 @@ export const logout: APIGatewayProxyHandler = async (event) => {
     return createResponse(400, response);
   }
 };
+
+// Internal endpoint for inter-service communication (folders-service -> auth-service)
+export const getProfileInternal: APIGatewayProxyHandler = async (event) => {
+  try {
+    console.log('getProfileInternal called');
+
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required',
+      });
+    }
+
+    const request = JSON.parse(event.body);
+
+    // Validate internal API key
+    const internalApiKey = process.env.INTERNAL_API_KEY || 'default-internal-key';
+    if (request.apiKey !== internalApiKey) {
+      return createResponse(403, {
+        success: false,
+        message: 'Invalid API key',
+      });
+    }
+
+    if (!request.userId) {
+      return createResponse(400, {
+        success: false,
+        message: 'userId is required',
+      });
+    }
+
+    console.log(`AuthService: Looking up user with ID: ${request.userId}`);
+
+    // Buscar usuario por userId en Cognito
+    const user = await cognitoService.getUserById(request.userId);
+
+    if (!user) {
+      console.log(`AuthService: User not found for ID: ${request.userId}`);
+      return createResponse(404, {
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    console.log(`AuthService: User found: ${user.email}`);
+
+    const response: AuthResponse = {
+      success: true,
+      message: 'User profile retrieved successfully',
+      user: {
+        id: user.cognitoSub,
+        email: user.email,
+        userType: user.userType,
+        cognitoSub: user.cognitoSub,
+        userId: user.cognitoSub,
+        // Incluir atributos adicionales para postulantes
+        ...(user.attributes && {
+          fullName: user.attributes.fullName,
+          firstName: user.attributes.firstName,
+          lastName: user.attributes.lastName,
+          phone: user.attributes.phone,
+          rut: user.attributes.rut,
+          address: user.attributes.address,
+          city: user.attributes.city,
+          educationLevel: user.attributes.educationLevel,
+          workExperience: user.attributes.workExperience,
+          skills: user.attributes.skills,
+          dateOfBirth: user.attributes.dateOfBirth,
+          createdAt: user.attributes.createdAt,
+          updatedAt: user.attributes.updatedAt,
+        }),
+      },
+    };
+
+    return createResponse(200, response);
+  } catch (error: any) {
+    console.error('Error in getProfileInternal:', error);
+
+    const response: AuthResponse = {
+      success: false,
+      message: error.message || 'Failed to get user profile',
+    };
+
+    return createResponse(500, response);
+  }
+};

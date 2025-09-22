@@ -1,16 +1,19 @@
 import { randomUUID } from 'crypto';
 import { Application, ApplicationModel } from '../models/Application';
 import { DynamoService } from './dynamoService';
+import { FoldersServiceClient } from './foldersServiceClient';
 import { CreateApplicationInput, ApplicationResponse, ApplicationQuery } from '../types';
 
 export class ApplicationService {
   private dynamoService: DynamoService;
+  private foldersServiceClient: FoldersServiceClient;
 
   constructor() {
     this.dynamoService = new DynamoService();
+    this.foldersServiceClient = new FoldersServiceClient();
   }
 
-  async createApplication(input: CreateApplicationInput, userId: string): Promise<ApplicationResponse> {
+  async createApplication(input: CreateApplicationInput, userId: string, userEmail?: string): Promise<ApplicationResponse> {
     try {
       const createdApplications: Application[] = [];
       const errors: string[] = [];
@@ -50,6 +53,46 @@ export class ApplicationService {
           // Crear aplicación en la base de datos
           const createdApplication = await this.dynamoService.createApplication(applicationModel);
           createdApplications.push(createdApplication);
+
+          // Crear carpeta del postulante en folders-service
+          try {
+            // Obtener datos del job para conseguir el folderId
+            const jobData = await this.dynamoService.getJobData(jobId);
+            if (jobData && jobData.folderId && userEmail) {
+              // Buscar la carpeta del cargo específico
+              const jobFolderId = await this.dynamoService.getJobFolderId(jobData.folderId, jobData.title, jobData.companyName, jobData.location);
+              
+              if (jobFolderId) {
+                const folderResult = await this.foldersServiceClient.createApplicantFolder(
+                  userId, // Enviar el userId del postulante para que folders-service busque su nombre
+                  jobFolderId, // Usar la carpeta del cargo específico
+                  jobData.createdBy, // Usar el createdBy del job (admin)
+                  applicationId,
+                  {
+                    applicantEmail: userEmail,
+                    jobTitle: jobData.title,
+                    companyName: jobData.companyName,
+                    location: jobData.location,
+                    appliedAt: new Date().toISOString(),
+                    applicationStatus: 'PENDING'
+                  }
+                );
+
+                if (folderResult.success) {
+                  console.log(`Carpeta del postulante creada exitosamente para userId: ${userId}`);
+                } else {
+                  console.warn(`Error creando carpeta del postulante: ${folderResult.message}`);
+                }
+              } else {
+                console.warn(`No se pudo encontrar la carpeta del cargo para el job ${jobId}`);
+              }
+            } else {
+              console.warn(`No se pudo crear carpeta del postulante: jobData=${!!jobData}, folderId=${jobData?.folderId}, userEmail=${userEmail}`);
+            }
+          } catch (folderError) {
+            console.error(`Error creando carpeta del postulante para job ${jobId}:`, folderError);
+            // No fallar la aplicación por error en la carpeta
+          }
 
         } catch (error) {
           console.error(`Error creating application for job ${jobId}:`, error);
@@ -177,7 +220,7 @@ export class ApplicationService {
       }
 
       // Eliminar aplicación
-      const deleted = await this.dynamoService.deleteApplication(applicationId);
+      const deleted = await this.dynamoService.deleteApplication(applicationId, userId);
       
       if (!deleted) {
         return {

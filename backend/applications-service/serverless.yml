@@ -8,6 +8,10 @@ provider:
   environment:
     STAGE: ${self:provider.stage}
     APPLICATIONS_TABLE: manpower-applications-${self:provider.stage}
+    JOBS_TABLE: manpower-jobs-${self:provider.stage}
+    FOLDERS_TABLE: manpower-folders-${self:provider.stage}
+    FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev'}
+    INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -21,6 +25,10 @@ provider:
       Resource:
         - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPLICATIONS_TABLE}
         - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOBS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOBS_TABLE}/index/*
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}/index/*
 
 functions:
   # Health Check

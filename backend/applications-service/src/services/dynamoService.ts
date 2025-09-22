@@ -221,12 +221,15 @@ export class DynamoService {
     return result.Attributes as Application || null;
   }
 
-  async deleteApplication(applicationId: string): Promise<boolean> {
+  async deleteApplication(applicationId: string, userId: string): Promise<boolean> {
     await this.ensureTableExists();
 
     const command = new DeleteCommand({
       TableName: this.tableName,
-      Key: { applicationId },
+      Key: { 
+        userId: userId,
+        applicationId: applicationId 
+      },
       ReturnValues: 'ALL_OLD'
     });
 
@@ -273,6 +276,36 @@ export class DynamoService {
       return result.Items && result.Items.length > 0 ? result.Items[0] : null;
     } catch (error) {
       console.error('Error getting job data:', error);
+      return null;
+    }
+  }
+
+  async getJobFolderId(regionFolderId: string, jobTitle: string, companyName: string, location: string): Promise<string | null> {
+    try {
+      const foldersTableName = process.env.FOLDERS_TABLE || `manpower-folders-${process.env.STAGE || 'dev'}`;
+      
+      // Buscar la carpeta del cargo específico
+      const command = new ScanCommand({
+        TableName: foldersTableName,
+        FilterExpression: 'parentId = :parentId AND #type = :type AND contains(#name, :jobTitle)',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#name': 'name'
+        },
+        ExpressionAttributeValues: {
+          ':parentId': regionFolderId,
+          ':type': 'Cargo',
+          ':jobTitle': jobTitle
+        }
+      });
+
+      const result = await this.client.send(command);
+      if (result.Items && result.Items.length > 0) {
+        return result.Items[0].folderId;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting job folder ID:', error);
       return null;
     }
   }

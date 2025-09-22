@@ -50,7 +50,7 @@ const createResponse = (statusCode: number, body: any): APIGatewayProxyResult =>
 // Create application
 export const createApplication: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const { userId, email } = extractUserFromEvent(event);
 
     if (!event.body) {
       return createResponse(400, {
@@ -68,7 +68,7 @@ export const createApplication: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const result = await applicationService.createApplication(input, userId);
+    const result = await applicationService.createApplication(input, userId, email);
 
     if (!result.success) {
       return createResponse(400, result);
