@@ -31,11 +31,11 @@ export class DynamoService {
     return file.toJSON();
   }
 
-  async getFile(fileId: string, userId: string): Promise<File | null> {
+  async getFile(documentId: string, userId: string): Promise<File | null> {
     const command = new GetCommand({
       TableName: this.tableName,
       Key: {
-        fileId,
+        documentId,
         userId,
       },
     });

@@ -1,0 +1,122 @@
+service: ocr-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    HOKTUS_ORCHESTRATOR_URL: https://hoktus-orchestrator-5504.com
+    CALLBACK_BASE_URL: ${self:custom.callbackBaseUrl.${self:provider.stage}}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/ocr-documents-${self:provider.stage}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/ocr-documents-${self:provider.stage}/index/*"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:GetObjectVersion
+          Resource:
+            - "arn:aws:s3:::manpower-files-dev/*"
+
+custom:
+  callbackBaseUrl:
+    dev: https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev
+    staging: https://staging-api.manpower-platform.com
+    prod: https://api.manpower-platform.com
+
+plugins:
+  - serverless-plugin-typescript
+
+functions:
+  processDocuments:
+    handler: src/handlers/ocr.processDocuments
+    events:
+      - http:
+          path: /api/ocr/process-documents
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: processDocuments
+
+  processDocumentsFromAdmin:
+    handler: src/handlers/ocr.processDocumentsFromAdmin
+    events:
+      - http:
+          path: /api/ocr/process-documents-admin
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: processDocumentsFromAdmin
+
+  callback:
+    handler: src/handlers/ocr.callback
+    events:
+      - http:
+          path: /api/ocr/callback
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: callback
+
+  health:
+    handler: src/handlers/health.handler
+    events:
+      - http:
+          path: /api/ocr/health
+          method: get
+          cors: true
+    environment:
+      FUNCTION_NAME: health
+
+
+  getPublicFile:
+    handler: src/handlers/ocr.getPublicFile
+    events:
+      - http:
+          path: /api/ocr/public-file/{platformDocumentId}
+          method: get
+          cors: true
+    environment:
+      FUNCTION_NAME: getPublicFile
+
+resources:
+  Resources:
+    OCRDocumentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ocr-documents-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: status-createdAt-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

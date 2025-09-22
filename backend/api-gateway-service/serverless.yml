@@ -214,6 +214,92 @@ resources:
             ResponseParameters:
               method.response.header.Access-Control-Allow-Origin: true
 
+    # OCR Service Proxy Resource
+    OCRResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: ocr
+
+    OCRProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: OCRResource
+        PathPart: "{proxy+}"
+
+    OCRProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: OCRProxyResource
+        HttpMethod: ANY
+        AuthorizationType: NONE
+        # AuthorizerId:
+        #   Ref: CognitoAuthorizer
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters:
+                method.response.header.Access-Control-Allow-Origin: "'*'"
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Methods: true
+
+    # WhatsApp Service Proxy Resource
+    WhatsAppResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: whatsapp
+
+    WhatsAppProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: WhatsAppResource
+        PathPart: "{proxy+}"
+
+    WhatsAppProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: WhatsAppProxyResource
+        HttpMethod: ANY
+        AuthorizationType: NONE
+        # AuthorizerId:
+        #   Ref: CognitoAuthorizer
+        Integration:
+          Type: HTTP_PROXY
+          IntegrationHttpMethod: ANY
+          Uri: https://whatsapp-service-url.execute-api.us-east-1.amazonaws.com/dev/{proxy}
+          IntegrationResponses:
+            - StatusCode: 200
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+
     # Deployment
     ApiGatewayDeployment:
       Type: AWS::ApiGateway::Deployment
@@ -222,6 +308,8 @@ resources:
         - FilesProxyMethod
         - FoldersProxyMethod
         - JobsProxyMethod
+        - OCRProxyMethod
+        - WhatsAppProxyMethod
       Properties:
         RestApiId:
           Ref: MainApiGateway

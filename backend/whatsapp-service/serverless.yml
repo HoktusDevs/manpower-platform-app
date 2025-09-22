@@ -1,0 +1,154 @@
+service: whatsapp-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    SESSIONS_TABLE: ${self:custom.sessionsTable}
+    EVOLUTION_API_URL: ${env:EVOLUTION_API_URL, 'https://whatsappchatbothardcoded-production.up.railway.app'}
+    EVOLUTION_API_KEY: ${env:EVOLUTION_API_KEY, ''}
+    INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
+  iamRoleStatements:
+    # DynamoDB permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:DeleteItem
+        - dynamodb:Scan
+        - dynamodb:Query
+        - dynamodb:UpdateItem
+      Resource:
+        - Fn::GetAtt: [SessionsTable, Arn]
+        - Fn::GetAtt: [SessionsTable, Arn]/*
+
+custom:
+  sessionsTable: whatsapp-sessions-${self:provider.stage}
+
+functions:
+  # Health Check
+  healthCheck:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # Session Management
+  createSession:
+    handler: src/handlers/sessions.createSession
+    events:
+      - http:
+          path: /sessions
+          method: post
+          cors: true
+
+  getSessionByCompany:
+    handler: src/handlers/sessions.getSessionByCompany
+    events:
+      - http:
+          path: /sessions/company/{companyId}
+          method: get
+          cors: true
+
+  getSessionStatus:
+    handler: src/handlers/sessions.getSessionStatus
+    events:
+      - http:
+          path: /sessions/{sessionId}/status
+          method: get
+          cors: true
+
+  deleteSession:
+    handler: src/handlers/sessions.deleteSession
+    events:
+      - http:
+          path: /sessions/{sessionId}
+          method: delete
+          cors: true
+
+  # Message Management
+  sendMessage:
+    handler: src/handlers/messages.sendMessage
+    events:
+      - http:
+          path: /messages/send
+          method: post
+          cors: true
+
+  sendTextMessage:
+    handler: src/handlers/messages.sendTextMessage
+    events:
+      - http:
+          path: /messages/send/text
+          method: post
+          cors: true
+
+  sendMediaMessage:
+    handler: src/handlers/messages.sendMediaMessage
+    events:
+      - http:
+          path: /messages/send/media
+          method: post
+          cors: true
+
+  # Template Messages
+  sendTemplateMessage:
+    handler: src/handlers/templateMessages.sendTemplateMessage
+    events:
+      - http:
+          path: /messages/send/template
+          method: post
+          cors: true
+
+  # Webhook Management
+  processWebhook:
+    handler: src/handlers/webhook.processWebhook
+    events:
+      - http:
+          path: /webhook
+          method: post
+          cors: true
+
+  setWebhook:
+    handler: src/handlers/webhook.setWebhook
+    events:
+      - http:
+          path: /webhook/set
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB Table for WhatsApp Sessions
+    SessionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.sessionsTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: sessionId
+            AttributeType: S
+          - AttributeName: companyId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sessionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: CompanyIdIndex
+            KeySchema:
+              - AttributeName: companyId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline

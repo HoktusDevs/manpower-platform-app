@@ -309,4 +309,21 @@ export class DynamoService {
       return null;
     }
   }
+
+  async getAllApplications(limit?: number, nextToken?: string): Promise<{ applications: Application[], nextToken?: string }> {
+    await this.ensureTableExists();
+
+    const command = new ScanCommand({
+      TableName: this.tableName,
+      Limit: limit,
+      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined
+    });
+
+    const result = await this.client.send(command);
+
+    return {
+      applications: result.Items as Application[] || [],
+      nextToken: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64') : undefined,
+    };
+  }
 }

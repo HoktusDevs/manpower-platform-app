@@ -1,9 +1,10 @@
 export interface File {
-  fileId: string;
-  userId: string;
+  documentId: string;        // Primary key (was fileId)
+  userId: string;            // Partition key
+  documentType: string;      // Required for DynamoDB
   folderId: string;
   originalName: string;
-  fileName: string;           // Sanitized filename for S3
+  fileName: string;          // Sanitized filename for S3
   fileType: string;          // MIME type
   fileExtension: string;     // .pdf, .jpg, etc.
   fileSize: number;          // bytes
@@ -19,8 +20,9 @@ export interface File {
 }
 
 export class FileModel {
-  public fileId: string;
-  public userId: string;
+  public documentId: string;    // Primary key
+  public userId: string;        // Partition key
+  public documentType: string;  // Required for DynamoDB
   public folderId: string;
   public originalName: string;
   public fileName: string;
@@ -38,8 +40,9 @@ export class FileModel {
   public isActive: boolean;
 
   constructor(data: Partial<File>) {
-    this.fileId = data.fileId || '';
+    this.documentId = data.documentId || '';
     this.userId = data.userId || '';
+    this.documentType = data.documentType || 'file';
     this.folderId = data.folderId || '';
     this.originalName = data.originalName || '';
     this.fileName = data.fileName || '';
@@ -141,8 +144,9 @@ export class FileModel {
 
   public toJSON(): File {
     return {
-      fileId: this.fileId,
+      documentId: this.documentId,
       userId: this.userId,
+      documentType: this.documentType,
       folderId: this.folderId,
       originalName: this.originalName,
       fileName: this.fileName,

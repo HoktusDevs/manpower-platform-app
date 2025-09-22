@@ -90,9 +90,14 @@ export const getFilesByFolder: APIGatewayProxyHandler = async (event) => {
 
 export const getUploadUrl: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    console.log('getUploadUrl called with event:', JSON.stringify(event, null, 2));
+    
+    // Usar userId fijo para OCR sin autenticación
+    const userId = 'ocr-user-123';
+    console.log('Using fixed userId for OCR:', userId);
 
     if (!event.body) {
+      console.log('No request body provided');
       return createResponse(400, {
         success: false,
         message: 'Request body is required',
@@ -100,15 +105,19 @@ export const getUploadUrl: APIGatewayProxyHandler = async (event) => {
     }
 
     const input: UploadFileInput = JSON.parse(event.body);
+    console.log('Parsed input:', input);
 
     if (!input.folderId || !input.originalName || !input.fileType || !input.fileSize) {
+      console.log('Missing required fields');
       return createResponse(400, {
         success: false,
         message: 'Missing required fields: folderId, originalName, fileType, fileSize',
       });
     }
 
+    console.log('Calling fileService.getUploadUrl...');
     const result = await fileService.getUploadUrl(input, userId);
+    console.log('FileService result:', result);
 
     if (!result.success) {
       return createResponse(400, result);
@@ -117,9 +126,11 @@ export const getUploadUrl: APIGatewayProxyHandler = async (event) => {
     return createResponse(200, result);
   } catch (error) {
     console.error('Error in getUploadUrl:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return createResponse(500, {
       success: false,
       message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };

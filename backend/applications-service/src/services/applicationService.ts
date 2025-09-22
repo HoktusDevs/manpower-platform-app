@@ -259,4 +259,74 @@ export class ApplicationService {
       };
     }
   }
+
+  async getAllApplications(limit?: number, nextToken?: string): Promise<ApplicationResponse> {
+    try {
+      const result = await this.dynamoService.getAllApplications(limit, nextToken);
+
+      // Enriquecer aplicaciones con datos del job desde DynamoDB
+      const enrichedApplications = await Promise.all(
+        result.applications.map(async (application) => {
+          try {
+            // Obtener datos del job directamente desde DynamoDB
+            const jobData = await this.dynamoService.getJobData(application.jobId);
+            
+            if (jobData) {
+              return {
+                ...application,
+                // Datos del job
+                title: jobData.title,
+                description: jobData.description,
+                companyName: jobData.companyName,
+                location: jobData.location,
+                salary: jobData.salary,
+                employmentType: jobData.employmentType,
+                experienceLevel: jobData.experienceLevel,
+                requirements: jobData.requirements,
+                folderId: jobData.folderId,
+                status: jobData.status,
+                isActive: jobData.isActive,
+                updatedAt: jobData.updatedAt,
+                // Mantener campos de la aplicación
+                jobTitle: jobData.title, // Para compatibilidad
+              };
+            }
+          } catch (error) {
+            console.warn(`Error obteniendo datos del job ${application.jobId}:`, error);
+          }
+          
+          // Fallback si no se pueden obtener los datos del job
+          return {
+            ...application,
+            title: 'Trabajo no encontrado',
+            description: 'Descripción no disponible',
+            companyName: 'Empresa no especificada',
+            location: 'Ubicación no especificada',
+            salary: undefined,
+            employmentType: 'FULL_TIME',
+            experienceLevel: 'ENTRY_LEVEL',
+            requirements: 'No especificados',
+            folderId: '',
+            status: 'DRAFT',
+            isActive: false,
+            updatedAt: application.updatedAt,
+            jobTitle: 'Trabajo no encontrado', // Para compatibilidad
+          };
+        })
+      );
+
+      return {
+        success: true,
+        message: 'Todas las aplicaciones obtenidas exitosamente',
+        applications: enrichedApplications,
+        nextToken: result.nextToken,
+      };
+    } catch (error) {
+      console.error('Error in getAllApplications:', error);
+      return {
+        success: false,
+        message: 'Error interno del servidor al obtener todas las aplicaciones',
+      };
+    }
+  }
 }

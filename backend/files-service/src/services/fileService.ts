@@ -110,10 +110,11 @@ export class FileService {
         };
       }
 
-      const fileId = uuidv4();
+      const documentId = uuidv4();
       const fileModel = new FileModel({
-        fileId,
+        documentId,
         userId,
+        documentType: 'file',
         folderId: input.folderId,
         originalName: input.originalName,
         fileName: input.originalName,

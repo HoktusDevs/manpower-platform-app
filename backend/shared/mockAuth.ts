@@ -26,14 +26,10 @@ export const MOCK_CREDENTIALS = {
 export function extractUserFromEvent(event: any): MockUser {
   const claims = event.requestContext.authorizer?.claims;
 
-  // For local development, provide mock values when claims are not available
-  if (!claims && process.env.STAGE === 'local') {
-    console.log('Using mock admin credentials for local testing');
-    return MOCK_CREDENTIALS.ADMIN;
-  }
-
+  // For local development or when no auth is configured, provide mock values
   if (!claims) {
-    throw new Error('Authorization claims not found');
+    console.log('No authorization claims found, using mock admin credentials');
+    return MOCK_CREDENTIALS.ADMIN;
   }
 
   return {

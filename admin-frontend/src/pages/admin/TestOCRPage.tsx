@@ -35,42 +35,141 @@ export const TestOCRPage = () => {
     setOcrResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      // Paso 1: Subir archivo a S3 usando files-service
+      const platformDocumentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Simular procesamiento OCR (reemplazar con endpoint real)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Obtener presignedURL del files-service
+      const presignedResponse = await fetch('https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev/files/upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          folderId: 'ocr-temp-folder', // Carpeta temporal para OCR
+          originalName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size
+        })
+      });
+
+      const presignedData = await presignedResponse.json();
       
-      // Resultado simulado - reemplazar con llamada real a API
-      const mockResult = {
-        success: true,
-        text: `Texto extraído de la imagen:
-        
-        Este es un texto de ejemplo extraído mediante OCR.
-        La imagen contenía texto que fue procesado y convertido
-        a formato digital para su posterior análisis.
-        
-        Características detectadas:
-        - Número de líneas: 4
-        - Número de palabras: 25
-        - Confianza: 95%`,
-        confidence: 95,
-        processingTime: '2.1s',
-        language: 'es',
-        metadata: {
-          width: 800,
-          height: 600,
-          format: selectedFile.type,
-          size: selectedFile.size
+      if (!presignedData.success) {
+        throw new Error('Error obteniendo presignedURL: ' + presignedData.error);
+      }
+
+      // Subir archivo a S3
+      const uploadResponse = await fetch(presignedData.uploadUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type,
         }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Error subiendo archivo a S3');
+      }
+
+      // Paso 2: Enviar referencia a ocr-service
+      // Construir URL pública de S3
+      const s3PublicUrl = `https://${presignedData.file.s3Bucket}.s3.us-east-1.amazonaws.com/${presignedData.file.s3Key}`;
+      
+      const requestData = {
+        ownerUserName: 'Usuario de Prueba',
+        documents: [
+          {
+            fileName: selectedFile.name,
+            fileUrl: s3PublicUrl, // URL pública de S3
+            platformDocumentId: platformDocumentId
+          }
+        ]
       };
 
-      setOcrResult(mockResult);
+      // Llamar al microservicio OCR
+      const response = await fetch('https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/process-documents-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Mostrar mensaje de procesamiento
+        setOcrResult({
+          success: true,
+          text: `Documento enviado para procesamiento OCR:
+
+          Archivo: ${selectedFile.name}
+          URL S3: ${s3PublicUrl}
+          ID del documento: ${platformDocumentId}
+          Estado: Enviado a Hoktus Orchestrator
+
+          El procesamiento puede tomar varios minutos.
+          Los resultados se recibirán via callback.`,
+          confidence: 0,
+          processingTime: 'Enviado',
+          language: 'es',
+          metadata: {
+            width: 800,
+            height: 600,
+            format: selectedFile.type,
+            size: selectedFile.size
+          }
+        });
+
+        // Iniciar polling para consultar resultados
+        startPollingResults(platformDocumentId);
+      } else {
+        setError('Error al enviar documento: ' + result.error);
+      }
     } catch (err) {
       setError('Error al procesar la imagen: ' + (err as Error).message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const startPollingResults = async (platformDocumentId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/results/${platformDocumentId}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const document = result.data;
+          
+          if (document.status === 'completed') {
+            // Mostrar resultados del OCR
+            setOcrResult({
+              success: true,
+              text: document.ocrResult?.text || 'No se pudo extraer texto',
+              confidence: document.ocrResult?.confidence || 0,
+              processingTime: document.ocrResult?.processingTime || 0,
+              language: document.ocrResult?.language || 'unknown',
+              metadata: document.ocrResult?.metadata || {}
+            });
+            
+            clearInterval(pollInterval);
+          } else if (document.status === 'failed') {
+            setError('Error en el procesamiento OCR: ' + (document.error || 'Error desconocido'));
+            clearInterval(pollInterval);
+          }
+          // Si está 'pending' o 'processing', continuar polling
+        }
+      } catch (error) {
+        console.error('Error consultando resultados:', error);
+        // Continuar polling en caso de error
+      }
+    }, 5000); // Consultar cada 5 segundos
+
+    // Limpiar polling después de 10 minutos
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 600000);
   };
 
   const handleClear = () => {
@@ -260,6 +359,18 @@ export const TestOCRPage = () => {
             <li>• Puede procesar documentos, capturas de pantalla, fotos de documentos</li>
             <li>• La precisión depende de la calidad de la imagen y el tipo de fuente</li>
             <li>• Ideal para automatizar la entrada de datos desde documentos físicos</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 p-4 bg-green-50 rounded-md">
+          <h3 className="text-sm font-medium text-green-800 mb-2">🔄 Flujo de Procesamiento:</h3>
+          <ul className="text-sm text-green-700 space-y-1">
+            <li>• <strong>1. Subida a S3:</strong> El archivo se sube a S3 usando files-service</li>
+            <li>• <strong>2. Envío a OCR:</strong> Se envía la URL de S3 al microservicio OCR</li>
+            <li>• <strong>3. Hoktus Orchestrator:</strong> Se procesa con IA avanzada</li>
+            <li>• <strong>4. Callback:</strong> Los resultados se reciben automáticamente</li>
+            <li>• <strong>5. Base de datos:</strong> Se almacenan los resultados en DynamoDB</li>
+            <li>• <strong>Nota:</strong> El procesamiento es asíncrono y puede tomar varios minutos</li>
           </ul>
         </div>
       </div>
