@@ -9,10 +9,20 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const [shouldRender, setShouldRender] = useState(false);
+  const [initialDelay, setInitialDelay] = useState(true);
 
   useEffect(() => {
-    // Esperar a que termine la carga de autenticación
-    if (!isLoading) {
+    // Dar tiempo para que el sessionExchangeService procese el sessionKey
+    const timer = setTimeout(() => {
+      setInitialDelay(false);
+    }, 2000); // Esperar 2 segundos para procesar sessionKey
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Solo verificar después del delay inicial
+    if (!initialDelay && !isLoading) {
       if (user) {
         console.log('✅ Usuario autenticado, permitiendo acceso');
         setShouldRender(true);
@@ -21,15 +31,17 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         setShouldRender(false);
       }
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, initialDelay]);
 
   // Mostrar loading mientras se verifica la autenticación
-  if (isLoading) {
+  if (isLoading || initialDelay) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando autenticación...</p>
+          <p className="mt-4 text-gray-600">
+            {initialDelay ? 'Procesando autenticación...' : 'Verificando autenticación...'}
+          </p>
         </div>
       </div>
     );

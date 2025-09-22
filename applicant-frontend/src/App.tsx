@@ -1,108 +1,127 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { PostulanteLayout } from './components/PostulanteLayout';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { CompletarAplicacionesPage } from './pages/CompletarAplicacionesPage';
 import { MiPerfilPage } from './pages/MiPerfilPage';
 import { AplicarPage } from './pages/AplicarPage';
 import { RedirectToLogin } from './components/RedirectToLogin';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function AppContent() {
-  // Manejar sessionKey para autenticación
-  useEffect(() => {
-    const handleSessionKey = async () => {
-      console.log('🔍 APPLICANT-FRONTEND: URL:', window.location.href);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
-      // Extract sessionKey from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionKey = urlParams.get('sessionKey');
+  // Manejar autenticación de forma secuencial (como admin-frontend)
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      console.log('🔍 APPLICANT-FRONTEND: Checking authentication...');
+
+      // Import SessionExchangeService
+      const { SessionExchangeService } = await import('./services/sessionExchangeService');
+
+      // Check if we have a sessionKey from URL
+      const sessionKey = SessionExchangeService.getSessionKeyFromURL();
 
       if (sessionKey) {
         console.log('✅ APPLICANT-FRONTEND: SessionKey found, processing...');
-
-        // Import and use SessionExchangeService to process sessionKey
-        const { SessionExchangeService } = await import('./services/sessionExchangeService');
+        
         const result = await SessionExchangeService.exchangeSessionKey(sessionKey);
 
-        console.log('🔍 APPLICANT-FRONTEND: Exchange result:', result);
-
-        // Clean URL after processing
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        if (result.success) {
-          console.log('✅ APPLICANT-FRONTEND: SessionKey exchange successful');
+        if (result.success && result.user?.userType === 'postulante') {
+          console.log('✅ APPLICANT-FRONTEND: SessionKey exchange successful for postulante');
+          setIsAuthChecked(true);
+          return;
         } else {
-          console.log('❌ APPLICANT-FRONTEND: SessionKey exchange failed, but continuing anyway');
+          console.log('❌ APPLICANT-FRONTEND: SessionKey exchange failed or wrong user type');
+          localStorage.clear();
+          window.location.href = 'http://localhost:6100/login?redirect=applicant&error=session_exchange_failed';
+          return;
         }
-      } else {
-        console.log('🔍 APPLICANT-FRONTEND: No sessionKey in URL');
       }
+
+      // Check existing tokens (using same keys as sessionExchange)
+      const authToken = localStorage.getItem('cognito_access_token');
+      const authUser = localStorage.getItem('user');
+
+      if (authToken && authUser) {
+        try {
+          const user = JSON.parse(authUser);
+          if (user['custom:role'] === 'postulante') {
+            console.log('✅ APPLICANT-FRONTEND: Valid existing tokens found');
+            setIsAuthChecked(true);
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+
+      // No valid authentication, redirect to login
+      console.log('❌ APPLICANT-FRONTEND: No valid authentication, redirecting to login');
+      localStorage.clear();
+      window.location.href = 'http://localhost:6100/login?redirect=applicant';
     };
 
-    handleSessionKey();
+    checkAuthentication();
   }, []);
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (!isAuthChecked) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verificando autenticación...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          <ProtectedRoute>
-            <PostulanteLayout>
-              <Navigate to="/buscar-empleos" replace />
-            </PostulanteLayout>
-          </ProtectedRoute>
+          <PostulanteLayout>
+            <Navigate to="/buscar-empleos" replace />
+          </PostulanteLayout>
         }
       />
       <Route
         path="/buscar-empleos"
         element={
-          <ProtectedRoute>
-            <PostulanteLayout>
-              <JobSearchPage />
-            </PostulanteLayout>
-          </ProtectedRoute>
+          <PostulanteLayout>
+            <JobSearchPage />
+          </PostulanteLayout>
         }
       />
       <Route
         path="/mis-aplicaciones"
         element={
-          <ProtectedRoute>
-            <PostulanteLayout>
-              <ApplicationsPage />
-            </PostulanteLayout>
-          </ProtectedRoute>
+          <PostulanteLayout>
+            <ApplicationsPage />
+          </PostulanteLayout>
         }
       />
       <Route
         path="/completar-aplicaciones"
         element={
-          <ProtectedRoute>
-            <PostulanteLayout>
-              <CompletarAplicacionesPage />
-            </PostulanteLayout>
-          </ProtectedRoute>
+          <PostulanteLayout>
+            <CompletarAplicacionesPage />
+          </PostulanteLayout>
         }
       />
       <Route
         path="/perfil"
         element={
-          <ProtectedRoute>
-            <PostulanteLayout>
-              <MiPerfilPage />
-            </PostulanteLayout>
-          </ProtectedRoute>
+          <PostulanteLayout>
+            <MiPerfilPage />
+          </PostulanteLayout>
         }
       />
       <Route
         path="/aplicar"
-        element={
-          <ProtectedRoute>
-            <AplicarPage />
-          </ProtectedRoute>
-        }
+        element={<AplicarPage />}
       />
 
       {/* Catch-all route - redirect to auth-frontend login */}
