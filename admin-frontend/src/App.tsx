@@ -6,6 +6,8 @@ import { MigrationDashboard } from './pages/admin/MigrationDashboard';
 import { ApplicationsManagementPage } from './pages/admin/ApplicationsManagementPage';
 import { JobPostingsManagementPage } from './pages/admin/JobPostingsManagementPage';
 import { FoldersAndFilesPage } from './pages/admin/FoldersAndFilesPage';
+import { TestWhatsappPage } from './pages/admin/TestWhatsappPage';
+import { TestOCRPage } from './pages/admin/TestOCRPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { AdminLayout } from './components/AdminLayout';
 import { RoleGuard } from './components/RoleGuard';
@@ -186,6 +188,16 @@ function AppContent() {
           <Route path="folders&files" element={
             <RoleGuard requiredRole="admin">
               <FoldersAndFilesPage />
+            </RoleGuard>
+          } />
+          <Route path="test-whatsapp" element={
+            <RoleGuard requiredRole="admin">
+              <TestWhatsappPage />
+            </RoleGuard>
+          } />
+          <Route path="test-ocr" element={
+            <RoleGuard requiredRole="admin">
+              <TestOCRPage />
             </RoleGuard>
           } />
           <Route path="settings" element={
