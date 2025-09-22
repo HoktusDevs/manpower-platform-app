@@ -33,11 +33,11 @@ const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity)
   
   switch (granularity) {
     case 'daily': {
-      // Estructura para 5 días laborables de la semana
+      // Estructura para 7 días de la semana (Lun a Dom)
       const currentDay = now.getDay();
       const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
       
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 7; i++) {
         const date = new Date(now);
         date.setDate(now.getDate() - mondayOffset + i);
         
@@ -46,7 +46,7 @@ const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity)
           count: 0,
           type: filter,
           details: getEmptyDetails(filter),
-          period: date.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()
+          period: date.toLocaleDateString('es-ES', { weekday: 'short' })
         });
       }
       break;
@@ -213,7 +213,7 @@ const ChartSkeleton = ({ granularity, filter }: { granularity: TimeGranularity, 
   const chartHeight = 200;
   
   // Determinar número de barras según granularidad
-  const barsCount = granularity === 'daily' ? 5 : granularity === 'weekly' ? 4 : 3;
+  const barsCount = granularity === 'daily' ? 7 : granularity === 'weekly' ? 4 : 3;
   
   const getXAxisLabel = () => {
     switch (granularity) {

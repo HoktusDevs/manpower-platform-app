@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getRedirectUrlByRole } from '../utils/redirectUtils';
+import { APP_CONFIG } from '../config/app-config';
+// import { getRedirectUrlByRole } from '../utils/redirectUtils';
 
 interface LoginFormData {
   email: string;
@@ -47,9 +48,17 @@ export const LoginPage: React.FC = () => {
         const userRole = response.user['custom:role'] || 'postulante';
         setLoginSuccess({ role: userRole });
 
-        // Redirect based on user role only
-        const redirectUrl = userRole === 'admin' ? 'http://manpower-admin-frontend-dev.s3-website-us-east-1.amazonaws.com' : 'http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com';
+        // Redirect based on user role using dynamic configuration
+        const redirectUrl = userRole === 'admin' ? APP_CONFIG.ADMIN_FRONTEND_URL : APP_CONFIG.APPLICANT_FRONTEND_URL;
         const urlWithSessionKey = `${redirectUrl}?sessionKey=${encodeURIComponent(response.sessionKey)}`;
+        
+        console.log('🔍 REDIRECT DEBUG:', {
+          userRole,
+          redirectUrl,
+          fullUrl: urlWithSessionKey,
+          appConfig: APP_CONFIG
+        });
+        
         window.location.href = urlWithSessionKey;
       } else {
         setError(response.message || 'Error en el inicio de sesión');

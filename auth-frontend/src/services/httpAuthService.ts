@@ -164,10 +164,11 @@ class HttpAuthRepository implements AuthRepository {
       console.log('🔍 DEBUG AUTH SERVICE: Conditions:', {
         success: response.success,
         hasUser: !!response.user,
-        hasSessionKey: !!response.sessionKey
+        hasSessionKey: !!(response as AuthServiceResponse & { sessionKey?: string }).sessionKey
       });
 
-      if (response.success && response.user && response.sessionKey) {
+      const responseWithSessionKey = response as AuthServiceResponse & { sessionKey?: string };
+      if (response.success && response.user && responseWithSessionKey.sessionKey) {
         const user = {
           sub: response.user.id,
           email: response.user.email,
@@ -179,7 +180,7 @@ class HttpAuthRepository implements AuthRepository {
           success: true,
           user,
           message: response.message,
-          sessionKey: response.sessionKey,
+          sessionKey: responseWithSessionKey.sessionKey,
         };
       }
 
