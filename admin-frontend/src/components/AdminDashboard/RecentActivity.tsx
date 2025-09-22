@@ -69,11 +69,12 @@ const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity)
     }
     
     case 'quarterly': {
-      // Estructura para 3 cuatrimestres del año
+      // Estructura para 4 cuatrimestres del año
       const quarters = [
-        { months: [0, 1, 2, 3], label: 'Q1', name: 'Ene-Abr' },
-        { months: [4, 5, 6, 7], label: 'Q2', name: 'May-Ago' },
-        { months: [8, 9, 10, 11], label: 'Q3', name: 'Sep-Dic' }
+        { months: [0, 1, 2], label: 'Q1', name: 'Ene-Mar' },
+        { months: [3, 4, 5], label: 'Q2', name: 'Abr-Jun' },
+        { months: [6, 7, 8], label: 'Q3', name: 'Jul-Sep' },
+        { months: [9, 10, 11], label: 'Q4', name: 'Oct-Dic' }
       ];
       
       quarters.forEach((quarter) => {
@@ -213,7 +214,7 @@ const ChartSkeleton = ({ granularity, filter }: { granularity: TimeGranularity, 
   const chartHeight = 200;
   
   // Determinar número de barras según granularidad
-  const barsCount = granularity === 'daily' ? 7 : granularity === 'weekly' ? 4 : 3;
+  const barsCount = granularity === 'daily' ? 7 : granularity === 'weekly' ? 4 : 4;
   
   const getXAxisLabel = () => {
     switch (granularity) {
