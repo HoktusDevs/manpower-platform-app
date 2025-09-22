@@ -4,6 +4,7 @@ import { JobSearchPage } from './pages/JobSearchPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
 import { CompletarAplicacionesPage } from './pages/CompletarAplicacionesPage';
 import { MiPerfilPage } from './pages/MiPerfilPage';
+import { AplicarPage } from './pages/AplicarPage';
 import { RedirectToLogin } from './components/RedirectToLogin';
 import { useEffect } from 'react';
 
@@ -83,6 +84,10 @@ function AppContent() {
             <MiPerfilPage />
           </PostulanteLayout>
         }
+      />
+      <Route
+        path="/aplicar"
+        element={<AplicarPage />}
       />
 
       {/* Catch-all route - redirect to auth-frontend login */}
