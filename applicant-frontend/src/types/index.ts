@@ -2,13 +2,19 @@ export interface JobPosting {
   jobId: string;
   title: string;
   description: string;
-  requirements: string;
-  location: string;
-  employmentType: string;
   companyName: string;
-  salary?: string | undefined;
-  benefits?: string | undefined;
+  companyId?: string;
+  location: string;
+  salary?: string;
+  employmentType: string;
   experienceLevel: string;
+  requirements?: string;
+  benefits?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
 
 export interface Application {

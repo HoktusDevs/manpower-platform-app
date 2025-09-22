@@ -1,0 +1,119 @@
+service: applications-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    APPLICATIONS_TABLE: manpower-applications-${self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPLICATIONS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*
+
+functions:
+  # Health Check
+  checkHealth:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+  # Application Management
+  createApplication:
+    handler: src/handlers/applications.createApplication
+    events:
+      - http:
+          path: /applications
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+  getMyApplications:
+    handler: src/handlers/applications.getMyApplications
+    events:
+      - http:
+          path: /applications/my
+          method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+  deleteApplication:
+    handler: src/handlers/applications.deleteApplication
+    events:
+      - http:
+          path: /applications/{applicationId}
+          method: delete
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+  checkApplicationExists:
+    handler: src/handlers/applications.checkApplicationExists
+    events:
+      - http:
+          path: /applications/check/{jobId}
+          method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+plugins:
+  - serverless-plugin-typescript

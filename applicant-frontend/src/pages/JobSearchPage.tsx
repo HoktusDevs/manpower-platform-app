@@ -1,39 +1,100 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { JobPosting } from '../types';
-
-const mockJobPostings: JobPosting[] = [
-  {
-    jobId: 'job-001',
-    title: 'Desarrollador Full Stack',
-    description: 'Buscamos un desarrollador full stack con experiencia en React y Node.js para unirse a nuestro equipo dinámico.',
-    requirements: 'React, Node.js, TypeScript, AWS, GraphQL. Mínimo 3 años de experiencia.',
-    location: 'Madrid, España',
-    employmentType: 'Tiempo completo',
-    companyName: 'TechCorp Innovations',
-    salary: '45.000€ - 60.000€ anuales',
-    benefits: 'Seguro médico, teletrabajo híbrido, 25 días de vacaciones',
-    experienceLevel: 'Intermedio'
-  },
-  {
-    jobId: 'job-002',
-    title: 'Diseñador UX/UI',
-    description: 'Diseñador creativo para interfaces de usuario modernas e intuitivas.',
-    requirements: 'Figma, Adobe Creative Suite, experiencia en diseño web responsivo.',
-    location: 'Barcelona, España',
-    employmentType: 'Tiempo completo',
-    companyName: 'Design Studio Pro',
-    salary: '35.000€ - 50.000€ anuales',
-    benefits: 'Horario flexible, formación continua',
-    experienceLevel: 'Junior'
-  }
-];
+import { jobsService } from '../services/jobsService';
+import { applicationsService } from '../services/applicationsService';
 
 export const JobSearchPage = () => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [checkingApplications, setCheckingApplications] = useState(false);
 
-  const filteredJobPostings = mockJobPostings.filter((job) => {
-    if (!searchTerm.trim()) return true;
+  // Cargar jobs al montar el componente
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Primero verificar la salud del servicio
+        console.log('Verificando salud del jobs-service...');
+        const isHealthy = await jobsService.checkHealth();
+        
+        if (!isHealthy) {
+          setError('El servicio de empleos no está disponible. Por favor intenta más tarde.');
+          return;
+        }
+        
+        console.log('Servicio saludable, obteniendo todos los empleos...');
+        const response = await jobsService.getAllJobs();
+        
+        if (response.success) {
+          if (response.jobs && response.jobs.length > 0) {
+            setJobPostings(response.jobs);
+            console.log(`Cargados ${response.jobs.length} empleos`);
+            // No mostrar jobs automáticamente, solo cuando el usuario busque
+          } else {
+            console.log('No hay empleos disponibles');
+            setJobPostings([]);
+            setError('No hay empleos disponibles en este momento. Por favor intenta más tarde.');
+          }
+        } else {
+          console.error('Error en respuesta del servicio:', response.message);
+          setError(response.message || 'Error al cargar empleos');
+        }
+      } catch (err) {
+        console.error('Error loading jobs:', err);
+        setError(`Error de conexión al cargar empleos: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadJobs();
+  }, []);
+
+  // Verificar aplicaciones existentes cuando cambian los jobs
+  useEffect(() => {
+    const checkExistingApplications = async () => {
+      if (jobPostings.length === 0) return;
+
+      try {
+        setCheckingApplications(true);
+        console.log('Verificando aplicaciones existentes para', jobPostings.length, 'jobs');
+        
+        const appliedJobsSet = new Set<string>();
+        
+        // Verificar cada job para ver si ya se postuló
+        for (const job of jobPostings) {
+          try {
+            const response = await applicationsService.checkApplicationExists(job.jobId);
+            if (response.success && response.application) {
+              appliedJobsSet.add(job.jobId);
+              console.log(`Ya postulado a: ${job.title}`);
+            }
+          } catch (error) {
+            console.warn(`Error verificando aplicación para job ${job.jobId}:`, error);
+          }
+        }
+        
+        setAppliedJobs(appliedJobsSet);
+        console.log(`Aplicaciones existentes: ${appliedJobsSet.size} de ${jobPostings.length}`);
+      } catch (error) {
+        console.error('Error verificando aplicaciones existentes:', error);
+      } finally {
+        setCheckingApplications(false);
+      }
+    };
+
+    checkExistingApplications();
+  }, [jobPostings]);
+
+  const filteredJobPostings = jobPostings.filter((job) => {
+    // Solo mostrar jobs si hay un término de búsqueda
+    if (!searchTerm.trim()) return false;
 
     const searchLower = searchTerm.toLowerCase();
 
@@ -50,11 +111,16 @@ export const JobSearchPage = () => {
     ];
 
     return searchableFields.some(field =>
-      field.toLowerCase().includes(searchLower)
+      field && field.toLowerCase().includes(searchLower)
     );
   });
 
   const handleJobSelection = (jobId: string) => {
+    // No permitir seleccionar jobs ya postulados
+    if (appliedJobs.has(jobId)) {
+      return;
+    }
+    
     setSelectedJobs(prev =>
       prev.includes(jobId)
         ? prev.filter(id => id !== jobId)
@@ -69,6 +135,93 @@ export const JobSearchPage = () => {
     }
     console.log('Proceeding with selected jobs:', selectedJobs);
   };
+
+  const handleDebugAllJobs = async () => {
+    try {
+      console.log('Debug: Obteniendo todos los jobs...');
+      const response = await jobsService.getAllJobs();
+      console.log('Debug: Respuesta de todos los jobs:', response);
+      
+      if (response.success && response.jobs) {
+        setJobPostings(response.jobs);
+        setError(null);
+        console.log(`Debug: Cargados ${response.jobs.length} jobs totales`);
+      } else {
+        setError(`Debug: Error obteniendo todos los jobs: ${response.message}`);
+      }
+    } catch (err) {
+      console.error('Debug: Error obteniendo todos los jobs:', err);
+      setError(`Debug: Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+    }
+  };
+
+  // Mostrar loading
+  if (loading) {
+    return (
+      <div className="h-full bg-gray-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="px-6 py-6 border-b border-gray-200">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Ofertas de Trabajo Disponibles
+                </h2>
+                <p className="text-gray-600">
+                  Cargando empleos disponibles...
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Cargando empleos...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error
+  if (error) {
+    return (
+      <div className="h-full bg-gray-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="px-6 py-6 border-b border-gray-200">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Ofertas de Trabajo Disponibles
+                </h2>
+              </div>
+            </div>
+            <div className="px-6 py-8 text-center">
+              <div className="text-red-600 mb-4">
+                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar empleos</h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <div className="space-x-3">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Reintentar
+                  </button>
+                  <button
+                    onClick={handleDebugAllJobs}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                  >
+                    Debug: Cargar Todos los Jobs
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-gray-100 p-6">
@@ -95,12 +248,18 @@ export const JobSearchPage = () => {
           </div>
 
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+            {checkingApplications && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Verificando aplicaciones existentes...</p>
+              </div>
+            )}
             {filteredJobPostings.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">
                   {searchTerm.trim()
                     ? `No se encontraron puestos que coincidan con "${searchTerm}"`
-                    : 'No hay puestos activos disponibles en este momento.'
+                    : 'Escribe algo en el campo de búsqueda para encontrar empleos disponibles.'
                   }
                 </p>
                 {searchTerm.trim() && (
@@ -114,57 +273,79 @@ export const JobSearchPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredJobPostings.map((job) => (
-                  <div
-                    key={job.jobId}
-                    className={`p-6 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      selectedJobs.includes(job.jobId)
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
-                        : 'border-gray-200 hover:border-blue-300'
-                    }`}
-                    onClick={() => handleJobSelection(job.jobId)}
-                  >
-                    <div className="flex items-start space-x-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedJobs.includes(job.jobId)}
-                        onChange={() => handleJobSelection(job.jobId)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
-                        <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-gray-600">
-                          <span className="font-medium">{job.companyName}</span>
-                          <span>•</span>
-                          <span>{job.location}</span>
-                          <span>•</span>
-                          <span>{job.employmentType}</span>
-                          <span>•</span>
-                          <span className="bg-gray-100 px-2 py-1 rounded text-sm">{job.experienceLevel}</span>
+                {filteredJobPostings.map((job) => {
+                  const isApplied = appliedJobs.has(job.jobId);
+                  const isSelected = selectedJobs.includes(job.jobId);
+                  
+                  return (
+                    <div
+                      key={job.jobId}
+                      className={`p-6 border rounded-lg transition-all ${
+                        isApplied
+                          ? 'border-green-300 bg-green-50 cursor-not-allowed opacity-75'
+                          : isSelected
+                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 cursor-pointer hover:shadow-md'
+                          : 'border-gray-200 hover:border-blue-300 cursor-pointer hover:shadow-md'
+                      }`}
+                      onClick={() => !isApplied && handleJobSelection(job.jobId)}
+                    >
+                      <div className="flex items-start space-x-4">
+                        {isApplied ? (
+                          <div className="mt-1 h-5 w-5 flex items-center justify-center">
+                            <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleJobSelection(job.jobId)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                            {isApplied && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Ya postulado
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-gray-600">
+                            <span className="font-medium">{job.companyName}</span>
+                            <span>•</span>
+                            <span>{job.location}</span>
+                            <span>•</span>
+                            <span>{job.employmentType}</span>
+                            <span>•</span>
+                            <span className="bg-gray-100 px-2 py-1 rounded text-sm">{job.experienceLevel}</span>
+                          </div>
+                          {job.salary && (
+                            <p className="text-sm text-green-600 font-medium mb-2">
+                              💰 {job.salary}
+                            </p>
+                          )}
+                          <p className="text-gray-700 mb-3 line-clamp-2">
+                            {job.description}
+                          </p>
+                          {job.requirements && (
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                              <span className="font-medium">Requisitos:</span> {job.requirements}
+                            </p>
+                          )}
+                          {job.benefits && (
+                            <p className="text-sm text-blue-600 line-clamp-2">
+                              <span className="font-medium">Beneficios:</span> {job.benefits}
+                            </p>
+                          )}
                         </div>
-                        {job.salary && (
-                          <p className="text-sm text-green-600 font-medium mb-2">
-                            💰 {job.salary}
-                          </p>
-                        )}
-                        <p className="text-gray-700 mb-3 line-clamp-2">
-                          {job.description}
-                        </p>
-                        {job.requirements && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                            <span className="font-medium">Requisitos:</span> {job.requirements}
-                          </p>
-                        )}
-                        {job.benefits && (
-                          <p className="text-sm text-blue-600 line-clamp-2">
-                            <span className="font-medium">Beneficios:</span> {job.benefits}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -177,9 +358,9 @@ export const JobSearchPage = () => {
                     ✓ {selectedJobs.length} puesto{selectedJobs.length > 1 ? 's' : ''} seleccionado{selectedJobs.length > 1 ? 's' : ''}
                   </span>
                 ) : searchTerm.trim() ? (
-                  `${filteredJobPostings.length} de ${mockJobPostings.length} puestos`
+                  `${filteredJobPostings.length} de ${jobPostings.length} puestos encontrados`
                 ) : (
-                  `${mockJobPostings.length} puestos disponibles`
+                  `${jobPostings.length} puestos disponibles - busca para verlos`
                 )}
               </div>
               <button
