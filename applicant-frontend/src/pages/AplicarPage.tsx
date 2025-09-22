@@ -102,10 +102,15 @@ export const AplicarPage = () => {
     };
 
     // Solo verificar cuando hay jobs filtrados y hay un término de búsqueda
-    if (searchTerm.trim() && filteredJobPostings.length > 0) {
-      checkExistingApplications();
-    }
-  }, [filteredJobPostings, searchTerm]);
+    // Usar un debounce para evitar llamadas excesivas
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim() && filteredJobPostings.length > 0) {
+        checkExistingApplications();
+      }
+    }, 500); // Esperar 500ms después del último cambio
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]); // Solo depender de searchTerm, no de filteredJobPostings
 
   const handleJobSelection = (jobId: string) => {
     // No permitir seleccionar jobs ya postulados
