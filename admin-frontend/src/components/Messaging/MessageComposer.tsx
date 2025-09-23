@@ -28,21 +28,72 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   availableUsers
 }) => {
   const [selectedRecipients, setSelectedRecipients] = useState<Recipient[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [subject, setSubject] = useState('');
-  const [messageType, setMessageType] = useState<'email' | 'sms' | 'whatsapp'>('email');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('low');
+  const [templateName, setTemplateName] = useState('send_documents_missing_3378594');
+  const [isLoading, setIsLoading] = useState(false);
+  const [response, setResponse] = useState<any>(null);
 
-  const handleSubmit = () => {
-    // Aquí se manejaría el envío del mensaje
-    console.log('Enviando mensaje:', {
-      recipients: selectedRecipients,
-      subject,
-      message: newMessage,
-      type: messageType,
-      priority
-    });
-    onClose();
+  const handleSendTemplateMessage = async () => {
+    if (selectedRecipients.length === 0) {
+      alert('Por favor, selecciona al menos un destinatario');
+      return;
+    }
+
+    setIsLoading(true);
+    setResponse(null);
+
+    try {
+      // Enviar plantilla a cada destinatario
+      for (const recipient of selectedRecipients) {
+        const response = await fetch('https://whatsappchatbothardcoded-production.up.railway.app/whatsapp/send_template_message', {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            data: {
+              userData: {
+                phone: recipient.phone || recipient.name,
+                name_user: recipient.name
+              },
+              messageData: {
+                template_name: templateName,
+                template_parameters: [
+                  { type: "text", text: recipient.name },
+                  { type: "text", text: "Nombre archivo 1" },
+                  { type: "text", text: "Nombre archivo 2" },
+                  { type: "text", text: "Nombre archivo 3" },
+                  { type: "text", text: "Nombre archivo 4" },
+                  { type: "text", text: "Nombre archivo 5" },
+                  { type: "text", text: "Nombre archivo 6" },
+                  { type: "text", text: "Nombre archivo 7" },
+                  { type: "text", text: "-" },
+                  { type: "text", text: "-" }
+                ],
+                template_type: "normal"
+              }
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setResponse(prev => [...(prev || []), { recipient: recipient.name, data }]);
+      }
+    } catch (error) {
+      console.error('Error details:', error);
+      setResponse({ 
+        error: 'Error al enviar mensaje de plantilla: ' + error,
+        details: 'Posible problema de CORS. Verifica que el servidor permita requests desde este dominio.',
+        suggestion: 'Contacta al administrador del servidor para configurar CORS o usa un proxy.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -58,7 +109,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Para
+              Seleccionar destinatario/s
             </label>
             <RecipientSelector
               selectedRecipients={selectedRecipients}
@@ -66,62 +117,19 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
               availableUsers={availableUsers}
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Asunto
+            <label htmlFor="templateName" className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre de la plantilla
             </label>
             <input
               type="text"
-              placeholder="Asunto del mensaje..."
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              id="templateName"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="send_documents_missing_3378594"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mensaje
-            </label>
-            <textarea
-              rows={6}
-              placeholder="Escribe tu mensaje aquí..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
-              </label>
-              <select 
-                value={messageType}
-                onChange={(e) => setMessageType(e.target.value as 'email' | 'sms' | 'whatsapp')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prioridad
-              </label>
-              <select 
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta</option>
-              </select>
-            </div>
           </div>
         </div>
         <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
@@ -132,12 +140,23 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             Cancelar
           </button>
           <button 
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={handleSendTemplateMessage}
+            disabled={isLoading || selectedRecipients.length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {activeTab === 'conversations' ? 'Crear Conversación' : 'Enviar Mensaje'}
+            {isLoading ? 'Enviando...' : 'Enviar Plantilla'}
           </button>
         </div>
+
+        {/* Respuesta de la API */}
+        {response && (
+          <div className="p-6 border-t border-gray-200">
+            <h3 className="text-sm font-medium text-gray-800 mb-2">Respuesta de la API:</h3>
+            <pre className="text-xs bg-gray-50 p-3 rounded border overflow-auto max-h-40">
+              {JSON.stringify(response, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
