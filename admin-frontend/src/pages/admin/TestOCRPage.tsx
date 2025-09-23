@@ -1,4 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useOCRWebSocket } from '../../hooks/useOCRWebSocket';
+import { OCRResultsTable } from '../../components/OCR/OCRResultsTable';
+import { DocumentPreviewModal } from '../../components/OCR/DocumentPreviewModal';
 
 interface DocumentFile {
   id: string;
@@ -7,17 +10,113 @@ interface DocumentFile {
   title: string;
   ocrResult?: any;
   status: 'pending' | 'processing' | 'completed' | 'error';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  documentType?: string;
+  observations?: any[];
 }
 
 export const TestOCRPage = () => {
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
+  const [historicalDocuments, setHistoricalDocuments] = useState<DocumentFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<DocumentFile | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // WebSocket para recibir actualizaciones en tiempo real
+  const handleDocumentUpdate = useCallback((update: any) => {
+    console.log('Document update received:', update);
+
+    const updateDoc = (doc: DocumentFile) => {
+      if (doc.id === update.documentId) {
+        if (update.status === 'completed' || update.status === 'failed') {
+          return {
+            ...doc,
+            status: update.status === 'completed' ? 'completed' as const : 'error' as const,
+            hoktusDecision: update.hoktusDecision,
+            hoktusProcessingStatus: update.hoktusProcessingStatus,
+            documentType: update.documentType,
+            observations: update.observations,
+            ocrResult: update.ocrResult ? {
+              success: update.ocrResult.success || false,
+              text: update.ocrResult?.extractedText || 'No se pudo extraer texto',
+              confidence: update.ocrResult?.confidence || 0,
+              processingTime: update.ocrResult?.processingTime || 0,
+              language: update.ocrResult?.language || 'unknown',
+              metadata: update.ocrResult?.metadata || {},
+              fields: update.ocrResult?.fields || {}
+            } : undefined
+          };
+        } else if (update.status === 'processing') {
+          return {
+            ...doc,
+            status: 'processing' as const
+          };
+        }
+      }
+      return doc;
+    };
+
+    // Actualizar documentos históricos
+    setHistoricalDocuments(prev => prev.map(updateDoc));
+
+    // Para documentos locales: si se completó o falló, eliminar del panel de documentos
+    // ya que aparecerá en la tabla de resultados
+    if (update.status === 'completed' || update.status === 'failed') {
+      setDocuments(prev => prev.filter(doc => doc.id !== update.documentId));
+    } else {
+      // Solo actualizar si aún está procesando
+      setDocuments(prev => prev.map(updateDoc));
+    }
+  }, []);
+
+  const { isConnected, connectionError } = useOCRWebSocket(handleDocumentUpdate);
+
+  // Cargar documentos históricos de la base de datos
+  const loadHistoricalDocuments = useCallback(async () => {
+    try {
+      const response = await fetch('https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/documents');
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const formattedDocs: DocumentFile[] = result.data.map((doc: any) => ({
+          id: doc.platformDocumentId || doc.id,
+          file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }), // Mock file with proper type
+          previewUrl: doc.fileUrl || '/api/placeholder/100/100', // Use actual fileUrl from database
+          title: doc.fileName,
+          status: doc.status || 'completed' as const,
+          hoktusDecision: doc.hoktusDecision,
+          hoktusProcessingStatus: doc.hoktusProcessingStatus,
+          documentType: doc.documentType,
+          observations: doc.observations,
+          ocrResult: doc.ocrResult ? {
+            success: doc.ocrResult.success,
+            text: doc.ocrResult.extractedText || '',
+            confidence: doc.ocrResult.confidence || 0,
+            processingTime: doc.ocrResult.processingTime || 0,
+            language: doc.ocrResult.language || 'unknown',
+            metadata: doc.ocrResult.metadata || {},
+            fields: doc.ocrResult.fields || {}
+          } : undefined
+        }));
+
+        setHistoricalDocuments(formattedDocs);
+      }
+    } catch (error) {
+      console.error('Error loading historical documents:', error);
+    }
+  }, []);
+
+  // Cargar documentos históricos al montar el componente
+  useEffect(() => {
+    loadHistoricalDocuments();
+  }, [loadHistoricalDocuments]);
+
   const processFile = useCallback((file: File) => {
-    const id = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     // Crear preview de la imagen
     const reader = new FileReader();
@@ -145,8 +244,8 @@ export const TestOCRPage = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Iniciar polling para consultar resultados
-        startPollingResults(platformDocumentId);
+        // El WebSocket se encargará de notificar cuando esté listo
+        console.log('Document sent for processing, waiting for WebSocket notification');
       } else {
         setDocuments(prev => prev.map(doc => 
           doc.id === documentId ? { ...doc, status: 'error' } : doc
@@ -163,53 +262,6 @@ export const TestOCRPage = () => {
     }
   };
 
-  const startPollingResults = async (platformDocumentId: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/results/${platformDocumentId}`);
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          const document = result.data;
-          
-          if (document.status === 'completed') {
-            // Actualizar el documento con los resultados del OCR
-            setDocuments(prev => prev.map(doc => 
-              doc.id === platformDocumentId ? {
-                ...doc,
-                status: 'completed',
-                ocrResult: {
-                  success: true,
-                  text: document.ocrResult?.text || 'No se pudo extraer texto',
-                  confidence: document.ocrResult?.confidence || 0,
-                  processingTime: document.ocrResult?.processingTime || 0,
-                  language: document.ocrResult?.language || 'unknown',
-                  metadata: document.ocrResult?.metadata || {}
-                }
-              } : doc
-            ));
-            
-            clearInterval(pollInterval);
-          } else if (document.status === 'failed') {
-            setDocuments(prev => prev.map(doc => 
-              doc.id === platformDocumentId ? { ...doc, status: 'error' } : doc
-            ));
-            setError('Error en el procesamiento OCR: ' + (document.error || 'Error desconocido'));
-            clearInterval(pollInterval);
-          }
-          // Si está 'pending' o 'processing', continuar polling
-        }
-      } catch (error) {
-        console.error('Error consultando resultados:', error);
-        // Continuar polling en caso de error
-      }
-    }, 5000); // Consultar cada 5 segundos
-
-    // Limpiar polling después de 10 minutos
-    setTimeout(() => {
-      clearInterval(pollInterval);
-    }, 600000);
-  };
 
   const handleClear = () => {
     setDocuments([]);
@@ -221,14 +273,49 @@ export const TestOCRPage = () => {
   };
 
   const updateDocumentTitle = (documentId: string, title: string) => {
-    setDocuments(prev => prev.map(doc => 
+    setDocuments(prev => prev.map(doc =>
       doc.id === documentId ? { ...doc, title } : doc
     ));
   };
 
-
   const removeDocument = (documentId: string) => {
     setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+  };
+
+  const deleteDocument = async (documentId: string) => {
+    try {
+      const response = await fetch(`https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/delete/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Solo eliminar de los arrays locales si la eliminación en la base de datos fue exitosa
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        setHistoricalDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      } else {
+        console.error('Error deleting document:', result.error);
+        // Opcionalmente mostrar un mensaje de error al usuario
+        setError(`Error al eliminar documento: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error calling delete API:', error);
+      setError('Error al eliminar el documento. Por favor, inténtalo de nuevo.');
+    }
+  };
+
+  const handlePreviewDocument = (document: DocumentFile) => {
+    setPreviewDocument(document);
+    setShowPreviewModal(true);
+  };
+
+  const handleClosePreview = () => {
+    setShowPreviewModal(false);
+    setPreviewDocument(null);
   };
 
 
@@ -236,10 +323,41 @@ export const TestOCRPage = () => {
     <div className="max-w-6xl mx-auto">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Test OCR</h1>
-          <p className="text-gray-600">
-            Prueba la funcionalidad de reconocimiento óptico de caracteres (OCR) para extraer texto de imágenes
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Test OCR</h1>
+              <p className="text-gray-600">
+                Prueba la funcionalidad de reconocimiento óptico de caracteres (OCR) para extraer texto de imágenes
+              </p>
+            </div>
+            
+            {/* WebSocket Status Indicator */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={`text-sm font-medium ${isConnected ? 'text-green-700' : 'text-red-700'}`}>
+                {isConnected ? 'Conectado' : 'Desconectado'}
+              </span>
+            </div>
+          </div>
+          
+          {/* WebSocket Error */}
+          {connectionError && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error de conexión WebSocket</h3>
+                  <div className="mt-1 text-sm text-red-700">
+                    {connectionError}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -422,6 +540,18 @@ export const TestOCRPage = () => {
                                     placeholder="Texto extraído aparecerá aquí..."
                                   />
                                 </div>
+                                
+                                {/* Campos estructurados si están disponibles */}
+                                {document.ocrResult.fields && Object.keys(document.ocrResult.fields).length > 0 && (
+                                  <div className="mt-3">
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Campos estructurados:</label>
+                                    <div className="bg-gray-50 rounded border p-2 max-h-32 overflow-y-auto">
+                                      <pre className="text-xs text-gray-600 whitespace-pre-wrap">
+                                        {JSON.stringify(document.ocrResult.fields, null, 2)}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
@@ -448,6 +578,23 @@ export const TestOCRPage = () => {
             )}
           </div>
         </div>
+
+        {/* Tabla de resultados del OCR */}
+        <div className="mt-8">
+          <OCRResultsTable
+            documents={[...documents, ...historicalDocuments]}
+            onDeleteDocument={deleteDocument}
+            onPreviewDocument={handlePreviewDocument}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Modal de vista previa */}
+        <DocumentPreviewModal
+          document={previewDocument}
+          isOpen={showPreviewModal}
+          onClose={handleClosePreview}
+        />
 
       </div>
     </div>

@@ -434,53 +434,16 @@ export const JobPostingsManagementPage: React.FC = () => {
     // Map backend data to fieldValues for additional fields
     const mappedFieldValues: Record<string, unknown> = {};
     
-    // Map location data if it exists
+    // Map location data if it exists using the new parser
     if (job.location && job.location !== 'Por definir') {
-      // Parse location string to extract type and address
-      let locationType = 'office'; // Default to presencial
-      let address = job.location;
-      
-      // Check if location contains type information in parentheses
-      const typeMatch = job.location.match(/\(([^)]+)\)/);
-      if (typeMatch) {
-        const typeText = typeMatch[1].toLowerCase();
-        if (typeText.includes('remoto') || typeText.includes('remote')) {
-          locationType = 'remote';
-        } else if (typeText.includes('híbrido') || typeText.includes('hybrid')) {
-          locationType = 'hybrid';
-        } else if (typeText.includes('presencial') || typeText.includes('office')) {
-          locationType = 'office';
-        }
-        // Remove the type from address
-        address = job.location.replace(/\s*\([^)]+\)/, '').trim();
-      }
-      
-      mappedFieldValues.location = {
-        type: locationType,
-        address: address
-      };
+      mappedFieldValues.location = parseLocationFromAPI(job.location);
     }
     
-    // Map employment type (convert backend values to frontend options)
-    const employmentTypeMap: Record<string, string> = {
-      'FULL_TIME': 'Tiempo Completo',
-      'PART_TIME': 'Medio Tiempo',
-      'CONTRACT': 'Contrato',
-      'FREELANCE': 'Freelance',
-      'INTERNSHIP': 'Práctica',
-      'TEMPORARY': 'Temporal'
-    };
-    mappedFieldValues.employment_type = employmentTypeMap[job.employmentType] || 'Tiempo Completo';
+    // Map employment type using helper function
+    mappedFieldValues.employment_type = mapEmploymentTypeFromBackend(job.employmentType);
     
-    // Map experience level (convert backend values to frontend options)
-    const experienceLevelMap: Record<string, string> = {
-      'ENTRY_LEVEL': 'Junior',
-      'MID_LEVEL': 'Semi-Senior',
-      'SENIOR_LEVEL': 'Senior',
-      'EXECUTIVE': 'Ejecutivo',
-      'INTERNSHIP': 'Práctica'
-    };
-    mappedFieldValues.experience = experienceLevelMap[job.experienceLevel] || 'Junior';
+    // Map experience level using helper function
+    mappedFieldValues.experience = mapExperienceLevelFromBackend(job.experienceLevel);
     
     // Map salary if it exists
     if (job.salary) {
@@ -505,6 +468,12 @@ export const JobPostingsManagementPage: React.FC = () => {
       mappedFieldValues.benefits = job.benefits;
     }
     
+    // Map requiredDocuments if they exist
+    if (job.requiredDocuments && Array.isArray(job.requiredDocuments)) {
+      setRequiredDocuments(job.requiredDocuments);
+    } else {
+      setRequiredDocuments([]);
+    }
     
     // Set the mapped field values
     setFieldValues(mappedFieldValues);
@@ -675,6 +644,107 @@ export const JobPostingsManagementPage: React.FC = () => {
     }
   };
 
+  // Helper function to format location consistently
+  const formatLocationForAPI = (locationData: any): string => {
+    if (typeof locationData === 'string') {
+      return locationData;
+    }
+    
+    if (locationData && typeof locationData === 'object') {
+      const { type, address } = locationData;
+      const locationParts = [];
+      
+      if (address) locationParts.push(address);
+      if (type) {
+        const typeMap = {
+          'remote': '100% Remoto',
+          'office': 'Presencial', 
+          'hybrid': 'Híbrido'
+        };
+        locationParts.push(`(${typeMap[type as keyof typeof typeMap] || type})`);
+      }
+      
+      return locationParts.length > 0 ? locationParts.join(' ') : 'Por definir';
+    }
+    
+    return 'Por definir';
+  };
+
+  // Helper function to parse location from API
+  const parseLocationFromAPI = (locationString: string): { type: string; address: string } => {
+    if (!locationString || locationString === 'Por definir') {
+      return { type: 'office', address: 'Por definir' };
+    }
+    
+    // Parse location string to extract type and address
+    const typeMatch = locationString.match(/\(([^)]+)\)/);
+    if (typeMatch) {
+      const typeText = typeMatch[1].toLowerCase();
+      let locationType = 'office';
+      
+      if (typeText.includes('remoto') || typeText.includes('remote')) {
+        locationType = 'remote';
+      } else if (typeText.includes('híbrido') || typeText.includes('hybrid')) {
+        locationType = 'hybrid';
+      }
+      
+      const address = locationString.replace(/\s*\([^)]+\)/, '').trim();
+      return { type: locationType, address };
+    }
+    
+    return { type: 'office', address: locationString };
+  };
+
+  // Helper function to map employment type from frontend to backend
+  const mapEmploymentTypeToBackend = (frontendType: string): string => {
+    const typeMap: Record<string, string> = {
+      'Tiempo Completo': 'FULL_TIME',
+      'Medio Tiempo': 'PART_TIME',
+      'Contrato': 'CONTRACT',
+      'Freelance': 'FREELANCE',
+      'Práctica': 'INTERNSHIP',
+      'Temporal': 'TEMPORARY'
+    };
+    return typeMap[frontendType] || 'FULL_TIME';
+  };
+
+  // Helper function to map employment type from backend to frontend
+  const mapEmploymentTypeFromBackend = (backendType: string): string => {
+    const typeMap: Record<string, string> = {
+      'FULL_TIME': 'Tiempo Completo',
+      'PART_TIME': 'Medio Tiempo',
+      'CONTRACT': 'Contrato',
+      'FREELANCE': 'Freelance',
+      'INTERNSHIP': 'Práctica',
+      'TEMPORARY': 'Temporal'
+    };
+    return typeMap[backendType] || 'Tiempo Completo';
+  };
+
+  // Helper function to map experience level from frontend to backend
+  const mapExperienceLevelToBackend = (frontendLevel: string): string => {
+    const levelMap: Record<string, string> = {
+      'Junior': 'ENTRY_LEVEL',
+      'Semi-Senior': 'MID_LEVEL',
+      'Senior': 'SENIOR_LEVEL',
+      'Ejecutivo': 'EXECUTIVE',
+      'Práctica': 'INTERNSHIP'
+    };
+    return levelMap[frontendLevel] || 'ENTRY_LEVEL';
+  };
+
+  // Helper function to map experience level from backend to frontend
+  const mapExperienceLevelFromBackend = (backendLevel: string): string => {
+    const levelMap: Record<string, string> = {
+      'ENTRY_LEVEL': 'Junior',
+      'MID_LEVEL': 'Semi-Senior',
+      'SENIOR_LEVEL': 'Senior',
+      'EXECUTIVE': 'Ejecutivo',
+      'INTERNSHIP': 'Práctica'
+    };
+    return levelMap[backendLevel] || 'Junior';
+  };
+
   // Map fieldValues to API format
   const mapFieldValuesToAPI = () => {
     const mappedData: Partial<CreateJobPostingInput> = {};
@@ -690,22 +760,9 @@ export const JobPostingsManagementPage: React.FC = () => {
       }
     }
     
-    // Handle location
-    if (fieldValues.location && typeof fieldValues.location === 'object') {
-      const locationObj = fieldValues.location as { type?: string; address?: string };
-      const locationParts = [];
-      if (locationObj.address) locationParts.push(locationObj.address);
-      if (locationObj.type) {
-        const typeMap = {
-          'remote': '100% Remoto',
-          'office': 'Presencial',
-          'hybrid': 'Híbrido'
-        };
-        locationParts.push(`(${typeMap[locationObj.type as keyof typeof typeMap] || locationObj.type})`);
-      }
-      if (locationParts.length > 0) {
-        mappedData.location = locationParts.join(' ');
-      }
+    // Handle location with improved structure
+    if (fieldValues.location) {
+      mappedData.location = formatLocationForAPI(fieldValues.location);
     }
     
     // Handle requirements from fieldValues
@@ -747,29 +804,14 @@ export const JobPostingsManagementPage: React.FC = () => {
       }
     }
     
-    // Handle experience level from fieldValues
+    // Handle experience level from fieldValues using helper function
     if (fieldValues.experience && typeof fieldValues.experience === 'string') {
-      const experienceMap = {
-        'Junior': 'ENTRY_LEVEL',
-        'Semi-Senior': 'MID_LEVEL', 
-        'Senior': 'SENIOR_LEVEL',
-        'Ejecutivo': 'EXECUTIVE',
-        'Práctica': 'INTERNSHIP'
-      };
-      mappedData.experienceLevel = experienceMap[fieldValues.experience as keyof typeof experienceMap] as JobPosting['experienceLevel'];
+      mappedData.experienceLevel = mapExperienceLevelToBackend(fieldValues.experience) as JobPosting['experienceLevel'];
     }
     
-    // Handle employment type from fieldValues
+    // Handle employment type from fieldValues using helper function
     if (fieldValues.employment_type && typeof fieldValues.employment_type === 'string') {
-      const typeMap = {
-        'Tiempo Completo': 'FULL_TIME',
-        'Medio Tiempo': 'PART_TIME',
-        'Contrato': 'CONTRACT',
-        'Freelance': 'FREELANCE',
-        'Práctica': 'INTERNSHIP',
-        'Temporal': 'TEMPORARY'
-      };
-      mappedData.employmentType = typeMap[fieldValues.employment_type as keyof typeof typeMap] as JobPosting['employmentType'];
+      mappedData.employmentType = mapEmploymentTypeToBackend(fieldValues.employment_type) as JobPosting['employmentType'];
     }
     
     
@@ -994,7 +1036,8 @@ export const JobPostingsManagementPage: React.FC = () => {
         benefits: input.benefits,
         schedule: input.schedule,
         expiresAt: input.expiresAt,
-        folderId: folderId
+        folderId: folderId,
+        requiredDocuments: input.requiredDocuments || []
       };
 
       console.log('Enviando datos al jobs-service:', createJobInput);
@@ -1035,6 +1078,10 @@ export const JobPostingsManagementPage: React.FC = () => {
         employmentType: input.employmentType,
         experienceLevel: input.experienceLevel,
         requirements: input.requirements,
+        benefits: input.benefits,
+        schedule: input.schedule,
+        expiresAt: input.expiresAt,
+        requiredDocuments: input.requiredDocuments,
         status: input.status
       };
 

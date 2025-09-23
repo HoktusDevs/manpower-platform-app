@@ -19,12 +19,13 @@ import type {
  * Follows Single Responsibility Principle - only handles folder data
  */
 // Helper function to convert backend Folder to frontend FolderRow
-const folderToFolderRow = (folder: { folderId: string; name: string; type: string; createdAt: string; parentId?: string | null }): FolderRow => ({
+const folderToFolderRow = (folder: { folderId: string; name: string; type: string; createdAt: string; parentId?: string | null; files?: any[] }): FolderRow => ({
   id: folder.folderId,
   name: folder.name,
   type: folder.type,
   createdAt: folder.createdAt,
   parentId: folder.parentId || null,
+  files: folder.files || [],
 });
 
 export const useFoldersState = (

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface DownloadDropdownProps {
   isOpen: boolean;
@@ -65,7 +65,7 @@ export const DownloadDropdown: React.FC<DownloadDropdownProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-50">
           <div className="p-3">
             {/* Download Options */}
             <div className="space-y-2">

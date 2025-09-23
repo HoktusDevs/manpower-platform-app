@@ -1,192 +1,257 @@
-// Documents Service - Migration-aware document management
-// Handles both Legacy API and AWS-Native S3 direct upload
+/**
+ * Documents Service
+ * Handles document retrieval and management for admin folders
+ */
 
-import { cognitoAuthService } from '../services/cognitoAuthService';
-import { migrationService } from './migrationService';
-import { legacyApiService } from './legacyApiService';
+import { applicantDataService } from './applicantDataService';
 
-interface Document {
+export type DocumentInfo = {
   documentId: string;
-  userId: string;
   fileName: string;
-  fileType: string;
+  fileUrl: string;
+  documentType: string;
+  jobId: string;
+  applicationId: string;
+  userId: string;
   fileSize: number;
-  s3Key?: string;
-  url: string;
+  mimeType: string;
+  status: 'uploaded' | 'processing' | 'completed' | 'failed';
   uploadedAt: string;
-  expiresAt?: string;
-}
+  ocrResult?: any;
+};
 
-interface UploadDocumentInput {
-  file: File;
-  documentType?: 'resume' | 'cover_letter' | 'certificate' | 'other';
-  description?: string;
+export type FolderDocument = {
+  folderId: string;
+  folderName: string;
+  folderPath: string;
+  folderType: string;
+  documents: DocumentInfo[];
+  totalDocuments: number;
+  lastUploaded?: string;
+};
+
+export interface DocumentsResponse {
+  success: boolean;
+  documents?: FolderDocument[];
+  error?: string;
 }
 
 class DocumentsService {
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = 'https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev';
+  }
+
   /**
-   * Upload document using migration-aware system
+   * Obtener documentos por carpeta
    */
-  async uploadDocument(input: UploadDocumentInput): Promise<Document> {
-    const user = cognitoAuthService.getCurrentUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const startTime = Date.now();
-    const systemUsed = migrationService.getSystemForFeature('documents', user.userId);
-
+  async getDocumentsByFolder(folderId: string): Promise<{ success: boolean; documents?: DocumentInfo[]; error?: string }> {
     try {
-      let document: Document;
+      // Simular obtención de documentos desde localStorage del postulante
+      // En un sistema real, esto vendría del backend
+      const allDocuments = this.getStoredDocuments();
+      const folderDocuments = allDocuments.filter(doc =>
+        doc.applicationId && this.isDocumentInFolder()
+      );
 
-      if (systemUsed === 'aws_native') {
-        // AWS-Native: Direct S3 upload with presigned URLs
-        document = await this.uploadToS3(input, user.userId);
-        console.log('✅ Document uploaded via AWS-Native S3');
-      } else {
-        // Legacy: Upload via REST API
-        const token = cognitoAuthService.getIdToken();
-        if (token) {
-          legacyApiService.setAuthToken(token);
+      return {
+        success: true,
+        documents: folderDocuments,
+      };
+    } catch (error) {
+      console.error('DocumentsService: Error getting documents by folder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error de conexión',
+      };
+    }
+  }
+
+  /**
+   * Obtener todos los documentos organizados por carpeta
+   */
+  async getAllDocumentsByFolders(folders: any[]): Promise<DocumentsResponse> {
+    try {
+      const allDocuments = await this.getStoredDocuments();
+      const folderDocuments: FolderDocument[] = [];
+
+      for (const folder of folders) {
+        if (folder.type === 'Postulante' && folder.metadata?.applicationId) {
+          const applicationId = folder.metadata.applicationId;
+          const documents = allDocuments.filter(doc => doc.applicationId === applicationId);
+
+          if (documents.length > 0) {
+            folderDocuments.push({
+              folderId: folder.folderId,
+              folderName: folder.name,
+              folderPath: folder.path,
+              folderType: folder.type,
+              documents: documents,
+              totalDocuments: documents.length,
+              lastUploaded: documents.sort((a, b) => 
+                new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+              )[0]?.uploadedAt,
+            });
+          }
         }
-        document = await this.uploadViaLegacyAPI(input);
-        console.log('📊 Document uploaded via Legacy API');
       }
 
-      // Track performance metrics
-      migrationService.trackPerformance({
-        system: systemUsed === 'aws_native' ? 'aws_native' : 'legacy',
-        feature: 'documents',
-        operation: 'uploadDocument',
-        latency: Date.now() - startTime,
+      return {
         success: true,
-        userId: user.userId
-      });
-
-      return document;
+        documents: folderDocuments,
+      };
     } catch (error) {
-      // Track error metrics
-      migrationService.trackPerformance({
-        system: systemUsed === 'aws_native' ? 'aws_native' : 'legacy',
-        feature: 'documents',
-        operation: 'uploadDocument',
-        latency: Date.now() - startTime,
+      console.error('DocumentsService: Error getting all documents:', error);
+      return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
-        userId: user.userId
-      });
-
-      throw error;
+        error: error instanceof Error ? error.message : 'Error de conexión',
+      };
     }
   }
 
   /**
-   * AWS-Native: Direct S3 upload
+   * Obtener documentos almacenados desde applicant-frontend
    */
-  private async uploadToS3(input: UploadDocumentInput, userId: string): Promise<Document> {
-    // In production, this would get presigned URLs from Lambda
-    // For now, simulate the AWS-Native response
-    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const s3Key = `documents/${userId}/${documentId}/${input.file.name}`;
-
-    // Simulate S3 upload
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-
-    return {
-      documentId,
-      userId,
-      fileName: input.file.name,
-      fileType: input.file.type,
-      fileSize: input.file.size,
-      s3Key,
-      url: `https://manpower-documents-dev.s3.amazonaws.com/${s3Key}`,
-      uploadedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
-    };
-  }
-
-  /**
-   * Legacy: Upload via REST API
-   */
-  private async uploadViaLegacyAPI(input: UploadDocumentInput): Promise<Document> {
-    // Simulate legacy API upload
-    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 500));
-
-    const documentId = `legacy_doc_${Date.now()}`;
-    
-    return {
-      documentId,
-      userId: cognitoAuthService.getCurrentUser()?.userId || '',
-      fileName: input.file.name,
-      fileType: input.file.type,
-      fileSize: input.file.size,
-      url: `https://api.manpower.com/documents/${documentId}`,
-      uploadedAt: new Date().toISOString()
-    };
-  }
-
-  /**
-   * Get user documents
-   */
-  async getMyDocuments(): Promise<Document[]> {
-    const user = cognitoAuthService.getCurrentUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const startTime = Date.now();
-    const systemUsed = migrationService.getSystemForFeature('documents', user.userId);
-
+  private async getStoredDocuments(): Promise<DocumentInfo[]> {
     try {
-      let documents: Document[];
-
-      if (systemUsed === 'aws_native') {
-        documents = await this.getFromS3(user.userId);
-      } else {
-        documents = await this.getFromLegacyAPI();
+      // Obtener documentos desde el servicio de datos de postulantes
+      const response = await applicantDataService.getApplicantDocuments();
+      
+      if (!response.success || !response.documents) {
+        console.log('No hay documentos disponibles');
+        return [];
       }
 
-      // Track performance metrics
-      migrationService.trackPerformance({
-        system: systemUsed === 'aws_native' ? 'aws_native' : 'legacy',
-        feature: 'documents',
-        operation: 'getMyDocuments',
-        latency: Date.now() - startTime,
-        success: true,
-        userId: user.userId
-      });
+      console.log('Documentos encontrados:', response.documents);
 
-      return documents;
+      // Convertir formato de ApplicantDocument a DocumentInfo
+      return response.documents.map((doc: any) => ({
+        documentId: doc.documentId,
+        fileName: doc.fileName,
+        fileUrl: doc.fileUrl,
+        documentType: doc.documentType,
+        jobId: doc.jobId,
+        applicationId: doc.applicationId,
+        userId: doc.userId,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        status: doc.status || 'uploaded',
+        uploadedAt: doc.createdAt || new Date().toISOString(),
+        ocrResult: doc.ocrResult || null,
+      }));
     } catch (error) {
-      // Track error metrics
-      migrationService.trackPerformance({
-        system: systemUsed === 'aws_native' ? 'aws_native' : 'legacy',
-        feature: 'documents',
-        operation: 'getMyDocuments',
-        latency: Date.now() - startTime,
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get documents',
-        userId: user.userId
-      });
-
-      throw error;
+      console.error('DocumentsService: Error getting stored documents:', error);
+      return [];
     }
   }
 
-  private async getFromS3(userId: string): Promise<Document[]> {
-    // Simulate S3 document listing
-    await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
-    console.log(`Getting documents for user: ${userId}`);
-    return []; // Would query DynamoDB for user documents
+  /**
+   * Verificar si un documento pertenece a una carpeta
+   */
+  private isDocumentInFolder(): boolean {
+    // En un sistema real, esto se haría consultando la base de datos
+    // Por ahora, simulamos la lógica basada en los metadatos de las carpetas
+    return true; // Simplificado para la demo
   }
 
-  private async getFromLegacyAPI(): Promise<Document[]> {
-    // Simulate legacy API call
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 300));
-    return []; // Would call legacy REST API
+  /**
+   * Obtener documento por ID
+   */
+  async getDocumentById(documentId: string): Promise<{ success: boolean; document?: DocumentInfo; error?: string }> {
+    try {
+      const allDocuments = await this.getStoredDocuments();
+      const document = allDocuments.find(doc => doc.documentId === documentId);
+
+      if (!document) {
+        return {
+          success: false,
+          error: 'Documento no encontrado',
+        };
+      }
+
+      return {
+        success: true,
+        document,
+      };
+    } catch (error) {
+      console.error('DocumentsService: Error getting document by ID:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error de conexión',
+      };
+    }
+  }
+
+  /**
+   * Descargar documento
+   */
+  async downloadDocument(documentId: string): Promise<{ success: boolean; downloadUrl?: string; error?: string }> {
+    try {
+      const documentResult = await this.getDocumentById(documentId);
+      
+      if (!documentResult.success || !documentResult.document) {
+        return {
+          success: false,
+          error: 'Documento no encontrado',
+        };
+      }
+
+      // En un sistema real, aquí se generaría una URL de descarga segura
+      return {
+        success: true,
+        downloadUrl: documentResult.document.fileUrl,
+      };
+    } catch (error) {
+      console.error('DocumentsService: Error downloading document:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error de conexión',
+      };
+    }
+  }
+
+  /**
+   * Obtener estadísticas de documentos
+   */
+  async getDocumentStats(): Promise<{ success: boolean; stats?: any; error?: string }> {
+    try {
+      const allDocuments = await this.getStoredDocuments();
+      
+      const stats = {
+        totalDocuments: allDocuments.length,
+        completedDocuments: allDocuments.filter(doc => doc.status === 'completed').length,
+        processingDocuments: allDocuments.filter(doc => doc.status === 'processing').length,
+        failedDocuments: allDocuments.filter(doc => doc.status === 'failed').length,
+        totalSize: allDocuments.reduce((sum, doc) => sum + doc.fileSize, 0),
+        documentTypes: this.getDocumentTypeStats(allDocuments),
+      };
+
+      return {
+        success: true,
+        stats,
+      };
+    } catch (error) {
+      console.error('DocumentsService: Error getting document stats:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error de conexión',
+      };
+    }
+  }
+
+  /**
+   * Obtener estadísticas por tipo de documento
+   */
+  private getDocumentTypeStats(documents: DocumentInfo[]): Record<string, number> {
+    const stats: Record<string, number> = {};
+    
+    documents.forEach(doc => {
+      stats[doc.documentType] = (stats[doc.documentType] || 0) + 1;
+    });
+
+    return stats;
   }
 }
 
-// Export singleton
 export const documentsService = new DocumentsService();
-export type { Document, UploadDocumentInput };

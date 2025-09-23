@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
+import { DownloadProgressComponent } from '../molecules/DownloadProgress';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
 import { FoldersAccordion } from './FoldersAccordion';
@@ -8,6 +9,7 @@ import {
   useModalState, 
   useClickOutside 
 } from '../hooks';
+import { useDownloadZip } from '../../../hooks/useDownloadZip';
 import { useFoldersContext } from '../context/FoldersContext';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 // FilterOptions interface defined locally
@@ -53,6 +55,15 @@ export const FoldersManager: React.FC = () => {
     setSearchTerm,
     refreshFolders,
   } = useFoldersContext();
+
+  // Download functionality
+  const {
+    isDownloading,
+    progress,
+    downloadAllContent,
+    downloadSelectedItems,
+    clearProgress
+  } = useDownloadZip();
 
   // Calculate folder level in hierarchy
   const getFolderLevel = (folder: any, allFolders: any[]): number => {
@@ -292,20 +303,28 @@ export const FoldersManager: React.FC = () => {
     setCurrentFilters(filters);
   };
 
-  const handleDownloadAll = (): void => {
-    // TODO: Implementar descarga de todo el contenido
-    console.log('Descargando todo el contenido...');
-    alert('Función de descarga de todo el contenido en desarrollo');
+  const handleDownloadAll = async (): Promise<void> => {
+    try {
+      await downloadAllContent();
+    } catch (error) {
+      console.error('Error downloading all content:', error);
+      // El error ya se maneja en el hook
+    }
   };
 
-  const handleDownloadSelected = (): void => {
+  const handleDownloadSelected = async (): Promise<void> => {
     if (selectedCount === 0) {
       alert('No hay elementos seleccionados para descargar');
       return;
     }
-    // TODO: Implementar descarga de elementos seleccionados
-    console.log(`Descargando ${selectedCount} elementos seleccionados...`);
-    alert(`Descargando ${selectedCount} elementos seleccionados...`);
+    
+    try {
+      const selectedIds = Array.from(selectedRows);
+      await downloadSelectedItems(selectedIds, folders);
+    } catch (error) {
+      console.error('Error downloading selected items:', error);
+      // El error ya se maneja en el hook
+    }
   };
 
   return (
@@ -454,6 +473,14 @@ export const FoldersManager: React.FC = () => {
         onConfirm={confirmModalData.onConfirm}
         onCancel={closeConfirmModal}
       />
+
+      {/* Download Progress Modal */}
+      {progress && (
+        <DownloadProgressComponent
+          progress={progress}
+          onClose={clearProgress}
+        />
+      )}
     </div>
   );
 };

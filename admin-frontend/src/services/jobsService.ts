@@ -179,29 +179,65 @@ class JobsService {
     try {
       console.log('JobsService: Creando job', input);
       
-      const response = await fetch(`${this.baseUrl}/jobs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: Agregar token de autorización cuando esté implementado
-          // 'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('JobsService: Job creado', data);
+      // Add timeout and retry logic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      return data;
+      let retries = 3;
+      let lastError: Error | null = null;
+      
+      while (retries > 0) {
+        try {
+          const response = await fetch(`${this.baseUrl}/jobs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              // TODO: Agregar token de autorización cuando esté implementado
+              // 'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(input),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log('JobsService: Job creado', data);
+          
+          return data;
+        } catch (error) {
+          lastError = error as Error;
+          retries--;
+          
+          if (retries > 0 && !controller.signal.aborted) {
+            console.warn(`JobsService: Request failed, retrying... (${retries} attempts left)`, error);
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, 3 - retries) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // Handle final error
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          message: 'Request timeout - please try again',
+        };
+      }
+      
+      throw lastError || new Error('Unknown error');
     } catch (error) {
       console.error('JobsService: Error creando job:', error);
       return {
         success: false,
-        message: 'Error al crear el job en el servidor',
+        message: error instanceof Error ? error.message : 'Error al crear el job en el servidor',
       };
     }
   }
@@ -213,29 +249,65 @@ class JobsService {
     try {
       console.log('JobsService: Actualizando job', input);
       
-      const response = await fetch(`${this.baseUrl}/jobs/${input.jobId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: Agregar token de autorización cuando esté implementado
-          // 'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('JobsService: Job actualizado', data);
+      // Add timeout and retry logic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      return data;
+      let retries = 3;
+      let lastError: Error | null = null;
+      
+      while (retries > 0) {
+        try {
+          const response = await fetch(`${this.baseUrl}/jobs/${input.jobId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              // TODO: Agregar token de autorización cuando esté implementado
+              // 'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(input),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log('JobsService: Job actualizado', data);
+          
+          return data;
+        } catch (error) {
+          lastError = error as Error;
+          retries--;
+          
+          if (retries > 0 && !controller.signal.aborted) {
+            console.warn(`JobsService: Update request failed, retrying... (${retries} attempts left)`, error);
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, 3 - retries) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // Handle final error
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          message: 'Request timeout - please try again',
+        };
+      }
+      
+      throw lastError || new Error('Unknown error');
     } catch (error) {
       console.error('JobsService: Error actualizando job:', error);
       return {
         success: false,
-        message: 'Error al actualizar el job en el servidor',
+        message: error instanceof Error ? error.message : 'Error al actualizar el job en el servidor',
       };
     }
   }

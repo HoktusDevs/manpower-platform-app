@@ -202,7 +202,7 @@ export const FoldersAccordion: React.FC<FoldersAccordionProps> = ({
             isSelected={selectedRows.has(folder.id)}
             showActionsMenu={showRowActionsMenu === folder.id}
             subfolders={subfolders}
-            documentCount={0} // TODO: Implement document count logic
+            documentCount={folder.files?.length || 0}
             onSelect={onSelectRow}
             onAction={onAction}
             onToggleActionsMenu={onToggleRowActionsMenu}
