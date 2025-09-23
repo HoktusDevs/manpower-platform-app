@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 interface SelectOption<T extends string = string> {
-  readonly value: T;
+readonly value: T;
   readonly label: string;
   readonly description?: string;
+  readonly disabled?: boolean;
 }
 
 interface CustomSelectProps<T extends string = string> {
@@ -44,8 +45,11 @@ export function CustomSelect<T extends string = string>({
   }, [isOpen]);
 
   const handleSelect = (optionValue: T) => {
-    onChange(optionValue);
-    setIsOpen(false);
+    const option = options.find(opt => opt.value === optionValue);
+    if (option && !option.disabled) {
+      onChange(optionValue);
+      setIsOpen(false);
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -100,11 +104,16 @@ export function CustomSelect<T extends string = string>({
               key={option.value}
               type="button"
               onClick={() => handleSelect(option.value)}
+              disabled={option.disabled}
               className={`
                 w-full text-left px-3 py-2 text-sm transition-colors duration-150
-                hover:bg-blue-50 hover:text-blue-600
-                focus:outline-none focus:bg-blue-50 focus:text-blue-600
-                ${option.value === value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'}
+                ${option.disabled 
+                  ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+                  : 'hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:bg-blue-50 focus:text-blue-600'
+                }
+                ${option.value === value && !option.disabled ? 'bg-blue-100 text-blue-700 font-medium' : ''}
+                ${option.value === value && option.disabled ? 'bg-gray-100 text-gray-500' : ''}
+                ${!option.disabled ? 'text-gray-700' : ''}
                 ${index === 0 ? 'rounded-t-md' : ''}
                 ${index === options.length - 1 ? 'rounded-b-md' : ''}
               `}
@@ -112,7 +121,7 @@ export function CustomSelect<T extends string = string>({
             >
               <div className="flex items-center justify-between">
                 <span className="truncate">{option.label}</span>
-                {option.value === value && (
+                {option.value === value && !option.disabled && (
                   <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>

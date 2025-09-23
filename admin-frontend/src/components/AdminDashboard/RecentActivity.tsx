@@ -17,8 +17,8 @@ interface ActivityData {
 
 const ACTIVITY_FILTER_OPTIONS: readonly SelectOption<ActivityFilter>[] = [
   { value: 'postulaciones', label: 'Aplicaciones recientes', description: 'Solo actividad de postulaciones' },
-  { value: 'usuarios', label: 'Formulario actualizado', description: 'Solo actividad de formularios' },
-  { value: 'sistema', label: 'Postulante pendiente de revisión', description: 'Solo postulantes pendientes' }
+  { value: 'usuarios', label: 'Formulario actualizado', description: 'Solo actividad de formularios', disabled: true },
+  { value: 'sistema', label: 'Postulante pendiente de revisión', description: 'Solo postulantes pendientes', disabled: true }
 ] as const;
 
 const TIME_GRANULARITY_OPTIONS: readonly SelectOption<TimeGranularity>[] = [
