@@ -155,8 +155,8 @@ export const MessagingPage: React.FC = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: 'conversations', name: 'Conversaciones', count: conversations.length },
-                { id: 'messages', name: 'Mensajes', count: messages.length },
+                { id: 'conversations', name: 'WhatsApp', count: conversations.length },
+                { id: 'messages', name: 'Emails', count: messages.length },
                 { id: 'templates', name: 'Plantillas', count: 0 }
               ].map((tab) => (
                 <button
