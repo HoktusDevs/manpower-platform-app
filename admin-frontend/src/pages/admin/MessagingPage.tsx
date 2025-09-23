@@ -9,7 +9,7 @@ import {
 import { ConversationList, WhatsAppChat, MessageComposer } from '../../components/Messaging';
 
 // Tipos locales
-interface Message {
+interface EmailMessage {
   id: string;
   senderId: string;
   senderName: string;
@@ -23,6 +23,14 @@ interface Message {
   type: 'email' | 'sms' | 'whatsapp' | 'internal';
 }
 
+interface ChatMessage {
+  id: string;
+  text: string;
+  timestamp: string;
+  sender: 'user' | 'system';
+  type: 'text' | 'system';
+}
+
 interface Conversation {
   id: string;
   participantId: string;
@@ -33,6 +41,7 @@ interface Conversation {
   unreadCount: number;
   type: 'email' | 'sms' | 'whatsapp' | 'internal';
   status: 'active' | 'archived' | 'blocked';
+  messages: ChatMessage[];
 }
 
 interface User {
@@ -57,9 +66,53 @@ export const MessagingPage: React.FC = () => {
       participantEmail: 'juan.perez@email.com',
       lastMessage: 'Gracias por la información sobre el puesto...',
       lastMessageTime: '2025-09-22T15:30:00Z',
-      unreadCount: 2,
-      type: 'email',
-      status: 'active'
+      unreadCount: 3,
+      type: 'whatsapp',
+      status: 'active',
+      messages: [
+        {
+          id: 'msg-1',
+          text: 'Hola! ¿En qué puedo ayudarte hoy?',
+          timestamp: '14:30',
+          sender: 'system',
+          type: 'text'
+        },
+        {
+          id: 'msg-2',
+          text: 'Hola, tengo una consulta sobre mi postulación',
+          timestamp: '14:32',
+          sender: 'user',
+          type: 'text'
+        },
+        {
+          id: 'msg-3',
+          text: 'Perfecto! Estoy aquí para ayudarte. ¿Cuál es tu consulta específica?',
+          timestamp: '14:33',
+          sender: 'system',
+          type: 'text'
+        },
+        {
+          id: 'msg-4',
+          text: 'Quería saber sobre el proceso de selección',
+          timestamp: '14:35',
+          sender: 'user',
+          type: 'text'
+        },
+        {
+          id: 'msg-5',
+          text: 'Gracias por la información sobre el puesto, me interesa mucho',
+          timestamp: '15:30',
+          sender: 'user',
+          type: 'text'
+        },
+        {
+          id: 'msg-6',
+          text: '¿Podrían enviarme más detalles sobre los horarios?',
+          timestamp: '15:32',
+          sender: 'user',
+          type: 'text'
+        }
+      ]
     },
     {
       id: '2',
@@ -70,7 +123,30 @@ export const MessagingPage: React.FC = () => {
       lastMessageTime: '2025-09-22T14:15:00Z',
       unreadCount: 0,
       type: 'whatsapp',
-      status: 'active'
+      status: 'active',
+      messages: [
+        {
+          id: 'msg-5',
+          text: 'Buenos días! ¿En qué puedo asistirte?',
+          timestamp: '09:15',
+          sender: 'system',
+          type: 'text'
+        },
+        {
+          id: 'msg-6',
+          text: '¿Cuándo es la entrevista?',
+          timestamp: '09:20',
+          sender: 'user',
+          type: 'text'
+        },
+        {
+          id: 'msg-7',
+          text: 'Tu entrevista está programada para el viernes a las 10:00 AM',
+          timestamp: '09:22',
+          sender: 'system',
+          type: 'text'
+        }
+      ]
     },
     {
       id: '3',
@@ -80,12 +156,42 @@ export const MessagingPage: React.FC = () => {
       lastMessage: 'Necesito más información sobre los beneficios...',
       lastMessageTime: '2025-09-22T12:45:00Z',
       unreadCount: 1,
-      type: 'sms',
-      status: 'active'
+      type: 'whatsapp',
+      status: 'active',
+      messages: [
+        {
+          id: 'msg-8',
+          text: 'Hola! ¿Cómo puedo ayudarte?',
+          timestamp: '16:45',
+          sender: 'system',
+          type: 'text'
+        },
+        {
+          id: 'msg-9',
+          text: 'Necesito más información sobre los beneficios',
+          timestamp: '16:50',
+          sender: 'user',
+          type: 'text'
+        },
+        {
+          id: 'msg-10',
+          text: 'Te envío la información detallada de beneficios por email',
+          timestamp: '16:52',
+          sender: 'system',
+          type: 'text'
+        },
+        {
+          id: 'msg-11',
+          text: 'Necesito más información sobre los beneficios y también sobre el plan de carrera',
+          timestamp: '17:45',
+          sender: 'user',
+          type: 'text'
+        }
+      ]
     }
   ]);
 
-  const [messages] = useState<Message[]>([
+  const [messages] = useState<EmailMessage[]>([
     {
       id: '1',
       senderId: 'admin',

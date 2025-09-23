@@ -1,4 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+interface Message {
+  id: string;
+  text: string;
+  timestamp: string;
+  sender: 'user' | 'system';
+  type: 'text' | 'system';
+}
 
 interface Conversation {
   id: string;
@@ -10,6 +18,7 @@ interface Conversation {
   unreadCount: number;
   type: 'email' | 'sms' | 'whatsapp' | 'internal';
   status: 'active' | 'archived' | 'blocked';
+  messages: Message[];
 }
 
 interface WhatsAppChatProps {
@@ -22,6 +31,9 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   conversations
 }) => {
   const selectedConv = conversations.find(c => c.id === selectedConversation);
+  const [messageText, setMessageText] = useState('');
+
+  const currentMessages = selectedConv?.messages || [];
 
   return (
     <div className="lg:col-span-2">
@@ -48,36 +60,35 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           <div className="space-y-3">
             {selectedConversation ? (
               <>
-                {/* Mensaje del sistema */}
+                {/* Mensaje del sistema - Conversación iniciada */}
                 <div className="flex justify-center">
                   <div className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
                     Conversación iniciada
                   </div>
                 </div>
 
-                {/* Mensaje de ejemplo del sistema */}
-                <div className="flex justify-end">
-                  <div className="bg-green-500 text-white max-w-xs p-3 rounded-lg rounded-br-none">
-                    <p className="text-sm">Hola! ¿En qué puedo ayudarte hoy?</p>
-                    <p className="text-xs text-green-100 mt-1">14:30</p>
+                {/* Historial de mensajes específico de la conversación */}
+                {currentMessages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex ${message.sender === 'system' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-xs p-3 rounded-lg ${
+                      message.sender === 'system' 
+                        ? 'bg-green-500 text-white rounded-br-none' 
+                        : 'bg-white text-gray-800 rounded-bl-none shadow-sm'
+                    }`}>
+                      <p className="text-sm">{message.text}</p>
+                      <p className={`text-xs mt-1 ${
+                        message.sender === 'system' 
+                          ? 'text-green-100' 
+                          : 'text-gray-500'
+                      }`}>
+                        {message.timestamp}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                {/* Respuesta del usuario */}
-                <div className="flex justify-start">
-                  <div className="bg-white text-gray-800 max-w-xs p-3 rounded-lg rounded-bl-none shadow-sm">
-                    <p className="text-sm">Hola, tengo una consulta sobre mi postulación</p>
-                    <p className="text-xs text-gray-500 mt-1">14:32</p>
-                  </div>
-                </div>
-
-                {/* Mensaje del sistema */}
-                <div className="flex justify-end">
-                  <div className="bg-green-500 text-white max-w-xs p-3 rounded-lg rounded-br-none">
-                    <p className="text-sm">Perfecto! Estoy aquí para ayudarte. ¿Cuál es tu consulta específica?</p>
-                    <p className="text-xs text-green-100 mt-1">14:33</p>
-                  </div>
-                </div>
+                ))}
               </>
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -98,9 +109,18 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             <input
               type="text"
               placeholder="Escribe un mensaje..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
             />
-            <button className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <button 
+              disabled={!messageText.trim()}
+              className={`p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                messageText.trim() 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" />
               </svg>
