@@ -1,6 +1,13 @@
 import { SearchInput, FilterButton, DownloadButton, ViewToggle } from '../atoms';
 import { ActionsDropdown } from './ActionsDropdown';
 
+interface FilterOptions {
+  type: 'all' | 'folder' | 'file';
+  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
+  sortBy: 'name' | 'date' | 'size' | 'type';
+  sortOrder: 'asc' | 'desc';
+}
+
 interface ToolbarSectionProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -13,6 +20,9 @@ interface ToolbarSectionProps {
   onCloseActionsMenu: () => void;
   onViewModeChange: (mode: 'table' | 'grid' | 'accordion') => void;
   actionsMenuRef: React.RefObject<HTMLDivElement | null>;
+  // Filter props
+  currentFilters: FilterOptions;
+  onApplyFilters: (filters: FilterOptions) => void;
 }
 
 /**
@@ -31,7 +41,9 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
   onDeleteSelected,
   onCloseActionsMenu,
   onViewModeChange,
-  actionsMenuRef
+  actionsMenuRef,
+  currentFilters,
+  onApplyFilters
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
@@ -48,7 +60,10 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
           onViewChange={onViewModeChange}
         />
         
-        <FilterButton />
+        <FilterButton 
+          currentFilters={currentFilters}
+          onApplyFilters={onApplyFilters}
+        />
         
         <div className="relative" ref={actionsMenuRef}>
           <button 

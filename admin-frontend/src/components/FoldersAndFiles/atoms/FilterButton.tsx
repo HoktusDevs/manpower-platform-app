@@ -1,15 +1,44 @@
+import React, { useState } from 'react';
+import { FilterDropdown } from '../molecules/FilterDropdown';
+
+interface FilterOptions {
+  type: 'all' | 'folder' | 'file';
+  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
+  sortBy: 'name' | 'date' | 'size' | 'type';
+  sortOrder: 'asc' | 'desc';
+}
+
+interface FilterButtonProps {
+  onApplyFilters: (filters: FilterOptions) => void;
+  currentFilters: FilterOptions;
+}
+
 /**
  * FilterButton Atom
- * Pure component for filter functionality
+ * Enhanced component with dropdown functionality
  * Follows Single Responsibility Principle
  */
-export const FilterButton: React.FC = () => {
+export const FilterButton: React.FC<FilterButtonProps> = ({
+  onApplyFilters,
+  currentFilters
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleToggle = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   return (
-    <button className="flex-1 sm:flex-none inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-      </svg>
-      Filtro
-    </button>
+    <FilterDropdown
+      onApplyFilters={onApplyFilters}
+      currentFilters={currentFilters}
+      isOpen={isOpen}
+      onToggle={handleToggle}
+      onClose={handleClose}
+    />
   );
 };

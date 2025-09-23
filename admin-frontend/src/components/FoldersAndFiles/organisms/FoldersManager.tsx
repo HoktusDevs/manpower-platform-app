@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
@@ -9,6 +10,13 @@ import {
 } from '../hooks';
 import { useFoldersContext } from '../context/FoldersContext';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
+// FilterOptions interface defined locally
+interface FilterOptions {
+  type: 'all' | 'folder' | 'file';
+  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
+  sortBy: 'name' | 'date' | 'size' | 'type';
+  sortOrder: 'asc' | 'desc';
+}
 import type { 
   FolderAction, 
   CreateFolderData
@@ -20,6 +28,14 @@ import type {
  * Follows Clean Architecture and acts as a controller
  */
 export const FoldersManager: React.FC = () => {
+  // Filter state
+  const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
+    type: 'all',
+    dateRange: 'all',
+    sortBy: 'name',
+    sortOrder: 'asc'
+  });
+
   // Custom hooks for state management
   const {
     folders,
@@ -176,6 +192,12 @@ export const FoldersManager: React.FC = () => {
     openCreateModal(null);
   };
 
+  const handleApplyFilters = (filters: FilterOptions): void => {
+    setCurrentFilters(filters);
+    // TODO: Implement actual filtering logic
+    console.log('Applying filters:', filters);
+  };
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
       {/* Toolbar */}
@@ -191,6 +213,8 @@ export const FoldersManager: React.FC = () => {
         onCloseActionsMenu={handleCloseActionsMenu}
         onViewModeChange={setViewMode}
         actionsMenuRef={actionsMenuRef.ref}
+        currentFilters={currentFilters}
+        onApplyFilters={handleApplyFilters}
       />
 
       {/* Breadcrumb Navigation */}
