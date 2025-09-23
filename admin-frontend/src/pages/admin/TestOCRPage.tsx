@@ -1,42 +1,89 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+
+interface DocumentFile {
+  id: string;
+  file: File;
+  previewUrl: string;
+  title: string;
+  ocrResult?: any;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+}
 
 export const TestOCRPage = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [ocrResult, setOcrResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = useCallback((file: File) => {
+    const id = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear preview de la imagen
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const previewUrl = e.target?.result as string;
+      const newDocument: DocumentFile = {
+        id,
+        file,
+        previewUrl,
+        title: file.name,
+        status: 'pending'
+      };
+      
+      setDocuments(prev => [...prev, newDocument]);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setError(null);
-      setOcrResult(null);
-      
-      // Crear preview de la imagen
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      processFile(file);
     }
   };
 
-  const handleOCR = async () => {
-    if (!selectedFile) {
-      setError('Por favor, selecciona un archivo primero');
-      return;
-    }
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(event.dataTransfer.files);
+    files.forEach(file => {
+      // Verificar que sea un tipo de archivo válido
+      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        processFile(file);
+      } else {
+        setError('Por favor, selecciona archivos de imagen (JPG, PNG) o PDF');
+      }
+    });
+  };
+
+  const handleOCR = async (documentId: string) => {
+    const document = documents.find(doc => doc.id === documentId);
+    if (!document) return;
 
     setIsLoading(true);
     setError(null);
-    setOcrResult(null);
+
+    // Actualizar estado del documento
+    setDocuments(prev => prev.map(doc => 
+      doc.id === documentId ? { ...doc, status: 'processing' } : doc
+    ));
 
     try {
       // Paso 1: Subir archivo a S3 usando files-service
-      const platformDocumentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const platformDocumentId = document.id;
 
       // Obtener presignedURL del files-service
       const presignedResponse = await fetch('https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev/files/upload-url', {
@@ -46,9 +93,9 @@ export const TestOCRPage = () => {
         },
         body: JSON.stringify({
           folderId: 'ocr-temp-folder', // Carpeta temporal para OCR
-          originalName: selectedFile.name,
-          fileType: selectedFile.type,
-          fileSize: selectedFile.size
+          originalName: document.file.name,
+          fileType: document.file.type,
+          fileSize: document.file.size
         })
       });
 
@@ -61,9 +108,9 @@ export const TestOCRPage = () => {
       // Subir archivo a S3
       const uploadResponse = await fetch(presignedData.uploadUrl, {
         method: 'PUT',
-        body: selectedFile,
+        body: document.file,
         headers: {
-          'Content-Type': selectedFile.type,
+          'Content-Type': document.file.type,
         }
       });
 
@@ -79,7 +126,7 @@ export const TestOCRPage = () => {
         ownerUserName: 'Usuario de Prueba',
         documents: [
           {
-            fileName: selectedFile.name,
+            fileName: document.file.name,
             fileUrl: s3PublicUrl, // URL pública de S3
             platformDocumentId: platformDocumentId
           }
@@ -98,35 +145,18 @@ export const TestOCRPage = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Mostrar mensaje de procesamiento
-        setOcrResult({
-          success: true,
-          text: `Documento enviado para procesamiento OCR:
-
-          Archivo: ${selectedFile.name}
-          URL S3: ${s3PublicUrl}
-          ID del documento: ${platformDocumentId}
-          Estado: Enviado a Hoktus Orchestrator
-
-          El procesamiento puede tomar varios minutos.
-          Los resultados se recibirán via callback.`,
-          confidence: 0,
-          processingTime: 'Enviado',
-          language: 'es',
-          metadata: {
-            width: 800,
-            height: 600,
-            format: selectedFile.type,
-            size: selectedFile.size
-          }
-        });
-
         // Iniciar polling para consultar resultados
         startPollingResults(platformDocumentId);
       } else {
+        setDocuments(prev => prev.map(doc => 
+          doc.id === documentId ? { ...doc, status: 'error' } : doc
+        ));
         setError('Error al enviar documento: ' + result.error);
       }
     } catch (err) {
+      setDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'error' } : doc
+      ));
       setError('Error al procesar la imagen: ' + (err as Error).message);
     } finally {
       setIsLoading(false);
@@ -143,18 +173,27 @@ export const TestOCRPage = () => {
           const document = result.data;
           
           if (document.status === 'completed') {
-            // Mostrar resultados del OCR
-            setOcrResult({
-              success: true,
-              text: document.ocrResult?.text || 'No se pudo extraer texto',
-              confidence: document.ocrResult?.confidence || 0,
-              processingTime: document.ocrResult?.processingTime || 0,
-              language: document.ocrResult?.language || 'unknown',
-              metadata: document.ocrResult?.metadata || {}
-            });
+            // Actualizar el documento con los resultados del OCR
+            setDocuments(prev => prev.map(doc => 
+              doc.id === platformDocumentId ? {
+                ...doc,
+                status: 'completed',
+                ocrResult: {
+                  success: true,
+                  text: document.ocrResult?.text || 'No se pudo extraer texto',
+                  confidence: document.ocrResult?.confidence || 0,
+                  processingTime: document.ocrResult?.processingTime || 0,
+                  language: document.ocrResult?.language || 'unknown',
+                  metadata: document.ocrResult?.metadata || {}
+                }
+              } : doc
+            ));
             
             clearInterval(pollInterval);
           } else if (document.status === 'failed') {
+            setDocuments(prev => prev.map(doc => 
+              doc.id === platformDocumentId ? { ...doc, status: 'error' } : doc
+            ));
             setError('Error en el procesamiento OCR: ' + (document.error || 'Error desconocido'));
             clearInterval(pollInterval);
           }
@@ -173,45 +212,25 @@ export const TestOCRPage = () => {
   };
 
   const handleClear = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setOcrResult(null);
+    setDocuments([]);
     setError(null);
+    setIsDragOver(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const handleTestImage = () => {
-    // Crear una imagen de prueba con texto
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = 400;
-    canvas.height = 200;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = 'black';
-    ctx.font = '16px Arial';
-    ctx.fillText('Documento de Prueba', 20, 40);
-    ctx.fillText('Nombre: Juan Pérez', 20, 70);
-    ctx.fillText('RUT: 12.345.678-9', 20, 100);
-    ctx.fillText('Fecha: 15/12/2024', 20, 130);
-    ctx.fillText('Este es un texto de prueba para OCR', 20, 160);
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], 'test-document.png', { type: 'image/png' });
-        setSelectedFile(file);
-        setPreviewUrl(canvas.toDataURL());
-        setError(null);
-        setOcrResult(null);
-      }
-    });
+  const updateDocumentTitle = (documentId: string, title: string) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === documentId ? { ...doc, title } : doc
+    ));
   };
+
+
+  const removeDocument = (documentId: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+  };
+
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -228,110 +247,189 @@ export const TestOCRPage = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Seleccionar imagen
+                Seleccionar documentos
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div 
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                  isDragOver 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   onChange={handleFileSelect}
+                  multiple
                   className="hidden"
                 />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                  Seleccionar archivo
-                </button>
-                <p className="mt-2 text-sm text-gray-500">
-                  Formatos soportados: JPG, PNG, PDF
-                </p>
+                <div className="space-y-4">
+                  <div className="text-gray-500">
+                    <svg className="mx-auto h-16 w-16 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-700">
+                      Arrastra y suelta tus archivos aquí
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      o haz clic para seleccionar múltiples archivos
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Formatos soportados: JPG, PNG, PDF
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {selectedFile && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Archivo seleccionado:</h3>
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <p className="text-sm"><strong>Nombre:</strong> {selectedFile.name}</p>
-                  <p className="text-sm"><strong>Tamaño:</strong> {(selectedFile.size / 1024).toFixed(2)} KB</p>
-                  <p className="text-sm"><strong>Tipo:</strong> {selectedFile.type}</p>
-                </div>
-              </div>
-            )}
-
             <div className="flex space-x-4">
               <button
-                onClick={handleOCR}
-                disabled={!selectedFile || isLoading}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'Procesando...' : 'Procesar OCR'}
-              </button>
-              
-              <button
-                onClick={handleTestImage}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Imagen de prueba
-              </button>
-              
-              <button
                 onClick={handleClear}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                disabled={documents.length === 0}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Limpiar
+                Limpiar todo
               </button>
             </div>
           </div>
 
-          {/* Panel derecho - Preview y resultados */}
+          {/* Panel derecho - Lista de documentos */}
           <div className="space-y-6">
-            {/* Preview de imagen */}
-            {previewUrl && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Vista previa:</h3>
-                <div className="border rounded-md p-2 bg-gray-50">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="max-w-full h-auto max-h-64 mx-auto rounded"
-                  />
-                </div>
-              </div>
-            )}
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-700">Documentos ({documents.length})</h3>
+            </div>
 
-            {/* Resultados OCR */}
-            {ocrResult && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Resultado OCR:</h3>
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Confianza:</span>
-                      <span className="text-sm text-green-600">{ocrResult.confidence}%</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Tiempo de procesamiento:</span>
-                      <span className="text-sm text-gray-600">{ocrResult.processingTime}</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Idioma detectado:</span>
-                      <span className="text-sm text-gray-600">{ocrResult.language}</span>
+            {documents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="mt-2">No hay documentos seleccionados</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {documents.map((document) => (
+                  <div key={document.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <div className="flex items-start">
+                      {/* Información del documento */}
+                      <div className="flex-1 min-w-0">
+                        <div className="space-y-2">
+                          {/* Título editable */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Título:</label>
+                            <input
+                              type="text"
+                              value={document.title}
+                              onChange={(e) => updateDocumentTitle(document.id, e.target.value)}
+                              className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Ej: Carnet Frontal"
+                            />
+                          </div>
+                          
+                          
+                          {/* Estado y acciones */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                document.status === 'pending' ? 'bg-gray-100 text-gray-800' :
+                                document.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                document.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {document.status === 'pending' ? 'Pendiente' :
+                                 document.status === 'processing' ? 'Procesando...' :
+                                 document.status === 'completed' ? 'Completado' : 'Error'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex space-x-2">
+                              {document.status === 'pending' && (
+                                <button
+                                  onClick={() => handleOCR(document.id)}
+                                  disabled={isLoading}
+                                  className="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                                >
+                                  Procesar OCR
+                                </button>
+                              )}
+                              <button
+                                onClick={() => removeDocument(document.id)}
+                                className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Resultados OCR */}
+                          {document.ocrResult && (
+                            <div className="mt-3 bg-gray-50 rounded border">
+                              <div className="px-3 py-2 bg-gray-100 border-b">
+                                <h4 className="text-sm font-medium text-gray-700">Resultados del Procesamiento OCR</h4>
+                              </div>
+                              <div className="p-3">
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b">
+                                        <th className="text-left py-2 font-medium text-gray-600">Métrica</th>
+                                        <th className="text-left py-2 font-medium text-gray-600">Valor</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr className="border-b">
+                                        <td className="py-2 text-gray-600">Confianza</td>
+                                        <td className="py-2">
+                                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                            document.ocrResult.confidence >= 80 ? 'bg-green-100 text-green-800' :
+                                            document.ocrResult.confidence >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {document.ocrResult.confidence}%
+                                          </span>
+                                        </td>
+                                      </tr>
+                                      <tr className="border-b">
+                                        <td className="py-2 text-gray-600">Idioma detectado</td>
+                                        <td className="py-2 font-medium">{document.ocrResult.language}</td>
+                                      </tr>
+                                      <tr className="border-b">
+                                        <td className="py-2 text-gray-600">Tiempo de procesamiento</td>
+                                        <td className="py-2 font-medium">{document.ocrResult.processingTime}s</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="py-2 text-gray-600">Caracteres extraídos</td>
+                                        <td className="py-2 font-medium">{document.ocrResult.text?.length || 0}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                
+                                <div className="mt-3">
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">Texto extraído:</label>
+                                  <textarea
+                                    value={document.ocrResult.text}
+                                    readOnly
+                                    rows={4}
+                                    className="w-full text-xs border border-gray-300 rounded px-2 py-1 bg-white resize-none"
+                                    placeholder="Texto extraído aparecerá aquí..."
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Texto extraído:</label>
-                    <textarea
-                      value={ocrResult.text}
-                      readOnly
-                      rows={8}
-                      className="w-full mt-2 p-3 border border-gray-300 rounded-md bg-white text-sm"
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
             )}
 
@@ -351,28 +449,6 @@ export const TestOCRPage = () => {
           </div>
         </div>
 
-        <div className="mt-8 p-4 bg-blue-50 rounded-md">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">Información sobre OCR:</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>• <strong>OCR (Optical Character Recognition):</strong> Tecnología para extraer texto de imágenes</li>
-            <li>• Útil para digitalizar documentos, formularios y textos impresos</li>
-            <li>• Puede procesar documentos, capturas de pantalla, fotos de documentos</li>
-            <li>• La precisión depende de la calidad de la imagen y el tipo de fuente</li>
-            <li>• Ideal para automatizar la entrada de datos desde documentos físicos</li>
-          </ul>
-        </div>
-
-        <div className="mt-4 p-4 bg-green-50 rounded-md">
-          <h3 className="text-sm font-medium text-green-800 mb-2">🔄 Flujo de Procesamiento:</h3>
-          <ul className="text-sm text-green-700 space-y-1">
-            <li>• <strong>1. Subida a S3:</strong> El archivo se sube a S3 usando files-service</li>
-            <li>• <strong>2. Envío a OCR:</strong> Se envía la URL de S3 al microservicio OCR</li>
-            <li>• <strong>3. Hoktus Orchestrator:</strong> Se procesa con IA avanzada</li>
-            <li>• <strong>4. Callback:</strong> Los resultados se reciben automáticamente</li>
-            <li>• <strong>5. Base de datos:</strong> Se almacenan los resultados en DynamoDB</li>
-            <li>• <strong>Nota:</strong> El procesamiento es asíncrono y puede tomar varios minutos</li>
-          </ul>
-        </div>
       </div>
     </div>
   );
