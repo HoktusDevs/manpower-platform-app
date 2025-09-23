@@ -255,19 +255,54 @@ class ApplicationsService {
     const now = new Date();
     const data: ActivityData[] = [];
     
-    // Generar los últimos 7 días (incluyendo hoy)
-    for (let i = 6; i >= 0; i--) {
+    console.log('🔍 DEBUG: Today is', {
+      now: now.toISOString(),
+      dateString: now.toISOString().split('T')[0],
+      dayOfWeek: now.getDay(),
+      dayName: now.toLocaleDateString('es-ES', { weekday: 'long' })
+    });
+    
+    // Generar la semana actual (lunes a domingo)
+    // Calcular el lunes de esta semana
+    const currentDay = now.getDay(); // 0 = domingo, 1 = lunes, etc.
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Si es domingo, retroceder 6 días; si no, calcular días hasta el lunes
+    
+    for (let i = 0; i < 7; i++) {
       const date = new Date(now);
-      date.setDate(now.getDate() - i);
+      date.setDate(now.getDate() + mondayOffset + i); // Empezar desde el lunes de esta semana
       const dateString = date.toISOString().split('T')[0];
+      
+      console.log('🔍 DEBUG: Processing day', {
+        i,
+        dateString,
+        dayName: date.toLocaleDateString('es-ES', { weekday: 'short' })
+      });
       
       // Contar aplicaciones para este día
       const dayApplications = applications.filter(app => {
         const appDate = new Date(app.createdAt);
-        return appDate.toISOString().split('T')[0] === dateString;
+        const appDateString = appDate.toISOString().split('T')[0];
+        const matches = appDateString === dateString;
+        
+        if (matches) {
+          console.log('🔍 DEBUG: Found match!', {
+            appId: app.applicationId,
+            appDate: app.createdAt,
+            appDateString,
+            targetDate: dateString
+          });
+        }
+        
+        return matches;
       });
       
       const count = dayApplications.length;
+      
+      console.log('🔍 DEBUG: Day result', {
+        dateString,
+        count,
+        dayName: date.toLocaleDateString('es-ES', { weekday: 'short' })
+      });
       
       data.push({
         date: dateString,
@@ -278,6 +313,7 @@ class ApplicationsService {
       });
     }
     
+    console.log('🔍 DEBUG: Final week data', data);
     return data;
   }
 

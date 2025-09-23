@@ -108,7 +108,7 @@ const getEmptyDetails = (filter: ActivityFilter): string => {
 
 
 const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], granularity: TimeGranularity, filter: ActivityFilter }) => {
-  const maxCount = Math.max(...data.map(item => item.count));
+  const maxCount = Math.max(...data.map(item => item.count), 1); // Mínimo 1 para evitar división por 0
   const chartHeight = 200;
   
   const getXAxisLabel = () => {
@@ -139,8 +139,8 @@ const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], g
   };
 
   return (
-    <div className="p-6">
-      <div className="bg-gray-50 rounded-lg p-4">
+    <div className="p-0">
+      <div className="bg-gray-50 rounded-lg p-6">
         <div className="flex">
           {/* Y-axis label (vertical) */}
           <div className="flex items-center mr-4">

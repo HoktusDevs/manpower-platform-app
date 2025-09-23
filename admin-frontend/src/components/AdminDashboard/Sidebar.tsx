@@ -173,7 +173,7 @@ export function Sidebar({ onNavigate, isPluxeePortal = false, portalType }: Side
     <aside 
       className={`
         bg-white shadow-lg transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-16' : 'w-64'}
+        ${isCollapsed ? 'w-19' : 'w-64'}
         h-full relative overflow-visible
       `}
     >
