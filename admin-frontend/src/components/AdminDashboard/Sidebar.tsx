@@ -180,7 +180,7 @@ export function Sidebar({ onNavigate, isPluxeePortal = false, portalType }: Side
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-6 top-8 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out z-30 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        className="absolute -right-4 top-8 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out z-30 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         aria-label={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
       >
         <svg 
