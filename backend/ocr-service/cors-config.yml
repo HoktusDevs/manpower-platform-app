@@ -1,0 +1,60 @@
+# CORS Configuration for OCR Service WebSocket
+# This file contains the CORS settings needed for WebSocket connections from S3/CloudFront
+
+# CORS Headers for WebSocket connections
+WEBSOCKET_CORS_HEADERS:
+  # Standard CORS headers for WebSocket
+  Access-Control-Allow-Origin: "*"
+  Access-Control-Allow-Methods: "GET, POST, PUT, DELETE, OPTIONS"
+  Access-Control-Allow-Headers: "Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token, X-Amz-User-Agent, X-User-Id, Sec-WebSocket-Protocol, Sec-WebSocket-Version, Sec-WebSocket-Key"
+  Access-Control-Allow-Credentials: "true"
+  Access-Control-Max-Age: "86400"
+
+# CloudFront Origins that need to be allowed for WebSocket
+CLOUDFRONT_ORIGINS:
+  - "https://d1234567890abc.cloudfront.net"  # Admin Frontend
+  - "https://d0987654321xyz.cloudfront.net"  # Applicant Frontend  
+  - "https://d1111111111def.cloudfront.net"  # Auth Frontend
+
+# Production Origins (replace with actual CloudFront URLs)
+PRODUCTION_ORIGINS:
+  - "https://admin.manpower-platform.com"
+  - "https://applicant.manpower-platform.com"
+  - "https://auth.manpower-platform.com"
+
+# Development Origins (for local testing)
+DEVELOPMENT_ORIGINS:
+  - "http://localhost:6100"  # Auth Frontend
+  - "http://localhost:6200"  # Applicant Frontend
+  - "http://localhost:6500"  # Admin Frontend
+  - "http://localhost:3000"  # Alternative ports
+  - "http://localhost:3001"
+  - "http://localhost:5173"  # Vite default
+  - "http://localhost:8080"
+
+# WebSocket specific configuration
+WEBSOCKET_CONFIG:
+  # Connection timeout (in seconds)
+  ConnectionTimeout: 300
+  # Message timeout (in seconds)
+  MessageTimeout: 30
+  # Maximum connections per user
+  MaxConnectionsPerUser: 5
+  # Heartbeat interval (in seconds)
+  HeartbeatInterval: 30
+  # Reconnection attempts
+  MaxReconnectionAttempts: 5
+  # Reconnection delay (in milliseconds)
+  ReconnectionDelay: 5000
+
+# API Gateway WebSocket Configuration
+API_GATEWAY_WEBSOCKET:
+  # Route selection expression
+  RouteSelectionExpression: "$request.body.action"
+  # Default route
+  DefaultRoute: "$default"
+  # Connection routes
+  ConnectionRoutes:
+    - "$connect"
+    - "$disconnect"
+    - "$default"

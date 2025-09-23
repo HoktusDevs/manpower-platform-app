@@ -192,13 +192,10 @@ export const processDocumentsFromAdmin = async (
         console.log('doc.fileUrl:', doc.fileUrl);
         console.log('doc.platformDocumentId:', doc.platformDocumentId);
         
-        // Generate public URL for Hoktus to access
-        const baseUrl = process.env.CALLBACK_BASE_URL || 'https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev';
-        const publicUrl = `${baseUrl}/api/ocr/public-file/${doc.platformDocumentId}`;
-        
+        // Use original S3 URL directly - Hoktus should handle S3 access
         const mappedDoc = {
           file_name: doc.fileName,
-          file_url: publicUrl, // Use public URL that serves S3 file
+          file_url: doc.fileUrl, // Use original S3 URL directly
           platform_document_id: doc.platformDocumentId
         };
         
@@ -338,6 +335,14 @@ export const callback = async (
 
     const document = documentResult.data;
 
+    // Store Hoktus decision information
+    document.setHoktusResult({
+      final_decision: hoktusResult.final_decision,
+      processing_status: hoktusResult.processing_status,
+      document_type: hoktusResult.document_type,
+      observations: hoktusResult.observations
+    });
+
     // Update document with Hoktus results
     if (hoktusResult.final_decision === 'APPROVED') {
       document.updateStatus('completed');
@@ -383,6 +388,29 @@ export const callback = async (
     console.log('Status:', document.status);
     console.log('OCR Result:', document.ocrResult);
     console.log('=============================');
+
+    // Notify WebSocket clients about the document update
+    try {
+      const { WebSocketService } = require('../services/webSocketService');
+      const webSocketService = new WebSocketService();
+      
+      await webSocketService.notifyDocumentUpdate({
+        documentId: hoktusResult.platform_document_id,
+        status: document.status,
+        ocrResult: document.ocrResult,
+        error: document.error,
+        hoktusDecision: document.hoktusDecision,
+        hoktusProcessingStatus: document.hoktusProcessingStatus,
+        documentType: document.documentType,
+        observations: document.observations,
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log('WebSocket notification sent for document:', hoktusResult.platform_document_id);
+    } catch (wsError: any) {
+      console.error('Error sending WebSocket notification:', wsError);
+      // Don't fail the callback if WebSocket notification fails
+    }
 
     return {
       statusCode: 200,
@@ -461,30 +489,15 @@ export const getPublicFile = async (
       };
     }
 
-    // Generate presigned URL for the file
-    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-    
-    const s3Client = new S3Client({ region: 'us-east-1' });
-    
-    // Extract S3 key from the file URL
+    // Return the original S3 URL directly - let Hoktus handle it
     const fileUrl = document.data.fileUrl;
-    const s3Key = fileUrl.includes('amazonaws.com') 
-      ? fileUrl.split('amazonaws.com/')[1] 
-      : fileUrl.split('/').pop();
-    
-    const command = new GetObjectCommand({
-      Bucket: 'manpower-files-dev',
-      Key: s3Key
-    });
+    console.log('Returning original fileUrl:', fileUrl);
 
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
-    // Redirect to the presigned URL
+    // Redirect to the original S3 URL
     return {
       statusCode: 302,
       headers: {
-        'Location': presignedUrl,
+        'Location': fileUrl,
         'Access-Control-Allow-Origin': '*'
       },
       body: ''
@@ -500,6 +513,173 @@ export const getPublicFile = async (
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      })
+    };
+  }
+};
+
+// New endpoint to get real-time document status
+export const getDocumentStatus = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const documentId = event.pathParameters?.documentId;
+
+    if (!documentId) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS'
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'Document ID is required'
+        })
+      };
+    }
+
+    const result = await ocrService.getDocumentByPlatformId(documentId);
+
+    return {
+      statusCode: result.success ? 200 : 404,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify(result)
+    };
+
+  } catch (error: any) {
+    console.error('Error in getDocumentStatus handler:', error);
+    
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      })
+    };
+  }
+};
+
+// New endpoint to get all documents by status
+export const getDocumentsByStatus = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const status = event.queryStringParameters?.status || 'all';
+
+    let result;
+    if (status === 'all') {
+      result = await ocrService.getAllDocuments();
+    } else {
+      result = await ocrService.getDocumentsByStatus(status);
+    }
+
+    return {
+      statusCode: result.success ? 200 : 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify(result)
+    };
+
+  } catch (error: any) {
+    console.error('Error in getDocumentsByStatus handler:', error);
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      })
+    };
+  }
+};
+
+export const deleteDocument = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  // Handle preflight OPTIONS request
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+      },
+      body: ''
+    };
+  }
+
+  try {
+    console.log('Delete document request:', event.pathParameters);
+
+    const documentId = event.pathParameters?.id;
+    if (!documentId) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'Document ID is required'
+        })
+      };
+    }
+
+    const result = await ocrService.deleteDocument(documentId);
+
+    return {
+      statusCode: result.success ? 200 : 404,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+      },
+      body: JSON.stringify(result)
+    };
+
+  } catch (error: any) {
+    console.error('Error in deleteDocument handler:', error);
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
       },
       body: JSON.stringify({
         success: false,

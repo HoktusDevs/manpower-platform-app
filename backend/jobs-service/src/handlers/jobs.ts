@@ -71,6 +71,61 @@ export const createJob: APIGatewayProxyHandler = async (event) => {
       });
     }
 
+    // Validate employment type
+    const validEmploymentTypes = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE', 'INTERNSHIP', 'TEMPORARY'];
+    if (input.employmentType && !validEmploymentTypes.includes(input.employmentType)) {
+      return createResponse(400, {
+        success: false,
+        message: `Invalid employment type. Must be one of: ${validEmploymentTypes.join(', ')}`,
+      });
+    }
+
+    // Validate experience level
+    const validExperienceLevels = ['ENTRY_LEVEL', 'MID_LEVEL', 'SENIOR_LEVEL', 'EXECUTIVE', 'INTERNSHIP'];
+    if (input.experienceLevel && !validExperienceLevels.includes(input.experienceLevel)) {
+      return createResponse(400, {
+        success: false,
+        message: `Invalid experience level. Must be one of: ${validExperienceLevels.join(', ')}`,
+      });
+    }
+
+    // Validate status if provided
+    const validStatuses = ['DRAFT', 'PUBLISHED', 'PAUSED', 'CLOSED'];
+    if (input.status && !validStatuses.includes(input.status)) {
+      return createResponse(400, {
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    // Validate requiredDocuments if provided
+    if (input.requiredDocuments && !Array.isArray(input.requiredDocuments)) {
+      return createResponse(400, {
+        success: false,
+        message: 'requiredDocuments must be an array of strings',
+      });
+    }
+
+    // Validate for special characters that could cause issues
+    const specialCharRegex = /[<>{}[\]\\|`~!@#$%^&*()_+=\-]/;
+    const fieldsToValidate = [
+      { value: input.title, name: 'title' },
+      { value: input.companyName, name: 'companyName' },
+      { value: input.description, name: 'description' },
+      { value: input.requirements, name: 'requirements' },
+      { value: input.benefits, name: 'benefits' },
+      { value: input.schedule, name: 'schedule' }
+    ];
+
+    for (const field of fieldsToValidate) {
+      if (field.value && specialCharRegex.test(field.value)) {
+        return createResponse(400, {
+          success: false,
+          message: `Field '${field.name}' contains invalid special characters. Please remove characters like < > { } [ ] \\ | \` ~ ! @ # $ % ^ & * ( ) _ + = -`,
+        });
+      }
+    }
+
     const result = await jobService.createJob(input, userId);
 
     if (!result.success) {

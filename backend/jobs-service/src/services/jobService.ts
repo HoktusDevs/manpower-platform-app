@@ -61,10 +61,17 @@ export class JobService {
         try {
           console.log('Processing document types for job:', jobId);
           
-          // First, check which document types already exist
-          const checkResult = await this.documentTypesClient.checkExistingDocumentTypes(input.requiredDocuments);
+          // Add timeout for document types processing (10 seconds)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('DocumentTypes service timeout')), 10000)
+          );
           
-          if (checkResult.new.length > 0) {
+          const documentTypesPromise = this.documentTypesClient.checkExistingDocumentTypes(input.requiredDocuments);
+          
+          // Race between document types processing and timeout
+          const checkResult = await Promise.race([documentTypesPromise, timeoutPromise]);
+          
+          if (checkResult.new && checkResult.new.length > 0) {
             console.log(`Creating ${checkResult.new.length} new document types:`, checkResult.new);
             // Only create new document types
             const documentTypesResult = await this.documentTypesClient.createFromJobDocuments(
@@ -79,15 +86,16 @@ export class JobService {
             }
           }
           
-          if (checkResult.existing.length > 0) {
+          if (checkResult.existing && checkResult.existing.length > 0) {
             console.log(`Found ${checkResult.existing.length} existing document types:`, checkResult.existing);
             // TODO: Increment usage count for existing types
             // This could be implemented as a separate endpoint or batch operation
           }
           
         } catch (error) {
-          console.error('Error processing document types (non-blocking):', error);
+          console.warn('Document types processing failed (non-blocking):', error);
           // Don't fail the job creation if document types processing fails
+          // Job will be created successfully without document types integration
         }
       }
 

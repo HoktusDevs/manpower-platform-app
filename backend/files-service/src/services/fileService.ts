@@ -20,7 +20,8 @@ export class FileService {
   private s3Service: S3Service | MockS3Service;
 
   constructor() {
-    const isLocal = process.env.STAGE === 'local';
+    // Forzar uso de datos reales en desarrollo
+    const isLocal = false; // process.env.STAGE === 'local';
 
     if (isLocal) {
       console.log('FileService: Using mock services for local development');

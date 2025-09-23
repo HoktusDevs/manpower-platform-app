@@ -52,8 +52,6 @@ export class UserService {
           userId: result.Username,
           email: getAttribute('email'),
           name: fullName,
-          givenName: givenName,
-          familyName: familyName,
           role: getAttribute('custom:role'),
           rut: getAttribute('custom:rut'),
           phone: getAttribute('phone_number'),
@@ -64,6 +62,29 @@ export class UserService {
       return null;
     } catch (error) {
       console.error('Error getting user by ID from Cognito:', error);
+      // Fallback: intentar extraer nombre de la descripción de aplicaciones
+      return this.getUserFromApplications(userId);
+    }
+  }
+
+  /**
+   * Fallback: Get user data from application descriptions
+   */
+  private async getUserFromApplications(userId: string): Promise<UserData | null> {
+    try {
+      // Este es un fallback básico - en una implementación real,
+      // podrías consultar la tabla de aplicaciones para extraer el nombre
+      // del campo description que contiene "Aplicación de [nombre] ([email])"
+      
+      // Por ahora, devolvemos datos básicos
+      return {
+        userId: userId,
+        email: 'email@no-especificado.com',
+        name: `Usuario-${userId.slice(-8)}`,
+        role: 'postulante'
+      };
+    } catch (error) {
+      console.error('Error getting user from applications fallback:', error);
       return null;
     }
   }

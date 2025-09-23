@@ -298,6 +298,9 @@ export class ApplicationService {
             // Datos del usuario
             const userData = usersMap.get(application.userId);
             
+            // Extraer nombre real de la descripción si está disponible
+            const realUserName = this.extractUserNameFromDescription(application.description || '');
+            
             // Datos del trabajo
             const jobData = jobsMap.get(application.jobId);
             
@@ -306,8 +309,8 @@ export class ApplicationService {
             
             return {
               ...application,
-              // Usuario: nombre y apellido por userId
-              userName: userData?.name || `Usuario-${application.userId.slice(-8)}`,
+              // Usuario: nombre real extraído de la descripción o fallback
+              userName: realUserName || userData?.name || `Usuario-${application.userId.slice(-8)}`,
               userEmail: userData?.email || 'email@no-especificado.com',
               userRole: userData?.role || 'postulante',
               userRut: userData?.rut,
@@ -406,5 +409,26 @@ export class ApplicationService {
     }
     
     return jobsMap;
+  }
+
+  /**
+   * Extract user name from application description
+   * Format: "Aplicación de [nombre] ([email])"
+   */
+  private extractUserNameFromDescription(description: string): string | null {
+    if (!description) return null;
+    
+    try {
+      // Buscar patrón "Aplicación de [nombre] ([email])"
+      const match = description.match(/Aplicación de ([^(]+)\s*\(/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting user name from description:', error);
+      return null;
+    }
   }
 }

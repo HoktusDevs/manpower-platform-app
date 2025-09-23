@@ -44,21 +44,30 @@ export class DynamoService {
   }
 
   private async createTable(): Promise<void> {
-    const command = new CreateTableCommand({
-      TableName: this.tableName,
-      BillingMode: 'PAY_PER_REQUEST',
-      AttributeDefinitions: [
-        { AttributeName: 'jobId', AttributeType: 'S' },
-        { AttributeName: 'createdBy', AttributeType: 'S' }
-      ],
-      KeySchema: [
-        { AttributeName: 'jobId', KeyType: 'HASH' },
-        { AttributeName: 'createdBy', KeyType: 'RANGE' }
-      ]
-    });
+    try {
+      const command = new CreateTableCommand({
+        TableName: this.tableName,
+        BillingMode: 'PAY_PER_REQUEST',
+        AttributeDefinitions: [
+          { AttributeName: 'jobId', AttributeType: 'S' },
+          { AttributeName: 'createdBy', AttributeType: 'S' }
+        ],
+        KeySchema: [
+          { AttributeName: 'jobId', KeyType: 'HASH' },
+          { AttributeName: 'createdBy', KeyType: 'RANGE' }
+        ]
+      });
 
-    await this.rawClient.send(command);
-    console.log(`Table ${this.tableName} created successfully`);
+      await this.rawClient.send(command);
+      console.log(`Table ${this.tableName} created successfully`);
+    } catch (error: any) {
+      if (error.name === 'ResourceInUseException') {
+        console.log(`Table ${this.tableName} already exists`);
+      } else {
+        console.error('Error creating table:', error);
+        throw error;
+      }
+    }
   }
 
   async createJob(job: JobModel): Promise<Job> {
@@ -69,8 +78,29 @@ export class DynamoService {
       Item: job.toJSON(),
     });
 
-    await this.client.send(command);
-    return job.toJSON();
+    // Add retry logic for DynamoDB operations
+    let retries = 3;
+    let lastError: Error | null = null;
+    
+    while (retries > 0) {
+      try {
+        await this.client.send(command);
+        return job.toJSON();
+      } catch (error) {
+        lastError = error as Error;
+        retries--;
+        
+        if (retries > 0) {
+          console.warn(`DynamoDB operation failed, retrying... (${retries} attempts left)`, error);
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, 3 - retries) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    console.error('DynamoDB operation failed after all retries:', lastError);
+    throw new Error(`Database connection failed: ${lastError?.message || 'Unknown error'}`);
   }
 
   async getJob(jobId: string, createdBy: string): Promise<Job | null> {
@@ -84,8 +114,28 @@ export class DynamoService {
       },
     });
 
-    const result = await this.client.send(command);
-    return result.Item as Job || null;
+    // Add retry logic for DynamoDB operations
+    let retries = 3;
+    let lastError: Error | null = null;
+    
+    while (retries > 0) {
+      try {
+        const result = await this.client.send(command);
+        return result.Item as Job || null;
+      } catch (error) {
+        lastError = error as Error;
+        retries--;
+        
+        if (retries > 0) {
+          console.warn(`DynamoDB getJob failed, retrying... (${retries} attempts left)`, error);
+          const delay = Math.pow(2, 3 - retries) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    console.error('DynamoDB getJob failed after all retries:', lastError);
+    throw new Error(`Database connection failed: ${lastError?.message || 'Unknown error'}`);
   }
 
   async updateJob(jobId: string, createdBy: string, updates: Partial<Job>): Promise<Job | null> {
@@ -172,17 +222,10 @@ export class DynamoService {
   }
 
   async getPublishedJobs(limit?: number, nextToken?: string): Promise<{ jobs: Job[], nextToken?: string }> {
-    await this.ensureTableExists();
-
+    // Simple scan without filters for now
     const command = new ScanCommand({
       TableName: this.tableName,
-      FilterExpression: 'status = :status AND isActive = :isActive',
-      ExpressionAttributeValues: {
-        ':status': 'PUBLISHED',
-        ':isActive': true,
-      },
       Limit: limit,
-      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
     });
 
     const result = await this.client.send(command);

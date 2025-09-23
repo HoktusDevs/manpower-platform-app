@@ -12,6 +12,7 @@ provider:
     INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
     DYNAMODB_ENDPOINT: ${env:DYNAMODB_ENDPOINT, ''}
     JOBS_SERVICE_URL: ${env:JOBS_SERVICE_URL, 'https://pa3itplx4f.execute-api.us-east-1.amazonaws.com/dev'}
+    FILES_SERVICE_URL: ${env:FILES_SERVICE_URL, 'https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev'}
   iamRoleStatements:
     - Effect: Allow
       Action:

@@ -1,5 +1,26 @@
 import { Folder } from '../models/Folder';
 
+export interface File {
+  documentId: string;
+  userId: string;
+  documentType: string;
+  folderId: string;
+  originalName: string;
+  fileName: string;
+  fileType: string;
+  fileExtension: string;
+  fileSize: number;
+  s3Key: string;
+  s3Bucket: string;
+  downloadUrl?: string;
+  isPublic: boolean;
+  description?: string;
+  tags: string[];
+  uploadedAt: string;
+  updatedAt: string;
+  isActive: boolean;
+}
+
 export interface CreateFolderInput {
   name?: string; // Opcional cuando se usa applicantUserId
   applicantUserId?: string; // Para buscar el nombre del usuario por userId
@@ -18,8 +39,8 @@ export interface UpdateFolderInput {
 export interface FolderResponse {
   success: boolean;
   message: string;
-  folder?: Folder & { path?: string; childrenCount?: number };
-  folders?: (Folder & { path?: string; childrenCount?: number })[];
+  folder?: Folder & { path?: string; childrenCount?: number; files?: File[] };
+  folders?: (Folder & { path?: string; childrenCount?: number; files?: File[] })[];
   nextToken?: string;
 }
 

@@ -13,6 +13,10 @@ export class OCRDocumentModel {
   public hoktusRequestId?: string;
   public ocrResult?: OCRResult;
   public error?: string;
+  public hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
+  public hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  public documentType?: string;
+  public observations?: any[];
 
   constructor(data: Partial<OCRDocument>) {
     this.id = data.id || uuidv4();
@@ -26,6 +30,10 @@ export class OCRDocumentModel {
     this.hoktusRequestId = data.hoktusRequestId;
     this.ocrResult = data.ocrResult;
     this.error = data.error;
+    this.hoktusDecision = data.hoktusDecision;
+    this.hoktusProcessingStatus = data.hoktusProcessingStatus;
+    this.documentType = data.documentType;
+    this.observations = data.observations;
   }
 
   public toDynamoDB(): Record<string, any> {
@@ -40,7 +48,11 @@ export class OCRDocumentModel {
       updatedAt: this.updatedAt,
       hoktusRequestId: this.hoktusRequestId,
       ocrResult: this.ocrResult ? JSON.stringify(this.ocrResult) : undefined,
-      error: this.error
+      error: this.error,
+      hoktusDecision: this.hoktusDecision,
+      hoktusProcessingStatus: this.hoktusProcessingStatus,
+      documentType: this.documentType,
+      observations: this.observations ? JSON.stringify(this.observations) : undefined
     };
   }
 
@@ -56,7 +68,11 @@ export class OCRDocumentModel {
       updatedAt: item.updatedAt,
       hoktusRequestId: item.hoktusRequestId,
       ocrResult: item.ocrResult ? JSON.parse(item.ocrResult) : undefined,
-      error: item.error
+      error: item.error,
+      hoktusDecision: item.hoktusDecision,
+      hoktusProcessingStatus: item.hoktusProcessingStatus,
+      documentType: item.documentType,
+      observations: item.observations ? JSON.parse(item.observations) : undefined
     });
   }
 
@@ -77,6 +93,19 @@ export class OCRDocumentModel {
   public setHoktusRequestId(requestId: string): void {
     this.hoktusRequestId = requestId;
     this.status = 'processing';
+    this.updatedAt = new Date().toISOString();
+  }
+
+  public setHoktusResult(hoktusData: {
+    final_decision: string;
+    processing_status: string;
+    document_type?: string;
+    observations?: any[];
+  }): void {
+    this.hoktusDecision = hoktusData.final_decision as any;
+    this.hoktusProcessingStatus = hoktusData.processing_status as any;
+    this.documentType = hoktusData.document_type;
+    this.observations = hoktusData.observations;
     this.updatedAt = new Date().toISOString();
   }
 }

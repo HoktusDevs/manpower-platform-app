@@ -71,7 +71,7 @@ export class JobModel {
 
   // Validate job data
   public isValid(): boolean {
-    return !!(
+    const hasRequiredFields = !!(
       this.title &&
       this.description &&
       this.companyName &&
@@ -79,6 +79,23 @@ export class JobModel {
       this.folderId &&
       this.createdBy
     );
+
+    // Validate employment type if provided
+    const validEmploymentTypes = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE', 'INTERNSHIP', 'TEMPORARY'];
+    const hasValidEmploymentType = !this.employmentType || validEmploymentTypes.includes(this.employmentType);
+
+    // Validate experience level if provided
+    const validExperienceLevels = ['ENTRY_LEVEL', 'MID_LEVEL', 'SENIOR_LEVEL', 'EXECUTIVE', 'INTERNSHIP'];
+    const hasValidExperienceLevel = !this.experienceLevel || validExperienceLevels.includes(this.experienceLevel);
+
+    // Validate status if provided
+    const validStatuses = ['DRAFT', 'PUBLISHED', 'PAUSED', 'CLOSED'];
+    const hasValidStatus = !this.status || validStatuses.includes(this.status);
+
+    // Validate requiredDocuments if provided
+    const hasValidRequiredDocuments = !this.requiredDocuments || Array.isArray(this.requiredDocuments);
+
+    return hasRequiredFields && hasValidEmploymentType && hasValidExperienceLevel && hasValidStatus && hasValidRequiredDocuments;
   }
 
   // Check if job is visible to postulantes

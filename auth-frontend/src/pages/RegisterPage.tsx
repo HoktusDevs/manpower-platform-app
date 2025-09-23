@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { APP_CONFIG } from '../config/app-config';
 
 interface RegisterFormData {
   email: string;
@@ -79,8 +80,10 @@ export const RegisterPage: React.FC = () => {
           });
 
           if (loginResponse.success && loginResponse.sessionKey) {
-            // Redirect to applicant frontend with sessionKey
-            window.location.href = `http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com?sessionKey=${loginResponse.sessionKey}`;
+            // Redirect to applicant frontend with sessionKey using dynamic configuration
+            const redirectUrl = APP_CONFIG.APPLICANT_FRONTEND_URL;
+            const urlWithSessionKey = `${redirectUrl}?sessionKey=${encodeURIComponent(loginResponse.sessionKey)}`;
+            window.location.href = urlWithSessionKey;
           } else {
             // If auto-login fails, redirect to login page
             setSuccess('Registro exitoso. Por favor inicia sesión.');

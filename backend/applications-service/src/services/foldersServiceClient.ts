@@ -65,6 +65,30 @@ export class FoldersServiceClient {
     }
   }
 
+  // Get folder by ID
+  async getFolder(folderId: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/folders/${folderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('FoldersServiceClient: Error getting folder:', response.statusText);
+        return null;
+      }
+
+      const result = await response.json() as any;
+      return result.folder || null;
+    } catch (error) {
+      console.error('FoldersServiceClient: Network error getting folder:', error);
+      return null;
+    }
+  }
+
   // Health check for folders-service
   async checkFoldersServiceHealth(): Promise<boolean> {
     try {

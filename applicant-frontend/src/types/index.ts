@@ -10,6 +10,9 @@ export interface JobPosting {
   experienceLevel: string;
   requirements?: string;
   benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
+  requiredDocuments?: string[];
   status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
   isActive: boolean;
   createdAt: string;

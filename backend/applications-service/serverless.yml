@@ -12,6 +12,7 @@ provider:
     FOLDERS_TABLE: manpower-folders-${self:provider.stage}
     FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev'}
     INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
+    USER_POOL_ID: ${env:USER_POOL_ID, 'us-east-1_kQKPPUqRO'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -29,6 +30,12 @@ provider:
         - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.JOBS_TABLE}/index/*
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}/index/*
+    - Effect: Allow
+      Action:
+        - cognito-idp:AdminGetUser
+        - cognito-idp:ListUsers
+      Resource:
+        - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.USER_POOL_ID}
 
 functions:
   # Health Check

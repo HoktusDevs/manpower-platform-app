@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import { applicationsService } from '../services/applicationsService';
+import { filesService } from '../services/filesService';
+import { DocumentUpload } from '../components/DocumentUpload';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
 export const CompletarAplicacionesPage = () => {
@@ -19,7 +21,8 @@ export const CompletarAplicacionesPage = () => {
     direccion: '',
     educacion: ''
   });
-  const [files, setFiles] = useState<{ [jobId: string]: File[] }>({});
+  const [documentFiles, setDocumentFiles] = useState<{ [jobId: string]: { [documentName: string]: File } }>({});
+  const [documentIds, setDocumentIds] = useState<{ [jobId: string]: { [documentName: string]: string } }>({});
   const [saving, setSaving] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -87,10 +90,83 @@ export const CompletarAplicacionesPage = () => {
     setApplicationData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = (jobId: string, newFiles: FileList | null): void => {
-    if (newFiles) {
-      setFiles(prev => ({ ...prev, [jobId]: Array.from(newFiles) }));
+
+  const handleDocumentUpload = (jobId: string, documentName: string, file: File, documentId?: string) => {
+    setDocumentFiles(prev => ({
+      ...prev,
+      [jobId]: {
+        ...prev[jobId],
+        [documentName]: file
+      }
+    }));
+
+    if (documentId) {
+      setDocumentIds(prev => ({
+        ...prev,
+        [jobId]: {
+          ...prev[jobId],
+          [documentName]: documentId
+        }
+      }));
     }
+  };
+
+  const handleDocumentRemove = (jobId: string, documentName: string) => {
+    setDocumentFiles(prev => {
+      const newFiles = { ...prev[jobId] };
+      delete newFiles[documentName];
+      return {
+        ...prev,
+        [jobId]: newFiles
+      };
+    });
+
+    setDocumentIds(prev => {
+      const newIds = { ...prev[jobId] };
+      delete newIds[documentName];
+      return {
+        ...prev,
+        [jobId]: newIds
+      };
+    });
+  };
+
+  const handleDocumentUploadComplete = (jobId: string, documentName: string, documentId: string, fileUrl: string) => {
+    console.log('Document upload completed:', { jobId, documentName, documentId, fileUrl });
+    // El documento ya está guardado en DynamoDB y S3
+  };
+
+  const handleDocumentUploadError = (jobId: string, documentName: string, error: string) => {
+    console.error('Document upload error:', { jobId, documentName, error });
+    setError(`Error subiendo ${documentName}: ${error}`);
+  };
+
+  const isDocumentUploaded = (jobId: string, documentName: string): boolean => {
+    return !!(documentFiles[jobId]?.[documentName]);
+  };
+
+  const getUploadedDocument = (jobId: string, documentName: string): File | null => {
+    return documentFiles[jobId]?.[documentName] || null;
+  };
+
+  const areAllDocumentsUploaded = (job: JobPosting): boolean => {
+    if (!job.requiredDocuments || job.requiredDocuments.length === 0) {
+      return true; // No documents required
+    }
+    
+    return job.requiredDocuments.every(docName => 
+      isDocumentUploaded(job.jobId, docName)
+    );
+  };
+
+  const getMissingDocuments = (job: JobPosting): string[] => {
+    if (!job.requiredDocuments || job.requiredDocuments.length === 0) {
+      return [];
+    }
+    
+    return job.requiredDocuments.filter(docName => 
+      !isDocumentUploaded(job.jobId, docName)
+    );
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -112,15 +188,35 @@ export const CompletarAplicacionesPage = () => {
 
       console.log('Enviando aplicaciones para jobs:', selectedJobs.map(job => job.jobId));
 
+      // Validar que todos los documentos requeridos estén subidos
+      const missingDocuments = selectedJobs.flatMap(job => 
+        getMissingDocuments(job).map(docName => `${job.title}: ${docName}`)
+      );
+
+      if (missingDocuments.length > 0) {
+        setError(`Faltan documentos requeridos: ${missingDocuments.join(', ')}`);
+        return;
+      }
+
       // Enviar aplicaciones al backend
       const response = await applicationsService.createApplications({
         jobIds: selectedJobs.map(job => job.jobId),
         description: `Aplicación de ${applicationData.nombre} (${applicationData.email})`,
-        documents: [] // TODO: Implementar subida de documentos
+        documents: [] // Los documentos ya están asociados individualmente
       });
 
       if (response.success) {
-        setSuccessMessage(`¡Aplicaciones enviadas exitosamente! Se crearon ${response.applications?.length || 0} aplicaciones.`);
+        // Asociar documentos con las aplicaciones creadas
+        if (response.applications) {
+          for (const application of response.applications) {
+            const jobDocuments = documentIds[application.jobId] || {};
+            for (const [, documentId] of Object.entries(jobDocuments)) {
+              await filesService.associateDocumentWithApplication(documentId, application.applicationId);
+            }
+          }
+        }
+
+        setSuccessMessage(`¡Aplicaciones enviadas exitosamente con documentos! Se crearon ${response.applications?.length || 0} aplicaciones.`);
         setShowSuccessToast(true);
         
         // Redirigir a Mis Aplicaciones después de 2 segundos
@@ -321,33 +417,64 @@ export const CompletarAplicacionesPage = () => {
 
             {activeTab === 'documentos' && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Documentos</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Documentos Requeridos</h3>
                 {selectedJobs.length === 0 ? (
                   <p className="text-gray-600">Primero selecciona puestos de trabajo.</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {selectedJobs.map((job) => (
-                      <div key={job.jobId} className="border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-2">{job.title}</h4>
-                        <div className="mb-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Subir documentos (CV, certificados, etc.)
-                          </label>
-                          <input
-                            type="file"
-                            multiple
-                            onChange={(e) => handleFileChange(job.jobId, e.target.files)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        {(() => {
-                          const jobFiles = files[job.jobId];
-                          return jobFiles && jobFiles.length > 0 && (
-                            <div className="text-sm text-gray-600">
-                              {jobFiles.length} archivo(s) seleccionado(s)
+                      <div key={job.jobId} className="border border-gray-200 rounded-lg p-6">
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium text-gray-900 text-lg">{job.title}</h4>
+                              <p className="text-sm text-gray-600">{job.companyName}</p>
                             </div>
-                          );
-                        })()}
+                            {job.requiredDocuments && job.requiredDocuments.length > 0 && (
+                              <div className="flex items-center space-x-2">
+                                {areAllDocumentsUploaded(job) ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    ✓ Completado
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    {getMissingDocuments(job).length} pendiente(s)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {job.requiredDocuments && job.requiredDocuments.length > 0 ? (
+                          <div className="space-y-4">
+                            <p className="text-sm text-gray-600 mb-4">
+                              Sube los siguientes documentos requeridos para este empleo:
+                            </p>
+                            {job.requiredDocuments.map((documentName, index) => (
+                              <DocumentUpload
+                                key={`${job.jobId}-${index}`}
+                                documentName={documentName}
+                                onFileUpload={(file, documentId) => handleDocumentUpload(job.jobId, documentName, file, documentId)}
+                                onFileRemove={() => handleDocumentRemove(job.jobId, documentName)}
+                                uploadedFile={getUploadedDocument(job.jobId, documentName)}
+                                isUploaded={isDocumentUploaded(job.jobId, documentName)}
+                                isRequired={true}
+                                userId={user?.sub || ''}
+                                jobId={job.jobId}
+                                onUploadComplete={(documentId, fileUrl) => handleDocumentUploadComplete(job.jobId, documentName, documentId, fileUrl)}
+                                onUploadError={(error) => handleDocumentUploadError(job.jobId, documentName, error)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p>Este empleo no requiere documentos específicos</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

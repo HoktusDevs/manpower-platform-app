@@ -268,11 +268,28 @@ export const AplicarPage = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                            {isApplied && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Ya postulado
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {job.status === 'PUBLISHED' && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Activo
+                                </span>
+                              )}
+                              {job.status === 'PAUSED' && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  Pausado
+                                </span>
+                              )}
+                              {job.status === 'CLOSED' && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  Cerrado
+                                </span>
+                              )}
+                              {isApplied && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  Ya postulado
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-gray-600">
                             <span className="font-medium">{job.companyName}</span>
@@ -300,6 +317,30 @@ export const AplicarPage = () => {
                             <p className="text-sm text-blue-600 line-clamp-2">
                               <span className="font-medium">Beneficios:</span> {job.benefits}
                             </p>
+                          )}
+                          {job.schedule && (
+                            <p className="text-sm text-purple-600 line-clamp-2">
+                              <span className="font-medium">Horario:</span> {job.schedule}
+                            </p>
+                          )}
+                          {job.expiresAt && (
+                            <p className="text-sm text-orange-600 line-clamp-2">
+                              <span className="font-medium">Expira:</span> {new Date(job.expiresAt).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </p>
+                          )}
+                          {job.requiredDocuments && job.requiredDocuments.length > 0 && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Documentos requeridos:</span>
+                              <ul className="list-disc list-inside mt-1 space-y-1">
+                                {job.requiredDocuments.map((doc, index) => (
+                                  <li key={index} className="text-xs">{doc}</li>
+                                ))}
+                              </ul>
+                            </div>
                           )}
                         </div>
                       </div>

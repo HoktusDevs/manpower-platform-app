@@ -22,12 +22,12 @@ class JobsService {
   }
 
   /**
-   * Obtener todos los jobs (mismo endpoint que admin-frontend)
+   * Obtener todos los jobs publicados (endpoint público para postulantes)
    */
   async getAllJobs(limit?: number, nextToken?: string): Promise<JobsResponse> {
     try {
-      const url = `${this.baseUrl}/jobs`;
-      console.log('JobsService: Obteniendo todos los jobs desde', url);
+      const url = `${this.baseUrl}/jobs/published`;
+      console.log('JobsService: Obteniendo jobs publicados desde', url);
       
       const params = new URLSearchParams();
       if (limit) params.append('limit', limit.toString());

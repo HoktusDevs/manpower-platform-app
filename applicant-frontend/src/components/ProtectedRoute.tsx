@@ -8,7 +8,6 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
-  const [shouldRender, setShouldRender] = useState(false);
   const [initialDelay, setInitialDelay] = useState(true);
 
   useEffect(() => {
@@ -25,10 +24,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     if (!initialDelay && !isLoading) {
       if (user) {
         console.log('✅ Usuario autenticado, permitiendo acceso');
-        setShouldRender(true);
       } else {
         console.log('❌ Usuario no autenticado, redirigiendo al login');
-        setShouldRender(false);
       }
     }
   }, [user, isLoading, initialDelay]);

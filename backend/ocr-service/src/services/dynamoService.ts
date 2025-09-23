@@ -1,5 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, QueryCommand, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { OCRDocumentModel } from '../models/OCRDocument';
 
 export class DynamoService {
@@ -131,5 +131,28 @@ export class DynamoService {
       console.error('Error getting document by platform ID:', error);
       throw error;
     }
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    const command = new DeleteCommand({
+      TableName: this.tableName,
+      Key: { id }
+    });
+
+    await this.client.send(command);
+  }
+
+  async getAllDocuments(): Promise<OCRDocumentModel[]> {
+    const command = new ScanCommand({
+      TableName: this.tableName
+    });
+
+    const result = await this.client.send(command);
+
+    if (!result.Items) {
+      return [];
+    }
+
+    return result.Items.map(item => OCRDocumentModel.fromDynamoDB(item));
   }
 }

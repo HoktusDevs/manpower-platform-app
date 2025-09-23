@@ -4,13 +4,16 @@ import { DynamoService } from './dynamoService';
 import { MockDynamoService } from './mockDynamoService';
 import { UserService } from './userService';
 import { CreateFolderInput, UpdateFolderInput, FolderResponse, FolderQuery } from '../types';
+import { FileService } from './fileService';
 
 export class FolderService {
   private dynamoService: DynamoService | MockDynamoService;
   private userService: UserService;
+  private fileService: FileService;
 
   constructor() {
-    const isLocal = process.env.STAGE === 'local';
+    // Forzar uso de datos reales en desarrollo
+    const isLocal = false; // process.env.STAGE === 'local' || process.env.NODE_ENV === 'local';
     if (isLocal) {
       console.log('FolderService: Using MockDynamoService for local development');
       this.dynamoService = new MockDynamoService();
@@ -19,6 +22,7 @@ export class FolderService {
       this.dynamoService = new DynamoService();
     }
     this.userService = new UserService();
+    this.fileService = new FileService();
   }
 
   async createFolder(input: CreateFolderInput, userId: string): Promise<FolderResponse> {
@@ -158,10 +162,40 @@ export class FolderService {
       const result = await this.dynamoService.getFoldersByUser(userId, limit, nextToken);
 
       const foldersWithPath = await Promise.all(
-        result.folders.map(async (folder) => ({
-          ...folder,
-          path: await this.buildFolderPath(folder),
-        }))
+        result.folders.map(async (folder) => {
+          const folderWithPath = {
+            ...folder,
+            path: await this.buildFolderPath(folder),
+          };
+
+          // Si el tipo es "Postulante", obtener los archivos de la carpeta
+          if (folder.type === 'Postulante') {
+            try {
+              const filesResponse = await this.fileService.getFilesByFolder(folder.folderId, userId);
+              if (filesResponse.success && filesResponse.files) {
+                return {
+                  ...folderWithPath,
+                  files: filesResponse.files,
+                };
+              } else {
+                // Si no se pueden obtener archivos, incluir array vacío
+                return {
+                  ...folderWithPath,
+                  files: [],
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching files for folder ${folder.folderId}:`, error);
+              // En caso de error, incluir array vacío
+              return {
+                ...folderWithPath,
+                files: [],
+              };
+            }
+          }
+
+          return folderWithPath;
+        })
       );
 
       return {

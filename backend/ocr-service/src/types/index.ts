@@ -10,6 +10,10 @@ export interface OCRDocument {
   hoktusRequestId?: string;
   ocrResult?: OCRResult;
   error?: string;
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  documentType?: string;
+  observations?: any[];
 }
 
 export interface OCRResult {

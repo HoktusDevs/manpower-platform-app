@@ -187,7 +187,7 @@ export class OCRService {
   async getDocumentsByStatus(status: string): Promise<APIResponse<OCRDocumentModel[]>> {
     try {
       const documents = await this.dynamoService.getDocumentsByStatus(status);
-      
+
       return {
         success: true,
         data: documents
@@ -195,10 +195,29 @@ export class OCRService {
 
     } catch (error: any) {
       console.error('Error getting documents by status:', error);
-      
+
       return {
         success: false,
         error: error.message || 'Failed to get documents by status'
+      };
+    }
+  }
+
+  async getAllDocuments(): Promise<APIResponse<OCRDocumentModel[]>> {
+    try {
+      const documents = await this.dynamoService.getAllDocuments();
+
+      return {
+        success: true,
+        data: documents
+      };
+
+    } catch (error: any) {
+      console.error('Error getting all documents:', error);
+
+      return {
+        success: false,
+        error: error.message || 'Failed to get all documents'
       };
     }
   }
@@ -231,6 +250,36 @@ export class OCRService {
       return {
         success: false,
         error: error.message || 'Failed to get document'
+      };
+    }
+  }
+
+  async deleteDocument(documentId: string): Promise<APIResponse> {
+    try {
+      console.log('Deleting document:', documentId);
+
+      const document = await this.dynamoService.getDocument(documentId);
+
+      if (!document) {
+        return {
+          success: false,
+          error: 'Document not found'
+        };
+      }
+
+      await this.dynamoService.deleteDocument(documentId);
+
+      return {
+        success: true,
+        message: 'Document deleted successfully'
+      };
+
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+
+      return {
+        success: false,
+        error: error.message || 'Failed to delete document'
       };
     }
   }

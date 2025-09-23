@@ -107,7 +107,7 @@ class UserService {
   /**
    * Actualizar perfil del usuario
    */
-  async updateProfile(profileData: UserProfileData): Promise<UserResponse> {
+  async updateProfile(): Promise<UserResponse> {
     try {
       console.log('UserService: Servicio de usuario no implementado');
       
