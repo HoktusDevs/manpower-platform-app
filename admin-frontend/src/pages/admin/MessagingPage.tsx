@@ -371,9 +371,6 @@ export const MessagingPage: React.FC = () => {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 ml-4">
-                          <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(message.priority)}`}>
-                            {message.priority}
-                          </span>
                           <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
                             {message.type}
                           </span>
