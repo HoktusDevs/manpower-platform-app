@@ -7,7 +7,40 @@ import {
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { ConversationList, WhatsAppChat, MessageComposer } from '../../components/Messaging';
-import type { Conversation, Message, User } from '../../types/messaging';
+
+// Tipos locales
+interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  subject: string;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+  priority: 'low' | 'medium' | 'high';
+  type: 'email' | 'sms' | 'whatsapp' | 'internal';
+}
+
+interface Conversation {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  type: 'email' | 'sms' | 'whatsapp' | 'internal';
+  status: 'active' | 'archived' | 'blocked';
+}
+
+interface User {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+}
 
 export const MessagingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'conversations' | 'messages' | 'templates'>('conversations');

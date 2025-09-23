@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Recipient } from '../../types/messaging';
+
+interface User {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+}
+
+interface Recipient {
+  id: string;
+  name: string;
+  phone?: string;
+}
 
 interface RecipientSelectorProps {
   selectedRecipients: Recipient[];
@@ -14,6 +26,9 @@ export const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 }) => {
   const [recipientSearch, setRecipientSearch] = useState('');
   const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
+  const [showNewContactForm, setShowNewContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredUsers = availableUsers.filter(user =>
@@ -45,6 +60,34 @@ export const RecipientSelector: React.FC<RecipientSelectorProps> = ({
       setRecipientSearch('');
       setShowRecipientDropdown(false);
     }
+  };
+
+  const handleShowNewContactForm = () => {
+    setNewContactName(recipientSearch.trim());
+    setNewContactPhone('');
+    setShowNewContactForm(true);
+    setShowRecipientDropdown(false);
+  };
+
+  const handleAddNewContactWithDetails = () => {
+    if (newContactName.trim()) {
+      const newContact: Recipient = {
+        id: `new-${Date.now()}`,
+        name: newContactName.trim(),
+        phone: newContactPhone.trim() || undefined
+      };
+      onRecipientsChange([...selectedRecipients, newContact]);
+      setNewContactName('');
+      setNewContactPhone('');
+      setShowNewContactForm(false);
+      setRecipientSearch('');
+    }
+  };
+
+  const handleCancelNewContact = () => {
+    setNewContactName('');
+    setNewContactPhone('');
+    setShowNewContactForm(false);
   };
 
   // Cerrar dropdown al hacer clic fuera
@@ -121,15 +164,68 @@ export const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             </div>
           )}
           
-          {/* Add new contact option */}
+          {/* Add new contact options */}
           {recipientSearch.trim() && (
-            <div
-              onClick={addNewContact}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-t border-gray-200 text-blue-600 font-medium"
-            >
-              + Agregar "{recipientSearch.trim()}"
+            <div className="border-t border-gray-200">
+              <div
+                onClick={handleShowNewContactForm}
+                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-blue-600 font-medium"
+              >
+                + Agregar "{recipientSearch.trim()}" con teléfono
+              </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* New Contact Form Modal */}
+      {showNewContactForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Agregar Nuevo Contacto</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={newContactName}
+                  onChange={(e) => setNewContactName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre del contacto"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Teléfono (opcional)
+                </label>
+                <input
+                  type="tel"
+                  value={newContactPhone}
+                  onChange={(e) => setNewContactPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+1234567890"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={handleCancelNewContact}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddNewContactWithDetails}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Agregar Contacto
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,16 @@
 import React from 'react';
-import { Conversation } from '../../types/messaging';
+
+interface Conversation {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  type: 'email' | 'sms' | 'whatsapp' | 'internal';
+  status: 'active' | 'archived' | 'blocked';
+}
 
 interface WhatsAppChatProps {
   selectedConversation: string | null;

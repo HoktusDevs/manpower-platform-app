@@ -1,6 +1,17 @@
 import React from 'react';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
-import { Conversation } from '../../types/messaging';
+
+interface Conversation {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  type: 'email' | 'sms' | 'whatsapp' | 'internal';
+  status: 'active' | 'archived' | 'blocked';
+}
 
 interface ConversationListProps {
   conversations: Conversation[];

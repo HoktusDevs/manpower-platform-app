@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { RecipientSelector } from './RecipientSelector';
-import { User, Recipient } from '../../types/messaging';
+
+interface User {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+}
+
+interface Recipient {
+  id: string;
+  name: string;
+  phone?: string;
+}
 
 interface MessageComposerProps {
   isOpen: boolean;
