@@ -34,6 +34,15 @@ export const API_CONFIG = {
       deleteDocument: (documentId: string) => `/api/ocr/delete/${documentId}`,
       notifyUpdate: '/api/ocr/notify-update'
     }
+  },
+  documentProcessing: {
+    baseUrl: import.meta.env.VITE_DOCUMENT_PROCESSING_API_URL || 'https://sr4qzksrak.execute-api.us-east-1.amazonaws.com/dev',
+    websocketUrl: import.meta.env.VITE_DOCUMENT_PROCESSING_WS_URL || 'wss://b3wt34nt9h.execute-api.us-east-1.amazonaws.com/dev',
+    endpoints: {
+      processDocuments: '/api/v1/platform/process-documents-platform',
+      health: '/api/v1/health',
+      websocketNotify: '/api/v1/websocket/notify'
+    }
   }
 } as const;
 

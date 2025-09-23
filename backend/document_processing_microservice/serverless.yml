@@ -9,6 +9,9 @@ provider:
   stage: ${opt:stage, 'dev'}
   timeout: 900  # 15 minutos máximo
   memorySize: 1024
+  apiGateway:
+    websocketApi:
+      routeSelectionExpression: $request.body.action
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
@@ -51,6 +54,8 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/doc-processor-websocket-connections-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}/index/*"
     - Effect: Allow
       Action:
         - execute-api:ManageConnections
@@ -91,7 +96,7 @@ functions:
 
   # WebSocket Lambda functions
   websocket-connect:
-    handler: src/handlers/websocket_handler.handler
+    handler: src.handlers.websocket_simple_handler.handler
     events:
       - websocket:
           route: $connect
@@ -99,7 +104,7 @@ functions:
     memorySize: 256
 
   websocket-disconnect:
-    handler: src/handlers/websocket_handler.handler
+    handler: src.handlers.websocket_simple_handler.handler
     events:
       - websocket:
           route: $disconnect
@@ -107,7 +112,7 @@ functions:
     memorySize: 256
 
   websocket-default:
-    handler: src/handlers/websocket_handler.handler
+    handler: src.handlers.websocket_simple_handler.handler
     events:
       - websocket:
           route: $default
@@ -124,6 +129,22 @@ functions:
           cors: true
     timeout: 30
     memorySize: 256
+
+  # Documents endpoint
+  documents:
+    handler: src.handlers.documents_handler.handler
+    events:
+      - http:
+          path: /api/v1/documents
+          method: get
+          cors: true
+      - http:
+          path: /api/v1/documents/delete/{documentId}
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 256
+
 
 resources:
   Resources:
@@ -146,28 +167,53 @@ resources:
     #     QueueName: doc-processor-dlq-${self:provider.stage}
     #     MessageRetentionPeriod: 1209600  # 14 días
 
-    # WebSocket Connections Table
-    WebSocketConnectionsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: doc-processor-websocket-connections-${self:provider.stage}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: connectionId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: connectionId
-            KeyType: HASH
-        TimeToLiveSpecification:
-          AttributeName: ttl
-          Enabled: true
+        # WebSocket Connections Table
+        WebSocketConnectionsTable:
+          Type: AWS::DynamoDB::Table
+          Properties:
+            TableName: doc-processor-websocket-connections-${self:provider.stage}
+            BillingMode: PAY_PER_REQUEST
+            AttributeDefinitions:
+              - AttributeName: connectionId
+                AttributeType: S
+            KeySchema:
+              - AttributeName: connectionId
+                KeyType: HASH
+            TimeToLiveSpecification:
+              AttributeName: ttl
+              Enabled: true
 
-    # CloudWatch Log Group
-    DocumentProcessingLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName: /aws/lambda/document-processing-microservice-${self:provider.stage}
-        RetentionInDays: 14
+        # Document Processing Results Table
+        DocumentProcessingResultsTable:
+          Type: AWS::DynamoDB::Table
+          Properties:
+            TableName: document-processing-results-${self:provider.stage}
+            BillingMode: PAY_PER_REQUEST
+            AttributeDefinitions:
+              - AttributeName: document_id
+                AttributeType: S
+              - AttributeName: owner_user_name
+                AttributeType: S
+            KeySchema:
+              - AttributeName: document_id
+                KeyType: HASH
+            GlobalSecondaryIndexes:
+              - IndexName: OwnerIndex
+                KeySchema:
+                  - AttributeName: owner_user_name
+                    KeyType: HASH
+                Projection:
+                  ProjectionType: ALL
+            TimeToLiveSpecification:
+              AttributeName: ttl
+              Enabled: true
+
+        # CloudWatch Log Group
+        DocumentProcessingLogGroup:
+          Type: AWS::Logs::LogGroup
+          Properties:
+            LogGroupName: /aws/lambda/document-processing-microservice-${self:provider.stage}
+            RetentionInDays: 14
 
   Outputs:
     ApiGatewayRestApiId:

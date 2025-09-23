@@ -1,5 +1,34 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useOCRWebSocket } from '../../hooks/useOCRWebSocket';
+import { useDocumentProcessingWebSocket } from '../../hooks/useDocumentProcessingWebSocket';
+import { documentProcessingService } from '../../services/documentProcessingService';
+
+// Definir las interfaces localmente
+interface ProcessDocumentsRequest {
+  owner_user_name: string;
+  documents: Array<{
+    file_name: string;
+    file_url: string;
+    platform_document_id: string;
+  }>;
+}
+
+interface WebSocketNotification {
+  documentId: string;
+  status: string;
+  processingStatus: string;
+  finalDecision?: string;
+  documentType?: string;
+  ocrResult?: any;
+  extractedData?: any;
+  observations?: any[];
+  message: string;
+  ownerUserName: string;
+  fileName?: string;
+  processingTime?: number;
+  timestamp: string;
+  error?: string;
+  lambdaError?: boolean;
+}
 import { OCRResultsTable } from '../../components/OCR/OCRResultsTable';
 import { DocumentPreviewModal } from '../../components/OCR/DocumentPreviewModal';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
@@ -28,83 +57,94 @@ export const TestOCRPage = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // WebSocket para recibir actualizaciones en tiempo real
-  const handleDocumentUpdate = useCallback((update: any) => {
-    console.log('Document update received:', update);
+  // WebSocket para recibir actualizaciones en tiempo real del nuevo microservicio
+  const { isConnected, connectionStatus, notifications, lastNotification } = useDocumentProcessingWebSocket();
 
-    const updateDoc = (doc: DocumentFile) => {
-      if (doc.id === update.documentId) {
-        if (update.status === 'completed' || update.status === 'failed') {
-          return {
-            ...doc,
-            status: update.status === 'completed' ? 'completed' as const : 'error' as const,
-            hoktusDecision: update.hoktusDecision,
-            hoktusProcessingStatus: update.hoktusProcessingStatus,
-            documentType: update.documentType,
-            observations: update.observations,
-            ocrResult: update.ocrResult ? {
-              success: update.ocrResult.success || false,
-              text: update.ocrResult?.extractedText || 'No se pudo extraer texto',
-              confidence: update.ocrResult?.confidence || 0,
-              processingTime: update.ocrResult?.processingTime || 0,
-              language: update.ocrResult?.language || 'unknown',
-              metadata: update.ocrResult?.metadata || {},
-              fields: update.ocrResult?.fields || {}
-            } : undefined
-          };
-        } else if (update.status === 'processing') {
-          return {
-            ...doc,
-            status: 'processing' as const
-          };
+  // Manejar notificaciones del WebSocket
+  useEffect(() => {
+    if (lastNotification) {
+      console.log('Document Processing notification received:', lastNotification);
+
+      const updateDoc = (doc: DocumentFile) => {
+        if (doc.id === lastNotification.documentId) {
+          if (lastNotification.status === 'completed' || lastNotification.status === 'failed') {
+            return {
+              ...doc,
+              status: lastNotification.status === 'completed' ? 'completed' as const : 'error' as const,
+              hoktusDecision: lastNotification.finalDecision,
+              hoktusProcessingStatus: lastNotification.processingStatus,
+              documentType: lastNotification.documentType,
+              observations: lastNotification.observations,
+              ocrResult: lastNotification.ocrResult ? {
+                success: true,
+                text: lastNotification.ocrResult?.text || 'Texto extraído',
+                confidence: 0.95,
+                processingTime: lastNotification.processingTime || 0,
+                language: 'es',
+                metadata: {},
+                fields: lastNotification.extractedData || {}
+              } : undefined
+            };
+          } else if (lastNotification.status === 'processing') {
+            return {
+              ...doc,
+              status: 'processing' as const
+            };
+          }
         }
+        return doc;
+      };
+
+      // Actualizar documentos históricos
+      setHistoricalDocuments(prev => prev.map(updateDoc));
+
+      // Para documentos locales: si se completó o falló, eliminar del panel de documentos
+      if (lastNotification.status === 'completed' || lastNotification.status === 'failed') {
+        setDocuments(prev => prev.filter(doc => doc.id !== lastNotification.documentId));
+      } else {
+        // Solo actualizar si aún está procesando
+        setDocuments(prev => prev.map(updateDoc));
       }
-      return doc;
-    };
-
-    // Actualizar documentos históricos
-    setHistoricalDocuments(prev => prev.map(updateDoc));
-
-    // Para documentos locales: si se completó o falló, eliminar del panel de documentos
-    // ya que aparecerá en la tabla de resultados
-    if (update.status === 'completed' || update.status === 'failed') {
-      setDocuments(prev => prev.filter(doc => doc.id !== update.documentId));
-    } else {
-      // Solo actualizar si aún está procesando
-      setDocuments(prev => prev.map(updateDoc));
     }
-  }, []);
-
-  const { isConnected, connectionError } = useOCRWebSocket(handleDocumentUpdate);
+  }, [lastNotification]);
 
   // Cargar documentos históricos de la base de datos
   const loadHistoricalDocuments = useCallback(async () => {
     try {
-      const response = await fetch('https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/documents');
-      const result = await response.json();
+      const result = await documentProcessingService.getDocuments();
 
       if (result.success && result.data) {
-        const formattedDocs: DocumentFile[] = result.data.map((doc: any) => ({
-          id: doc.platformDocumentId || doc.id,
-          file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }), // Mock file with proper type
-          previewUrl: doc.fileUrl || '/api/placeholder/100/100', // Use actual fileUrl from database
-          title: doc.fileName,
-          status: doc.status || 'completed' as const,
-          hoktusDecision: doc.hoktusDecision,
-          hoktusProcessingStatus: doc.hoktusProcessingStatus,
-          documentType: doc.documentType,
-          observations: doc.observations,
-          ocrResult: doc.ocrResult ? {
-            success: doc.ocrResult.success,
-            text: doc.ocrResult.extractedText || '',
-            confidence: doc.ocrResult.confidence || 0,
-            processingTime: doc.ocrResult.processingTime || 0,
-            language: doc.ocrResult.language || 'unknown',
-            metadata: doc.ocrResult.metadata || {},
-            fields: doc.ocrResult.fields || {}
-          } : undefined
-        }));
+        console.log('🔍 DEBUG - Raw data from API:', result.data);
+        
+        const formattedDocs: DocumentFile[] = result.data.map((doc: any) => {
+          const formatted = {
+            id: doc.id,
+            file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }),
+            previewUrl: doc.fileUrl || '/api/placeholder/100/100',
+            fileUrl: doc.fileUrl, // ✅ Pasar el fileUrl real
+            title: doc.fileName,
+            ownerName: doc.ownerUserName || 'Unknown',
+            status: doc.status === 'COMPLETED' ? 'completed' as const : 
+                    doc.status === 'FAILED' ? 'error' as const : 'processing' as const,
+            hoktusDecision: doc.finalDecision,
+            hoktusProcessingStatus: doc.status,
+            documentType: doc.documentType,
+            observations: doc.observations,
+            ocrResult: doc.ocrResult ? {
+              success: true,
+              text: doc.ocrResult.text || '',
+              confidence: doc.ocrResult.confidence || 0,
+              processingTime: 0,
+              language: 'es',
+              metadata: {},
+              fields: doc.extractedData || {}
+            } : undefined
+          };
+          console.log('🔍 DEBUG - Formatted document:', formatted);
+          return formatted;
+        });
 
+        console.log('🔍 DEBUG - Total formatted documents:', formattedDocs.length);
         setHistoricalDocuments(formattedDocs);
       }
     } catch (error) {
@@ -220,7 +260,7 @@ export const TestOCRPage = () => {
         throw new Error('Error subiendo archivo a S3');
       }
 
-      // Paso 2: Enviar referencia a ocr-service
+      // Paso 2: Enviar referencia al nuevo document_processing_microservice
       // Construir URL pública de S3
       const s3PublicUrl = `https://${presignedData.file.s3Bucket}.s3.us-east-1.amazonaws.com/${presignedData.file.s3Key}`;
       
@@ -232,38 +272,31 @@ export const TestOCRPage = () => {
       console.log('🔍 DEBUG - Final owner name:', finalOwnerName);
       console.log('🔍 DEBUG - Current user:', currentUser);
       
-      const requestData = {
-        ownerUserName: finalOwnerName,
+      const requestData: ProcessDocumentsRequest = {
+        owner_user_name: finalOwnerName,
         documents: [
           {
-            fileName: document.file.name,
-            fileUrl: s3PublicUrl, // URL pública de S3
-            platformDocumentId: platformDocumentId
+            file_name: document.file.name,
+            file_url: s3PublicUrl, // URL pública de S3
+            platform_document_id: platformDocumentId
           }
         ]
       };
 
       console.log('🔍 DEBUG - Request payload:', JSON.stringify(requestData, null, 2));
 
-      // Llamar al microservicio OCR
-      const response = await fetch('https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/process-documents-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      });
+      // Llamar al nuevo document_processing_microservice
+      const response = await documentProcessingService.processDocuments(requestData);
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (response.status === 'success') {
         // El WebSocket se encargará de notificar cuando esté listo
         console.log('Document sent for processing, waiting for WebSocket notification');
+        console.log('Response:', response);
       } else {
         setDocuments(prev => prev.map(doc => 
           doc.id === documentId ? { ...doc, status: 'error' } : doc
         ));
-        setError('Error al enviar documento: ' + result.error);
+        setError('Error al enviar documento: ' + response.message);
       }
     } catch (err) {
       setDocuments(prev => prev.map(doc => 
@@ -304,24 +337,12 @@ export const TestOCRPage = () => {
 
   const deleteDocument = async (documentId: string) => {
     try {
-      const response = await fetch(`https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/delete/${documentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Solo eliminar de los arrays locales si la eliminación en la base de datos fue exitosa
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-        setHistoricalDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      } else {
-        console.error('Error deleting document:', result.error);
-        // Opcionalmente mostrar un mensaje de error al usuario
-        setError(`Error al eliminar documento: ${result.error}`);
-      }
+      await documentProcessingService.deleteDocument(documentId);
+      
+      // Actualizar la lista de documentos
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      setHistoricalDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      console.log(`Document ${documentId} deleted successfully`);
     } catch (error) {
       console.error('Error calling delete API:', error);
       setError('Error al eliminar el documento. Por favor, inténtalo de nuevo.');
@@ -353,15 +374,25 @@ export const TestOCRPage = () => {
             
             {/* WebSocket Status Indicator */}
             <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className={`text-sm font-medium ${isConnected ? 'text-green-700' : 'text-red-700'}`}>
-                {isConnected ? 'Conectado' : 'Desconectado'}
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'connected' ? 'bg-green-500' : 
+                connectionStatus === 'connecting' ? 'bg-yellow-500' : 
+                'bg-red-500'
+              }`}></div>
+              <span className={`text-sm font-medium ${
+                connectionStatus === 'connected' ? 'text-green-700' : 
+                connectionStatus === 'connecting' ? 'text-yellow-700' : 
+                'text-red-700'
+              }`}>
+                {connectionStatus === 'connected' ? 'Conectado' : 
+                 connectionStatus === 'connecting' ? 'Conectando...' : 
+                 'Desconectado'}
               </span>
             </div>
           </div>
           
-          {/* WebSocket Error */}
-          {connectionError && (
+          {/* WebSocket Status Info */}
+          {connectionStatus === 'error' && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -372,7 +403,7 @@ export const TestOCRPage = () => {
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">Error de conexión WebSocket</h3>
                   <div className="mt-1 text-sm text-red-700">
-                    {connectionError}
+                    No se pudo conectar al servicio de procesamiento de documentos
                   </div>
                 </div>
               </div>
@@ -612,6 +643,15 @@ export const TestOCRPage = () => {
 
         {/* Tabla de resultados del OCR */}
         <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-700">Resultados Históricos</h2>
+            <button
+              onClick={loadHistoricalDocuments}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Recargar ({historicalDocuments.length})
+            </button>
+          </div>
           <OCRResultsTable
             documents={[...documents, ...historicalDocuments]}
             onDeleteDocument={deleteDocument}

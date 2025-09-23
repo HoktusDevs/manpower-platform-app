@@ -1,5 +1,8 @@
 # Document Processing Microservice - Essential Dependencies
 
+# Data Validation
+pydantic==2.8.0
+
 # HTTP Requests
 requests==2.31.0
 

@@ -14,6 +14,7 @@ interface DocumentFile {
   id: string;
   file: File;
   previewUrl: string;
+  fileUrl?: string; // ✅ URL real del archivo desde la base de datos
   title: string;
   ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: OCRResult;
@@ -67,10 +68,13 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
   const isImage = document.file.type.startsWith('image/');
   const isPdf = document.file.type === 'application/pdf';
+  
+  // Usar fileUrl si está disponible, sino usar previewUrl
+  const documentUrl = document.fileUrl || document.previewUrl;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0.5">
+      <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[99vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
@@ -93,37 +97,25 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-6 overflow-y-auto max-h-[calc(99vh-140px)]">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {/* Document Preview */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Vista Previa del Documento</h3>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 {isImage ? (
                   <img
-                    src={document.previewUrl}
+                    src={documentUrl}
                     alt={document.title}
                     className="max-w-full h-auto rounded shadow-sm"
-                    style={{ maxHeight: '500px' }}
+                    style={{ maxHeight: '800px' }}
                   />
                 ) : isPdf ? (
-                  <div className="text-center py-12">
-                    <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p className="text-lg text-gray-600 mb-2">Documento PDF</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      La vista previa completa no está disponible para archivos PDF
-                    </p>
-                    <button
-                      onClick={() => window.open(document.previewUrl, '_blank')}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Abrir en nueva pestaña
-                    </button>
+                  <div className="w-full h-[800px]">
+                    <iframe
+                      src={documentUrl}
+                      className="w-full h-full rounded shadow-sm border-0"
+                      title={`Vista previa de ${document.title}`}
+                    />
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -240,7 +232,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             Cerrar
           </button>
           <button
-            onClick={() => window.open(document.previewUrl, '_blank')}
+            onClick={() => window.open(documentUrl, '_blank')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Abrir Original
