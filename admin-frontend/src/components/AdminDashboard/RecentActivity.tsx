@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../core-ui';
 import type { SelectOption } from '../../core-ui';
+import { applicationsService } from '../../services/applicationsService';
 
 type ActivityFilter = 'postulaciones' | 'usuarios' | 'sistema';
 type TimeGranularity = 'daily' | 'weekly' | 'quarterly';
@@ -328,11 +329,12 @@ export function RecentActivity(): ReactNode {
   const [isLoading, setIsLoading] = useState(false);
   const [, setHasLoadedData] = useState(false);
 
-  // Función para cargar datos SOLO cuando el usuario lo solicite
+  // Función para cargar datos desde la API
   const loadActivityData = async (filter: ActivityFilter, granularity: TimeGranularity) => {
     setIsLoading(true);
     try {
-      setActivityData(generateEmptyData(filter, granularity));
+      const data = await applicationsService.getActivityData(filter, granularity);
+      setActivityData(data);
       setHasLoadedData(true);
     } catch (error) {
       console.error('Error loading activity data:', error);
