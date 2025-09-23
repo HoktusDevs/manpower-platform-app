@@ -117,7 +117,6 @@ export const JobPostingsManagementPage: React.FC = () => {
   
   // Estado local para job postings (sin GraphQL)
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
-  const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Hook for syncing folders with job operations
@@ -157,7 +156,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'fields' | 'forms'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fields'>('basic');
   const [jobData, setJobData] = useState({
     title: '',
     description: '',
@@ -174,7 +173,6 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showFieldConfigModal, setShowFieldConfigModal] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -182,7 +180,6 @@ export const JobPostingsManagementPage: React.FC = () => {
   // Cargar datos iniciales
   useEffect(() => {
     loadJobPostings();
-    loadForms();
   }, [selectedStatus]);
 
   // Función para cargar job postings desde jobs-service
@@ -209,15 +206,6 @@ export const JobPostingsManagementPage: React.FC = () => {
     }
   };
 
-  // Función para cargar formularios (mock data por ahora)
-  const loadForms = async () => {
-    try {
-      // TODO: Implementar carga real de formularios
-      setForms([]);
-    } catch (error) {
-      console.error('Error loading forms:', error);
-    }
-  };
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job => 
@@ -334,7 +322,6 @@ export const JobPostingsManagementPage: React.FC = () => {
     setSelectedFolderId(undefined);
     setSelectedFields(new Set());
     setFieldValues({});
-    setSelectedFormId(null);
     setActiveTab('basic');
     setIsCreating(false);
     setFieldErrors({});
@@ -1016,6 +1003,10 @@ export const JobPostingsManagementPage: React.FC = () => {
           selectedItems={selectedJobs}
           onSelectionChange={setSelectedJobs}
           getItemId={(job) => job.jobId}
+          createButton={{
+            label: 'Crear Empleo',
+            onClick: () => setShowCreateModal(true)
+          }}
         />
 
       {/* Create Job Posting Modal */}
@@ -1064,16 +1055,6 @@ export const JobPostingsManagementPage: React.FC = () => {
                   }`}
                 >
                   Campos Adicionales
-                </button>
-                <button
-                  onClick={() => setActiveTab('forms')}
-                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'forms'
-                      ? 'border-green-500 text-green-600 bg-white'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  Asignación de Formulario
                 </button>
               </nav>
             </div>
@@ -1261,69 +1242,6 @@ export const JobPostingsManagementPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Form Assignment Tab */}
-              {activeTab === 'forms' && (
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Asignación de Formulario</h4>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Selecciona el formulario que los candidatos deberán completar al aplicar a este empleo:
-                  </p>
-
-                  {forms.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500 mb-4">No hay formularios disponibles</p>
-                      <p className="text-sm text-gray-400">
-                        Crea un formulario en la sección de Gestión de Formularios primero.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {forms.filter(form => form.status === 'PUBLISHED').map((form) => (
-                        <div
-                          key={form.formId}
-                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                            selectedFormId === form.formId
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => setSelectedFormId(form.formId)}
-                        >
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              name="form-selection"
-                              checked={selectedFormId === form.formId}
-                              onChange={() => setSelectedFormId(form.formId)}
-                              className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500"
-                            />
-                            <div className="ml-3 flex-1">
-                              <h5 className="font-medium text-gray-900">{form.title}</h5>
-                              {form.description && (
-                                <p className="text-sm text-gray-500 mt-1">{form.description}</p>
-                              )}
-                              <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
-                                <span>{form.fields.length} campos</span>
-                                <span>•</span>
-                                <span>{form.isRequired ? 'Obligatorio' : 'Opcional'}</span>
-                                <span>•</span>
-                                <span>Creado: {new Date(form.createdAt).toLocaleDateString('es-ES')}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {forms.filter(form => form.status === 'PUBLISHED').length === 0 && forms.length > 0 && (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        No hay formularios publicados disponibles. Publica un formulario primero para poder asignarlo.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Modal Footer */}
