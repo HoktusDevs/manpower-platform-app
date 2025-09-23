@@ -85,6 +85,14 @@ export const FolderRow: React.FC<FolderRowProps> = ({
           
           {/* Folder Information */}
           <div className="ml-3">
+            {/* Level Indicator */}
+            {folder.level !== undefined && folder.level > 0 && (
+              <div className="flex items-center mb-1">
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  Nivel {folder.level}
+                </span>
+              </div>
+            )}
             <p className="text-sm font-medium text-gray-900">{folder.name}</p>
             <div className="text-sm text-gray-500 space-y-0.5">
               <div className="flex items-center gap-4">

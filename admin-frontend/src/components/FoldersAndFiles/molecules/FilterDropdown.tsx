@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface FilterOptions {
-  type: 'all' | 'folder' | 'file';
-  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  sortBy: 'name' | 'date' | 'size' | 'type';
+  type: 'all' | 'folder' | 'file' | 'level-1' | 'level-2' | 'level-3';
+  sortBy: 'name' | 'date' | 'type';
   sortOrder: 'asc' | 'desc';
 }
 
@@ -49,7 +48,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   const handleReset = () => {
     const defaultFilters: FilterOptions = {
       type: 'all',
-      dateRange: 'all',
       sortBy: 'name',
       sortOrder: 'asc'
     };
@@ -59,7 +57,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   };
 
   const hasActiveFilters = currentFilters.type !== 'all' || 
-                          currentFilters.dateRange !== 'all' || 
                           currentFilters.sortBy !== 'name' || 
                           currentFilters.sortOrder !== 'asc';
 
@@ -108,7 +105,10 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 <div className="space-y-1">
                   {[
                     { value: 'all', label: 'Todos' },
-                    { value: 'folder', label: 'Carpetas' },
+                    { value: 'folder', label: 'Carpetas (Nivel 0)' },
+                    { value: 'level-1', label: 'Subcarpetas Nivel 1' },
+                    { value: 'level-2', label: 'Subcarpetas Nivel 2' },
+                    { value: 'level-3', label: 'Subcarpetas Nivel 3' },
                     { value: 'file', label: 'Archivos' }
                   ].map((option) => (
                     <label key={option.value} className="flex items-center">
@@ -118,32 +118,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                         value={option.value}
                         checked={filters.type === option.value}
                         onChange={(e) => setFilters({ ...filters, type: e.target.value as any })}
-                        className="mr-2 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-xs text-gray-700">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date Range Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Fecha</label>
-                <div className="space-y-1">
-                  {[
-                    { value: 'all', label: 'Todas las fechas' },
-                    { value: 'today', label: 'Hoy' },
-                    { value: 'week', label: 'Esta semana' },
-                    { value: 'month', label: 'Este mes' },
-                    { value: 'year', label: 'Este año' }
-                  ].map((option) => (
-                    <label key={option.value} className="flex items-center">
-                      <input
-                        type="radio"
-                        name="dateRange"
-                        value={option.value}
-                        checked={filters.dateRange === option.value}
-                        onChange={(e) => setFilters({ ...filters, dateRange: e.target.value as any })}
                         className="mr-2 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="text-xs text-gray-700">{option.label}</span>
@@ -163,7 +137,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                   >
                     <option value="name">Nombre</option>
                     <option value="date">Fecha</option>
-                    <option value="size">Tamaño</option>
                     <option value="type">Tipo</option>
                   </select>
                   <select

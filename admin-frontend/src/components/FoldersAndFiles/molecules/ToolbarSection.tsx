@@ -2,9 +2,8 @@ import { SearchInput, FilterButton, DownloadButton, ViewToggle } from '../atoms'
 import { ActionsDropdown } from './ActionsDropdown';
 
 interface FilterOptions {
-  type: 'all' | 'folder' | 'file';
-  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  sortBy: 'name' | 'date' | 'size' | 'type';
+  type: 'all' | 'folder' | 'file' | 'level-1' | 'level-2' | 'level-3';
+  sortBy: 'name' | 'date' | 'type';
   sortOrder: 'asc' | 'desc';
 }
 
@@ -23,6 +22,9 @@ interface ToolbarSectionProps {
   // Filter props
   currentFilters: FilterOptions;
   onApplyFilters: (filters: FilterOptions) => void;
+  // Download props
+  onDownloadAll: () => void;
+  onDownloadSelected: () => void;
 }
 
 /**
@@ -43,7 +45,9 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
   onViewModeChange,
   actionsMenuRef,
   currentFilters,
-  onApplyFilters
+  onApplyFilters,
+  onDownloadAll,
+  onDownloadSelected
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
@@ -85,7 +89,12 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = ({
           />
         </div>
         
-        <DownloadButton />
+            <DownloadButton 
+              selectedCount={selectedCount}
+              hasSelection={selectedCount > 0}
+              onDownloadAll={onDownloadAll}
+              onDownloadSelected={onDownloadSelected}
+            />
       </div>
     </div>
   );

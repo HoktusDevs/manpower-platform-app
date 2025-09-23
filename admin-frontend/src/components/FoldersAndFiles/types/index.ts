@@ -7,6 +7,7 @@ export interface FolderRow {
   type: string; // Free text type
   createdAt: string;
   parentId?: string | null;
+  level?: number; // Hierarchy level (0 = root, 1+ = subfolders)
 }
 
 export interface CreateFolderData {

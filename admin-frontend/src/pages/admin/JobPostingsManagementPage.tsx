@@ -26,29 +26,9 @@ interface CreateJobPostingInput {
   benefits?: string;
   expiresAt?: string;
   fieldValues?: Record<string, unknown>;
+  status?: JobPosting['status'];
 }
 
-const getStatusColor = (status: JobPosting['status']) => {
-  switch (status) {
-    case 'PUBLISHED': return 'bg-green-100 text-green-800 border-green-200';
-    case 'DRAFT': return 'bg-gray-100 text-gray-800 border-gray-200';
-    case 'PAUSED': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    // case 'EXPIRED': return 'bg-red-100 text-red-800 border-red-200';
-    case 'CLOSED': return 'bg-purple-100 text-purple-800 border-purple-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getStatusText = (status: JobPosting['status']) => {
-  switch (status) {
-    case 'PUBLISHED': return 'Publicado';
-    case 'DRAFT': return 'Borrador';
-    case 'PAUSED': return 'Pausado';
-    // case 'EXPIRED': return 'Expirado';
-    case 'CLOSED': return 'Cerrado';
-    default: return status;
-  }
-};
 
 const getEmploymentTypeText = (type: JobPosting['employmentType']) => {
   switch (type) {
@@ -154,7 +134,6 @@ export const JobPostingsManagementPage: React.FC = () => {
   
   // Selection and bulk actions states
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
-  const [, setDeletingJobs] = useState<Set<string>>(new Set());
   const [, setIsBulkDeleting] = useState(false);
   
   // Confirmation modal states
@@ -216,7 +195,6 @@ export const JobPostingsManagementPage: React.FC = () => {
       if (response.success && response.jobs) {
         console.log('Jobs cargados exitosamente:', response.jobs);
         setJobPostings(response.jobs);
-        showSuccess('Jobs cargados exitosamente');
       } else {
         console.error('Error en respuesta del servidor:', response.message);
         showError(response.message || 'Error al cargar empleos');
@@ -506,9 +484,6 @@ export const JobPostingsManagementPage: React.FC = () => {
       '¿Estás seguro de que quieres eliminar esta oferta de trabajo? Esta acción no se puede deshacer.',
       async () => {
         setModalLoading(true);
-        
-        // Add job to deleting set
-        setDeletingJobs(prev => new Set([...prev, jobId]));
 
         try {
           const success = await deleteJobPosting(jobId);
@@ -528,18 +503,31 @@ export const JobPostingsManagementPage: React.FC = () => {
           console.error('Error deleting job:', error);
           showError('Error al eliminar', 'Ocurrió un error al eliminar la oferta de trabajo');
         } finally {
-          // Remove job from deleting set
-          setDeletingJobs(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(jobId);
-            return newSet;
-          });
           setModalLoading(false);
           closeConfirmModal();
         }
       },
       'danger'
     );
+  };
+
+  const handleToggleJobStatus = async (jobId: string, newStatus: 'PUBLISHED' | 'PAUSED') => {
+    try {
+      const success = await updateJobPosting(jobId, { status: newStatus });
+      
+      if (success) {
+        const statusText = newStatus === 'PUBLISHED' ? 'activada' : 'desactivada';
+        showSuccess('Estado actualizado', `La oferta de trabajo se ha ${statusText} correctamente`);
+        
+        // Refresh the list
+        await loadJobPostings();
+      } else {
+        showError('Error al actualizar', 'No se pudo actualizar el estado de la oferta de trabajo');
+      }
+    } catch (error) {
+      console.error('Error updating job status:', error);
+      showError('Error al actualizar', 'Ocurrió un error al actualizar el estado de la oferta de trabajo');
+    }
   };
 
   // Map fieldValues to API format
@@ -827,7 +815,8 @@ export const JobPostingsManagementPage: React.FC = () => {
         salary: input.salary,
         employmentType: input.employmentType,
         experienceLevel: input.experienceLevel,
-        requirements: input.requirements
+        requirements: input.requirements,
+        status: input.status
       };
 
       const response = await jobsService.updateJob(updateJobInput);
@@ -889,42 +878,62 @@ export const JobPostingsManagementPage: React.FC = () => {
     {
       key: 'title',
       label: 'Título / Empresa',
+      width: '300px',
       render: (job) => (
-        <div>
-          <div className="text-sm font-medium text-gray-900">{job.title}</div>
-          <div className="text-sm text-gray-500">{job.companyName}</div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-gray-900" title={job.title}>
+            {job.title}
+          </div>
+          <div className="text-sm text-gray-500" title={job.companyName}>
+            {job.companyName}
+          </div>
         </div>
       )
     },
     {
       key: 'location',
-      label: 'Ubicación / Tipo',
+      label: 'Tipo',
+      width: '200px',
       render: (job) => (
-        <div>
-          <div className="text-sm text-gray-900">{job.location}</div>
-          <div className="text-sm text-gray-500">{getEmploymentTypeText(job.employmentType)}</div>
+        <div className="min-w-0">
+          <div className="text-sm text-gray-900" title={getEmploymentTypeText(job.employmentType)}>
+            {getEmploymentTypeText(job.employmentType)}
+          </div>
         </div>
       )
     },
     {
       key: 'status',
       label: 'Estado',
+      width: '120px',
       render: (job) => (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(job.status)}`}>
-          {getStatusText(job.status)}
-        </span>
+        <div className="flex space-x-1">
+          <button
+            onClick={() => handleToggleJobStatus(job.jobId, job.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED')}
+            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md transition-colors duration-200 ${
+              job.status === 'PUBLISHED'
+                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
+            {job.status === 'PUBLISHED' ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
       )
     },
     {
       key: 'details',
       label: 'Detalles',
+      width: '192px',
       render: (job) => (
-        <div>
+        <div className="min-w-0">
           <div className="text-sm text-gray-500">
             Experiencia: {getExperienceLevelText(job.experienceLevel)}
           </div>
           {job.salary && (
-            <div className="text-sm text-gray-500">Salario: {job.salary}</div>
+            <div className="text-sm text-gray-500" title={job.salary}>
+              Salario: {job.salary}
+            </div>
           )}
           <div className="text-xs text-gray-400 mt-1">
             Creado: {new Date(job.createdAt).toLocaleDateString()}
@@ -938,24 +947,23 @@ export const JobPostingsManagementPage: React.FC = () => {
   const rowActions: TableAction<JobPosting>[] = [
     {
       key: 'edit',
-      label: 'Editar',
+      label: 'Editar/Ver',
       icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       ),
-      variant: 'primary',
       onClick: (job) => handleEditJob(job.jobId)
     },
     {
       key: 'delete',
       label: 'Eliminar',
       icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       ),
-      variant: 'danger',
       onClick: (job) => handleDeleteJob(job.jobId)
     }
   ];

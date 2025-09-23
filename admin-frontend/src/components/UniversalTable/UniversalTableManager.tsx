@@ -276,13 +276,13 @@ export const UniversalTableManager = <T,>({
             <p className="mt-1 text-sm text-gray-500">No hay elementos para mostrar</p>
           </div>
         ) : (
-          <div className="overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-300">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1000px] w-full divide-y divide-gray-300 rounded-lg overflow-hidden">
               {/* Table Header */}
               <thead className="bg-gray-50">
                 <tr>
                   {selectable && (
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left w-12 rounded-l-lg">
                       <input
                         type="checkbox"
                         checked={isAllSelected}
@@ -291,17 +291,19 @@ export const UniversalTableManager = <T,>({
                       />
                     </th>
                   )}
-                  {columns.map((column) => (
+                  {columns.map((column, index) => (
                     <th
                       key={column.key}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                        !selectable && index === 0 ? 'rounded-l-lg' : ''
+                      }`}
                       style={column.width ? { width: column.width } : undefined}
                     >
                       {column.label}
                     </th>
                   ))}
                   {rowActions.length > 0 && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24 rounded-r-lg">
                       Acciones
                     </th>
                   )}
@@ -310,14 +312,15 @@ export const UniversalTableManager = <T,>({
               
               {/* Table Body */}
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.map((item) => {
+                {data.map((item, rowIndex) => {
                   const itemId = getItemId(item);
                   const isSelected = selectedItems.has(itemId);
+                  const isLastRow = rowIndex === data.length - 1;
                   
                   return (
                     <tr key={itemId} className={isSelected ? 'bg-blue-50' : undefined}>
                       {selectable && (
-                        <td className="px-6 py-4">
+                        <td className={`px-6 py-4 ${isLastRow ? 'rounded-bl-lg' : ''}`}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -326,33 +329,34 @@ export const UniversalTableManager = <T,>({
                           />
                         </td>
                       )}
-                      {columns.map((column) => (
-                        <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {columns.map((column, colIndex) => (
+                        <td 
+                          key={column.key} 
+                          className={`px-6 py-4 text-sm text-gray-900 ${
+                            !selectable && colIndex === 0 && isLastRow ? 'rounded-bl-lg' : ''
+                          }`}
+                        >
                           {column.render 
                             ? column.render(item, (item as Record<string, unknown>)[column.key] as string | number | boolean | null | undefined)
-                            : String((item as Record<string, unknown>)[column.key] ?? '')
+                            : <span className="truncate block" title={String((item as Record<string, unknown>)[column.key] ?? '')}>
+                                {String((item as Record<string, unknown>)[column.key] ?? '')}
+                              </span>
                           }
                         </td>
                       ))}
                       {rowActions.length > 0 && (
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex space-x-2">
+                        <td className={`px-3 py-4 text-center text-sm font-medium ${isLastRow ? 'rounded-br-lg' : ''}`}>
+                          <div className="flex space-x-1 justify-center">
                             {rowActions
                               .filter(action => !action.show || action.show(item))
                               .map((action) => (
                                 <button
                                   key={action.key}
                                   onClick={() => action.onClick(item)}
-                                  className={`inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded ${
-                                    action.variant === 'danger'
-                                      ? 'text-red-700 bg-red-100 hover:bg-red-200'
-                                      : action.variant === 'primary'
-                                      ? 'text-green-700 bg-green-100 hover:bg-green-200'
-                                      : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                                  }`}
+                                  className="inline-flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                  title={action.label}
                                 >
-                                  {action.icon && <span className="mr-1">{action.icon}</span>}
-                                  {action.label}
+                                  {action.icon}
                                 </button>
                               ))}
                           </div>

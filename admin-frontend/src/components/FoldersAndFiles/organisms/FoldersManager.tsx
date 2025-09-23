@@ -12,9 +12,8 @@ import { useFoldersContext } from '../context/FoldersContext';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 // FilterOptions interface defined locally
 interface FilterOptions {
-  type: 'all' | 'folder' | 'file';
-  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  sortBy: 'name' | 'date' | 'size' | 'type';
+  type: 'all' | 'folder' | 'file' | 'level-1' | 'level-2' | 'level-3';
+  sortBy: 'name' | 'date' | 'type';
   sortOrder: 'asc' | 'desc';
 }
 import type { 
@@ -31,7 +30,6 @@ export const FoldersManager: React.FC = () => {
   // Filter state
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
     type: 'all',
-    dateRange: 'all',
     sortBy: 'name',
     sortOrder: 'asc'
   });
@@ -56,6 +54,104 @@ export const FoldersManager: React.FC = () => {
     refreshFolders,
   } = useFoldersContext();
 
+  // Calculate folder level in hierarchy
+  const getFolderLevel = (folder: any, allFolders: any[]): number => {
+    // Check if it's a root folder by path first
+    if (folder.path && folder.path.split('/').length === 2) {
+      return 0; // Root level based on path
+    }
+    
+    if (!folder.parentId) return 0; // Root level
+    
+    const parent = allFolders.find(f => f.id === folder.parentId);
+    if (!parent) {
+      // Parent not found - treat as root if path suggests it
+      return 0;
+    }
+    
+    return getFolderLevel(parent, allFolders) + 1;
+  };
+
+  // Add level information to folders
+  const addLevelInfo = (folders: any[]) => {
+    return folders.map(folder => ({
+      ...folder,
+      level: getFolderLevel(folder, folders)
+    }));
+  };
+
+  // Apply filters to the folders
+  const applyFilters = (folders: any[], filters: FilterOptions) => {
+    let filtered = [...folders];
+
+    // Add level information to all folders
+    const foldersWithLevels = addLevelInfo(filtered);
+
+    // Filter by type
+    if (filters.type !== 'all') {
+      filtered = foldersWithLevels.filter(folder => {
+        switch (filters.type) {
+          case 'folder':
+            // Root folders (level 0)
+            return folder.level === 0;
+          case 'level-1':
+            // Level 1 subfolders
+            return folder.level === 1;
+          case 'level-2':
+            // Level 2 subfolders
+            return folder.level === 2;
+          case 'level-3':
+            // Level 3 subfolders
+            return folder.level === 3;
+          case 'file':
+            // Files (not implemented yet)
+            return false;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sort the results
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (filters.sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'date':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'type':
+          comparison = a.type.localeCompare(b.type);
+          break;
+        default:
+          comparison = a.name.localeCompare(b.name);
+      }
+      
+      return filters.sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    return filtered;
+  };
+
+  // Get filtered folders based on current filters
+  const getFilteredFolders = () => {
+    // If filtering by specific levels, show ALL folders (not just current directory)
+    const isLevelFilter = currentFilters.type.startsWith('level-');
+    
+    if (isLevelFilter) {
+      // For level filters, use ALL folders, not just current directory
+      return applyFilters(folders, currentFilters);
+    } else {
+      // For other filters, use the current directory filtered folders
+      return applyFilters(filteredFolders, currentFilters);
+    }
+  };
+
+  const finalFilteredFolders = getFilteredFolders();
+
   const {
     selectedRows,
     selectedCount,
@@ -64,7 +160,7 @@ export const FoldersManager: React.FC = () => {
     selectRow,
     selectAll,
     deleteSelected,
-  } = useSelectionState(filteredFolders, folders);
+  } = useSelectionState(finalFilteredFolders, folders);
 
   const {
     showCreateModal,
@@ -105,7 +201,7 @@ export const FoldersManager: React.FC = () => {
   };
 
   const handleSelectAll = (): void => {
-    const folderIds = filteredFolders.map(folder => folder.id);
+    const folderIds = finalFilteredFolders.map(folder => folder.id);
     selectAll(folderIds);
   };
 
@@ -194,28 +290,44 @@ export const FoldersManager: React.FC = () => {
 
   const handleApplyFilters = (filters: FilterOptions): void => {
     setCurrentFilters(filters);
-    // TODO: Implement actual filtering logic
-    console.log('Applying filters:', filters);
+  };
+
+  const handleDownloadAll = (): void => {
+    // TODO: Implementar descarga de todo el contenido
+    console.log('Descargando todo el contenido...');
+    alert('Función de descarga de todo el contenido en desarrollo');
+  };
+
+  const handleDownloadSelected = (): void => {
+    if (selectedCount === 0) {
+      alert('No hay elementos seleccionados para descargar');
+      return;
+    }
+    // TODO: Implementar descarga de elementos seleccionados
+    console.log(`Descargando ${selectedCount} elementos seleccionados...`);
+    alert(`Descargando ${selectedCount} elementos seleccionados...`);
   };
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
       {/* Toolbar */}
-      <ToolbarSection
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        showActionsMenu={showActionsMenu}
-        selectedCount={selectedCount}
-        viewMode={viewMode}
-        onToggleActionsMenu={toggleActionsMenu}
-        onCreateFolder={handleCreateFolder}
-        onDeleteSelected={handleDeleteSelected}
-        onCloseActionsMenu={handleCloseActionsMenu}
-        onViewModeChange={setViewMode}
-        actionsMenuRef={actionsMenuRef.ref}
-        currentFilters={currentFilters}
-        onApplyFilters={handleApplyFilters}
-      />
+          <ToolbarSection
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            showActionsMenu={showActionsMenu}
+            selectedCount={selectedCount}
+            viewMode={viewMode}
+            onToggleActionsMenu={toggleActionsMenu}
+            onCreateFolder={handleCreateFolder}
+            onDeleteSelected={handleDeleteSelected}
+            onCloseActionsMenu={handleCloseActionsMenu}
+            onViewModeChange={setViewMode}
+            actionsMenuRef={actionsMenuRef.ref}
+            currentFilters={currentFilters}
+            onApplyFilters={handleApplyFilters}
+            onDownloadAll={handleDownloadAll}
+            onDownloadSelected={handleDownloadSelected}
+          />
 
       {/* Breadcrumb Navigation */}
       <BreadcrumbNavigation
@@ -224,6 +336,21 @@ export const FoldersManager: React.FC = () => {
         onNavigateToFolder={navigateToFolder}
         onNavigateBack={navigateBack}
       />
+
+      {/* Level Filter Indicator */}
+      {currentFilters.type.startsWith('level-') && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm text-blue-800">
+              Mostrando todas las carpetas de nivel {currentFilters.type.split('-')[1]} en toda la jerarquía
+            </span>
+          </div>
+        </div>
+      )}
+
 
       {/* Content View (Table or Grid) */}
       <div className="overflow-visible">
@@ -266,7 +393,7 @@ export const FoldersManager: React.FC = () => {
           </div>
         ) : viewMode === 'table' ? (
           <FoldersTable
-            folders={filteredFolders}
+            folders={finalFilteredFolders}
             selectedRows={selectedRows}
             selectedCount={selectedCount}
             isAllSelected={isAllSelected}
@@ -281,7 +408,7 @@ export const FoldersManager: React.FC = () => {
           />
         ) : viewMode === 'grid' ? (
           <FoldersGrid
-            folders={filteredFolders}
+            folders={finalFilteredFolders}
             selectedRows={selectedRows}
             showRowActionsMenu={showRowActionsMenu}
             onSelectRow={selectRow}
@@ -293,7 +420,7 @@ export const FoldersManager: React.FC = () => {
           />
         ) : (
           <FoldersAccordion
-            folders={filteredFolders}
+            folders={finalFilteredFolders}
             selectedRows={selectedRows}
             showRowActionsMenu={showRowActionsMenu}
             onSelectRow={selectRow}

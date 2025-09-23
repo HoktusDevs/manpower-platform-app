@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { FilterDropdown } from '../molecules/FilterDropdown';
 
 interface FilterOptions {
-  type: 'all' | 'folder' | 'file';
-  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  sortBy: 'name' | 'date' | 'size' | 'type';
+  type: 'all' | 'folder' | 'file' | 'level-1' | 'level-2' | 'level-3';
+  sortBy: 'name' | 'date' | 'type';
   sortOrder: 'asc' | 'desc';
 }
 
