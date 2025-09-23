@@ -21,18 +21,27 @@ export interface JobPosting {
 }
 
 export interface Application {
-  userId: string;
   applicationId: string;
+  userId: string;
   jobId: string;
-  companyName: string;
-  position: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'INTERVIEW_SCHEDULED' | 'HIRED';
-  description?: string | undefined;
-  salary?: string | undefined;
-  location?: string | undefined;
+  status: 'PENDING' | 'IN_REVIEW' | 'ACCEPTED' | 'REJECTED' | 'APPROVED' | 'INTERVIEW_SCHEDULED' | 'HIRED';
+  description?: string;
   createdAt: string;
   updatedAt: string;
-  companyId?: string | undefined;
+  documents?: string[];
+  // Enriched fields from job
+  jobTitle?: string;
+  title?: string; // alias for jobTitle
+  companyName?: string;
+  position?: string; // alias for jobTitle
+  location?: string;
+  salary?: string;
+  employmentType?: string;
+  experienceLevel?: string;
+  requirements?: string;
+  benefits?: string[];
+  skills?: string[];
+  companyId?: string;
 }
 
 export interface User {

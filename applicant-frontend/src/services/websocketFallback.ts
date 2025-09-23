@@ -12,16 +12,19 @@ export interface WebSocketFallbackOptions {
 
 export class WebSocketFallbackService {
   private websocket: WebSocket | null = null;
-  private pollingInterval: NodeJS.Timeout | null = null;
+  private pollingInterval: number | null = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectInterval: number = 5000;
   private pollingIntervalMs: number = 10000; // 10 seconds
   private messageHandlers: Map<string, (message: unknown) => void> = new Map();
   private isPolling: boolean = false;
-  private lastDocumentStatus: Map<string, string> = new Map();
+  // private lastDocumentStatus: Map<string, string> = new Map();
 
-  constructor(private options: WebSocketFallbackOptions) {
+  private options: WebSocketFallbackOptions;
+
+  constructor(options: WebSocketFallbackOptions) {
+    this.options = options;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     this.reconnectInterval = options.reconnectInterval || 5000;
     this.pollingIntervalMs = options.pollingInterval || 10000;
@@ -106,7 +109,7 @@ export class WebSocketFallbackService {
     this.isPolling = true;
     console.log('Starting polling fallback');
     
-    this.pollingInterval = setInterval(() => {
+    this.pollingInterval = window.setInterval(() => {
       this.pollDocumentUpdates();
     }, this.pollingIntervalMs);
   }
@@ -116,7 +119,7 @@ export class WebSocketFallbackService {
    */
   private stopPolling(): void {
     if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
+      window.clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
     this.isPolling = false;

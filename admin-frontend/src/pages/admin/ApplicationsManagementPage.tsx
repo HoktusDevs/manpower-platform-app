@@ -36,6 +36,7 @@ export const ApplicationsManagementPage: React.FC = () => {
     error,
     fetchAllApplications,
     updateApplicationStatus,
+    deleteApplications,
     clearError
   } = useApplications();
 
@@ -50,19 +51,20 @@ export const ApplicationsManagementPage: React.FC = () => {
 
   // Filter applications by search term
   const filteredApplications = (applications || []).filter(app => 
-    app.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.userId.toLowerCase().includes(searchTerm.toLowerCase())
+    app.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.userId?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Define table columns
   const columns: TableColumn<Application>[] = [
     {
-      key: 'userId',
+      key: 'userName',
       label: 'Usuario',
       render: (_, value) => (
         <div className="font-medium text-gray-900">
-          Usuario-{(value as string).slice(-8)}
+          {value || 'Usuario no especificado'}
         </div>
       )
     },
@@ -71,21 +73,21 @@ export const ApplicationsManagementPage: React.FC = () => {
       label: 'Empresa',
       render: (_, value) => (
         <div className="text-sm text-gray-900">
-          {value}
+          {value || 'Empresa no especificada'}
         </div>
       )
     },
     {
-      key: 'position',
+      key: 'jobTitle',
       label: 'Posición',
       render: (_, value) => (
         <div className="text-sm text-gray-900">
-          {value}
+          {value || 'Posición no especificada'}
         </div>
       )
     },
     {
-      key: 'status',
+      key: 'jobStatus',
       label: 'Estado',
       render: (_, value) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value as Application['status'])}`}>
@@ -249,6 +251,28 @@ export const ApplicationsManagementPage: React.FC = () => {
             setSelectedItems(new Set()); // Clear selection
           } catch (error) {
             console.error('Error rejecting applications:', error);
+          }
+        }
+      }
+    },
+    {
+      key: 'delete',
+      label: 'Eliminar Seleccionadas',
+      variant: 'danger',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+      onClick: async (applications) => {
+        if (window.confirm(`¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE ${applications.length} aplicación(es)? Esta acción no se puede deshacer.`)) {
+          try {
+            const applicationIds = applications.map(app => app.applicationId);
+            await deleteApplications(applicationIds);
+            await fetchAllApplications(); // Refresh list
+            setSelectedItems(new Set()); // Clear selection
+          } catch (error) {
+            console.error('Error deleting applications:', error);
           }
         }
       }

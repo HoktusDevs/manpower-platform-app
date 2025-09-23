@@ -22,16 +22,15 @@ export interface DocumentInfo {
   documentType: string;
   jobId: string;
   applicationId?: string;
+  userId: string;
   status: 'uploading' | 'uploaded' | 'processing' | 'completed' | 'failed';
   uploadedAt: string;
   ocrResult?: unknown;
 }
 
 class FilesService {
-  private baseUrl: string;
-
   constructor() {
-    this.baseUrl = 'https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev';
+    // Constructor for FilesService
   }
 
   /**
@@ -95,7 +94,7 @@ class FilesService {
         fileUrl: uploadResult.fileUrl,
         documentType: request.documentType,
         jobId: request.jobId,
-        applicationId: request.applicationId,
+        ...(request.applicationId && { applicationId: request.applicationId }),
         userId: request.userId,
         fileSize: request.file.size,
         mimeType: request.file.type,
@@ -112,7 +111,7 @@ class FilesService {
 
       return {
         success: true,
-        documentId: saveResult.documentId,
+        ...(saveResult.documentId && { documentId: saveResult.documentId }),
         fileUrl: uploadResult.fileUrl,
       };
     } catch (error) {
@@ -256,7 +255,7 @@ class FilesService {
 
       return {
         success: true,
-        downloadUrl: result.presignedUrl,
+        ...(result.presignedUrl && { downloadUrl: result.presignedUrl }),
       };
     } catch (error) {
       console.error('FilesService: Error getting download URL:', error);

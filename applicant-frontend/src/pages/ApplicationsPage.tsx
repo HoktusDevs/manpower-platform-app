@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import type { Application } from '../types';
 import { applicationsService } from '../services/applicationsService';
+import { JobDetailsModal } from '../components/JobDetailsModal';
 
 export const ApplicationsPage = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Cargar aplicaciones al montar el componente
   useEffect(() => {
@@ -32,35 +35,6 @@ export const ApplicationsPage = () => {
     loadApplications();
   }, []);
 
-  const getStatusColor = (status: Application['status']) => {
-    switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'IN_REVIEW':
-        return 'bg-blue-100 text-blue-800';
-      case 'ACCEPTED':
-        return 'bg-green-100 text-green-800';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: Application['status']) => {
-    switch (status) {
-      case 'PENDING':
-        return 'Pendiente';
-      case 'IN_REVIEW':
-        return 'En Revisión';
-      case 'ACCEPTED':
-        return 'Aceptada';
-      case 'REJECTED':
-        return 'Rechazada';
-      default:
-        return status;
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -87,6 +61,16 @@ export const ApplicationsPage = () => {
       console.error('Error deleting application:', err);
       alert('Error al eliminar la aplicación');
     }
+  };
+
+  const handleCardClick = (application: Application) => {
+    setSelectedApplication(application);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedApplication(null);
   };
 
   // Mostrar loading
@@ -141,7 +125,7 @@ export const ApplicationsPage = () => {
   return (
     <div className="h-full bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="px-6 py-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900">Mis Aplicaciones</h2>
             <p className="text-gray-600 mt-1">
@@ -173,7 +157,8 @@ export const ApplicationsPage = () => {
                 {applications.map((application) => (
                   <div
                     key={application.applicationId}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
+                    onClick={() => handleCardClick(application)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -181,16 +166,11 @@ export const ApplicationsPage = () => {
                           <h3 className="text-lg font-semibold text-gray-900">
                             {application.position}
                           </h3>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}
-                          >
-                            {getStatusText(application.status)}
-                          </span>
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
-                          <span className="font-medium">{application.companyName}</span>
-                          {application.location && (
+                          <span className="font-medium">{application.title}</span>
+                          {application.location && application.location !== 'Por definir' && (
                             <>
                               <span>•</span>
                               <span>{application.location}</span>
@@ -224,7 +204,10 @@ export const ApplicationsPage = () => {
 
                       <div className="flex items-center gap-2 ml-4">
                         <button
-                          onClick={() => handleDeleteApplication(application.applicationId)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteApplication(application.applicationId);
+                          }}
                           className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors"
                           title="Eliminar aplicación"
                         >
@@ -241,7 +224,7 @@ export const ApplicationsPage = () => {
           </div>
 
           {applications.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
               <div className="text-sm text-gray-600">
                 Total: {applications.length} aplicación{applications.length > 1 ? 'es' : ''}
               </div>
@@ -249,6 +232,13 @@ export const ApplicationsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de detalles del trabajo */}
+      <JobDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        application={selectedApplication}
+      />
     </div>
   );
 };

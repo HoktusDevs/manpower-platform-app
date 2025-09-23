@@ -87,7 +87,7 @@ export const AplicarPage = () => {
         for (const job of filteredJobPostings) {
           try {
             const response = await applicationsService.checkApplicationExists(job.jobId);
-            if (response.success && response.application) {
+            if (response.exists && response.applicationId) {
               appliedJobsSet.add(job.jobId);
             }
           } catch (error) {

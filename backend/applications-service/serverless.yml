@@ -94,6 +94,24 @@ functions:
               - X-User-Id
             allowCredentials: false
 
+  updateApplication:
+    handler: src/handlers/applications.updateApplication
+    events:
+      - http:
+          path: /applications/{applicationId}
+          method: put
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
   deleteApplication:
     handler: src/handlers/applications.deleteApplication
     events:
@@ -136,6 +154,24 @@ functions:
       - http:
           path: /applications
           method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - X-User-Id
+            allowCredentials: false
+
+  deleteApplications:
+    handler: src/handlers/applications.deleteApplications
+    events:
+      - http:
+          path: /applications/bulk
+          method: delete
           cors:
             origin: '*'
             headers:

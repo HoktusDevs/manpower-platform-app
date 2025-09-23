@@ -166,6 +166,35 @@ export const useApplications = () => {
   };
 
   /**
+   * Delete multiple applications (ADMIN)
+   */
+  const deleteApplications = async (applicationIds: string[]): Promise<boolean> => {
+    try {
+      console.log(`🗑️ Attempting to delete ${applicationIds.length} applications:`, applicationIds);
+      
+      const success = await applicationsApiService.deleteApplications(applicationIds);
+      
+      if (success) {
+        setApplications(prev => 
+          prev.filter(app => !applicationIds.includes(app.applicationId))
+        );
+        console.log(`✅ Deleted ${applicationIds.length} applications`);
+        setError(null); // Clear any previous errors
+      } else {
+        console.log('❌ Delete operation returned false');
+        setError('Failed to delete applications');
+      }
+      
+      return success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete applications';
+      setError(errorMessage);
+      console.error('❌ Error deleting applications:', err);
+      return false;
+    }
+  };
+
+  /**
    * Clear error
    */
   const clearError = () => {
@@ -194,6 +223,7 @@ export const useApplications = () => {
     updateApplicationStatus,
     updateMyApplication,
     deleteMyApplication,
+    deleteApplications,
     clearError,
     refresh,
   };

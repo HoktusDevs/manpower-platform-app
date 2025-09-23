@@ -107,7 +107,6 @@ export const getMyApplications: APIGatewayProxyHandler = async (event) => {
 // Delete application
 export const deleteApplication: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
     const applicationId = event.pathParameters?.applicationId;
 
     if (!applicationId) {
@@ -117,7 +116,7 @@ export const deleteApplication: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const result = await applicationService.deleteApplication(applicationId, userId);
+    const result = await applicationService.deleteApplication(applicationId);
 
     if (!result.success) {
       return createResponse(404, result);
@@ -158,6 +157,40 @@ export const checkApplicationExists: APIGatewayProxyHandler = async (event) => {
   }
 };
 
+// Update application
+export const updateApplication: APIGatewayProxyHandler = async (event) => {
+  try {
+    const { applicationId } = event.pathParameters || {};
+    
+    if (!applicationId) {
+      return createResponse(400, {
+        success: false,
+        message: 'Application ID is required',
+      });
+    }
+
+    const body = JSON.parse(event.body || '{}');
+    const { status, description } = body;
+
+    if (!status) {
+      return createResponse(400, {
+        success: false,
+        message: 'Status is required',
+      });
+    }
+
+    const result = await applicationService.updateApplication(applicationId, { status, description });
+
+    return createResponse(200, result);
+  } catch (error) {
+    console.error('Error in updateApplication:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 // Get all applications (admin only)
 export const getAllApplications: APIGatewayProxyHandler = async (event) => {
   try {
@@ -171,6 +204,38 @@ export const getAllApplications: APIGatewayProxyHandler = async (event) => {
     return createResponse(200, result);
   } catch (error) {
     console.error('Error in getAllApplications:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+// Delete multiple applications (admin only)
+export const deleteApplications: APIGatewayProxyHandler = async (event) => {
+  try {
+    console.log('🗑️ Deleting multiple applications (admin only)');
+    console.log('📝 Request body:', event.body);
+    
+    const body = JSON.parse(event.body || '{}');
+    const { applicationIds } = body;
+
+    console.log('📋 Application IDs to delete:', applicationIds);
+
+    if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+      console.log('❌ Invalid applicationIds:', applicationIds);
+      return createResponse(400, {
+        success: false,
+        message: 'Application IDs array is required',
+      });
+    }
+
+    const result = await applicationService.deleteApplications(applicationIds);
+    console.log('✅ Delete result:', result);
+
+    return createResponse(200, result);
+  } catch (error) {
+    console.error('❌ Error in deleteApplications:', error);
     return createResponse(500, {
       success: false,
       message: 'Internal server error',

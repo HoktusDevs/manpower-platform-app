@@ -20,7 +20,8 @@ export const API_CONFIG = {
       base: '/applications',
       my: '/applications/my',
       byId: (applicationId: string) => `/applications/${applicationId}`,
-      stats: '/applications/stats'
+      stats: '/applications/stats',
+      bulk: '/applications/bulk'
     }
   }
 } as const;

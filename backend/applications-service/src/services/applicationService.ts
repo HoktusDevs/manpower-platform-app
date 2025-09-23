@@ -206,9 +206,9 @@ export class ApplicationService {
     }
   }
 
-  async deleteApplication(applicationId: string, userId: string): Promise<ApplicationResponse> {
+  async deleteApplication(applicationId: string, userId?: string): Promise<ApplicationResponse> {
     try {
-      // Verificar que la aplicación existe y pertenece al usuario
+      // Verificar que la aplicación existe
       const application = await this.dynamoService.getApplication(applicationId);
       
       if (!application) {
@@ -218,7 +218,8 @@ export class ApplicationService {
         };
       }
 
-      if (application.userId !== userId) {
+      // Si se proporciona userId, verificar permisos
+      if (userId && application.userId !== userId) {
         return {
           success: false,
           message: 'No tienes permisos para eliminar esta aplicación',
@@ -226,7 +227,7 @@ export class ApplicationService {
       }
 
       // Eliminar aplicación
-      const deleted = await this.dynamoService.deleteApplication(applicationId, userId);
+      const deleted = await this.dynamoService.deleteApplication(applicationId);
       
       if (!deleted) {
         return {
@@ -262,6 +263,31 @@ export class ApplicationService {
       return {
         success: false,
         message: 'Error interno del servidor al verificar aplicación',
+      };
+    }
+  }
+
+  async updateApplication(applicationId: string, updateData: { status?: string; description?: string }): Promise<ApplicationResponse> {
+    try {
+      const result = await this.dynamoService.updateApplication(applicationId, updateData as Partial<Application>);
+      
+      if (result) {
+        return {
+          success: true,
+          message: 'Aplicación actualizada exitosamente',
+          application: result,
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Aplicación no encontrada',
+        };
+      }
+    } catch (error) {
+      console.error('Error in updateApplication:', error);
+      return {
+        success: false,
+        message: 'Error interno del servidor al actualizar aplicación',
       };
     }
   }
@@ -382,6 +408,43 @@ export class ApplicationService {
       return {
         success: false,
         message: 'Error interno del servidor al obtener todas las aplicaciones',
+      };
+    }
+  }
+
+  async deleteApplications(applicationIds: string[]): Promise<ApplicationResponse> {
+    try {
+      console.log(`🗑️ Deleting ${applicationIds.length} applications`);
+      
+      const results = await Promise.allSettled(
+        applicationIds.map(applicationId => 
+          this.dynamoService.deleteApplication(applicationId) // Admin can delete any application
+        )
+      );
+
+      console.log('📊 Delete results:', results);
+      
+      const successful = results.filter(result => result.status === 'fulfilled' && result.value === true).length;
+      const failed = results.length - successful;
+      
+      console.log(`📈 Successful: ${successful}, Failed: ${failed}`);
+
+      if (successful === 0) {
+        return {
+          success: false,
+          message: 'No se pudieron eliminar las aplicaciones',
+        };
+      }
+
+      return {
+        success: true,
+        message: `Se eliminaron ${successful} aplicaciones exitosamente${failed > 0 ? `, ${failed} fallaron` : ''}`,
+      };
+    } catch (error) {
+      console.error('Error in deleteApplications:', error);
+      return {
+        success: false,
+        message: 'Error interno del servidor al eliminar aplicaciones',
       };
     }
   }

@@ -55,7 +55,7 @@ class S3Service {
    * Simular subida de archivo (SIN AWS SDK)
    */
   async uploadFile(
-    file: File,
+    _file: File,
     presignedUrl: string,
     onProgress?: (progress: number) => void
   ): Promise<S3UploadResult> {

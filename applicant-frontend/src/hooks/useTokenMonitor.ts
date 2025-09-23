@@ -23,23 +23,23 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
     isRenewing: false
   });
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const warningShownRef = useRef<boolean>(false);
   const userDismissedRef = useRef<boolean>(false);
   const isLoggedOutRef = useRef<boolean>(false);
-  const autoLogoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoLogoutTimerRef = useRef<number | null>(null);
   const lastRenewalTimeRef = useRef<number>(0);
 
   const performLogout = useCallback(() => {
     // Stop all monitoring
     isLoggedOutRef.current = true;
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      window.clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
 
     if (autoLogoutTimerRef.current) {
-      clearTimeout(autoLogoutTimerRef.current);
+      window.clearTimeout(autoLogoutTimerRef.current);
       autoLogoutTimerRef.current = null;
     }
 
@@ -58,6 +58,9 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
   const parseJWT = (token: string) => {
     try {
       const base64Url = token.split('.')[1];
+      if (!base64Url) {
+        throw new Error('Invalid token format');
+      }
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
@@ -112,7 +115,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
 
         // Start auto-logout timer when token expires
         if (!autoLogoutTimerRef.current) {
-          autoLogoutTimerRef.current = setTimeout(() => {
+          autoLogoutTimerRef.current = window.setTimeout(() => {
             console.log('🚀 Auto-logout after token expiration');
             performLogout();
           }, AUTO_LOGOUT_DELAY);
@@ -123,7 +126,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
 
         // If we've been at 0 for too long, force logout
         if (!autoLogoutTimerRef.current) {
-          autoLogoutTimerRef.current = setTimeout(() => {
+          autoLogoutTimerRef.current = window.setTimeout(() => {
             console.log('🚀 Force logout - token expired too long');
             performLogout();
           }, AUTO_LOGOUT_DELAY);
@@ -173,7 +176,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
 
         // Clear auto-logout timer if it exists
         if (autoLogoutTimerRef.current) {
-          clearTimeout(autoLogoutTimerRef.current);
+          window.clearTimeout(autoLogoutTimerRef.current);
           autoLogoutTimerRef.current = null;
         }
 
@@ -199,13 +202,13 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       // Stop all monitoring immediately
       isLoggedOutRef.current = true;
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        window.clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
 
       // Clear auto-logout timer if it exists
       if (autoLogoutTimerRef.current) {
-        clearTimeout(autoLogoutTimerRef.current);
+        window.clearTimeout(autoLogoutTimerRef.current);
         autoLogoutTimerRef.current = null;
       }
 
@@ -239,16 +242,16 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       checkTokenExpiration();
       
       // Set up periodic checking
-      intervalRef.current = setInterval(checkTokenExpiration, CHECK_INTERVAL);
+      intervalRef.current = window.setInterval(checkTokenExpiration, CHECK_INTERVAL);
     }
 
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        window.clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       if (autoLogoutTimerRef.current) {
-        clearTimeout(autoLogoutTimerRef.current);
+        window.clearTimeout(autoLogoutTimerRef.current);
         autoLogoutTimerRef.current = null;
       }
     };

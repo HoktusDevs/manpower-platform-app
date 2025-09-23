@@ -221,20 +221,28 @@ export class DynamoService {
     return result.Attributes as Application || null;
   }
 
-  async deleteApplication(applicationId: string, userId: string): Promise<boolean> {
+  async deleteApplication(applicationId: string, userId?: string): Promise<boolean> {
     await this.ensureTableExists();
 
-    const command = new DeleteCommand({
-      TableName: this.tableName,
-      Key: { 
-        userId: userId,
-        applicationId: applicationId 
-      },
-      ReturnValues: 'ALL_OLD'
-    });
+    try {
+      console.log(`🗑️ Deleting application: ${applicationId}`);
+      
+      const command = new DeleteCommand({
+        TableName: this.tableName,
+        Key: { 
+          applicationId: applicationId 
+        },
+        ReturnValues: 'ALL_OLD'
+      });
 
-    const result = await this.client.send(command);
-    return !!result.Attributes;
+      const result = await this.client.send(command);
+      console.log(`✅ Delete result:`, result);
+      
+      return !!result.Attributes;
+    } catch (error) {
+      console.error(`❌ Error deleting application ${applicationId}:`, error);
+      return false;
+    }
   }
 
   async getApplicationsByJob(jobId: string, limit?: number, nextToken?: string): Promise<{ applications: Application[], nextToken?: string }> {
@@ -309,6 +317,7 @@ export class DynamoService {
       return null;
     }
   }
+
 
   async getAllApplications(limit?: number, nextToken?: string): Promise<{ applications: Application[], nextToken?: string }> {
     await this.ensureTableExists();

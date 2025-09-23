@@ -157,6 +157,34 @@ class ApplicationsService {
       };
     }
   }
+
+  /**
+   * Verificar si el usuario ya aplicó a un trabajo específico
+   */
+  async checkApplicationExists(jobId: string): Promise<{ exists: boolean; applicationId?: string }> {
+    try {
+      // Simular verificación desde localStorage
+      const storedApplications = localStorage.getItem('user_applications');
+      if (!storedApplications) {
+        return { exists: false };
+      }
+
+      const applications: Application[] = JSON.parse(storedApplications);
+      const existingApplication = applications.find(app => app.jobId === jobId);
+
+      if (existingApplication) {
+        return {
+          exists: true,
+          applicationId: existingApplication.applicationId
+        };
+      } else {
+        return { exists: false };
+      }
+    } catch (error) {
+      console.error('ApplicationsService: Error checking application existence:', error);
+      return { exists: false };
+    }
+  }
 }
 
 export const applicationsService = new ApplicationsService();

@@ -39,7 +39,7 @@ class CognitoAuthService {
     }
 
     const { email, password, fullName, role } = request;
-    const [firstName, ...lastNameParts] = fullName.trim().split(' ');
+    const [firstName, ...lastNameParts] = (fullName || '').trim().split(' ');
     const lastName = lastNameParts.join(' ') || firstName;
 
     // Extract additional postulante data from request
@@ -61,15 +61,15 @@ class CognitoAuthService {
       }),
       new CognitoUserAttribute({
         Name: 'given_name',
-        Value: firstName,
+        Value: firstName || 'Usuario',
       }),
       new CognitoUserAttribute({
         Name: 'family_name',
-        Value: lastName,
+        Value: lastName || '',
       }),
       new CognitoUserAttribute({
         Name: 'custom:role',
-        Value: role,
+        Value: role || 'postulante',
       }),
     ];
 
@@ -186,14 +186,15 @@ class CognitoAuthService {
     }
 
     const { email, password } = request;
+    const userEmail = email || request.username;
     const userData = {
-      Username: email.toLowerCase(),
+      Username: userEmail.toLowerCase(),
       Pool: this.userPool,
     };
 
     const cognitoUser = new CognitoUser(userData);
     const authenticationData = {
-      Username: email.toLowerCase(),
+      Username: userEmail.toLowerCase(),
       Password: password,
     };
 
@@ -211,12 +212,10 @@ class CognitoAuthService {
             resolve({
               success: true,
               message: 'Login successful',
-              data: {
-                user,
-                accessToken: session.getAccessToken().getJwtToken(),
-                idToken: session.getIdToken().getJwtToken(),
-                refreshToken: session.getRefreshToken().getToken(),
-              },
+              user,
+              accessToken: session.getAccessToken().getJwtToken(),
+              idToken: session.getIdToken().getJwtToken(),
+              refreshToken: session.getRefreshToken().getToken(),
             });
           } catch (error) {
             console.error('Error parsing user data:', error);
@@ -338,6 +337,9 @@ class CognitoAuthService {
   private parseJWT(token: string): JWTPayload {
     try {
       const base64Url = token.split('.')[1];
+      if (!base64Url) {
+        throw new Error('Invalid token format');
+      }
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
@@ -450,15 +452,22 @@ class CognitoAuthService {
 
     // Check if token is expired OR if it doesn't have custom:role claim
     try {
-      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const accessTokenParts = accessToken.split('.');
+      if (accessTokenParts.length !== 3 || !accessTokenParts[1]) {
+        throw new Error('Invalid access token format');
+      }
+      const payload = JSON.parse(atob(accessTokenParts[1]));
       const now = Math.floor(Date.now() / 1000);
-      
+
       // Check ID token for custom:role claim
       let hasRoleClaim = false;
       if (idToken) {
         try {
-          const idPayload = JSON.parse(atob(idToken.split('.')[1]));
-          hasRoleClaim = Boolean(idPayload['custom:role']);
+          const idTokenParts = idToken.split('.');
+          if (idTokenParts.length === 3 && idTokenParts[1]) {
+            const idPayload = JSON.parse(atob(idTokenParts[1]));
+            hasRoleClaim = Boolean(idPayload['custom:role']);
+          }
         } catch {
           console.warn('Could not parse ID token for role check');
         }
@@ -735,11 +744,11 @@ class CognitoAuthService {
         });
 
         const user: User = {
-          userId: idTokenPayload.sub,
-          email: attrs.email,
-          fullName: `${attrs.given_name} ${attrs.family_name}`.trim(),
-          role: attrs['custom:role'] as 'admin' | 'postulante',
-          emailVerified: attrs.email_verified === 'true',
+          userId: idTokenPayload['sub'],
+          email: attrs['email'] || '',
+          fullName: `${attrs['given_name'] || ''} ${attrs['family_name'] || ''}`.trim(),
+          role: (attrs['custom:role'] || 'postulante') as 'admin' | 'postulante',
+          emailVerified: attrs['email_verified'] === 'true',
           mfaEnabled: idTokenPayload['cognito:mfa_enabled'] === true,
         };
 
