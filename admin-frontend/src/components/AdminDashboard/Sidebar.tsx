@@ -172,19 +172,19 @@ export function Sidebar({ onNavigate, isPluxeePortal = false, portalType }: Side
   return (
     <aside 
       className={`
-        bg-white shadow-lg transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-19' : 'w-64'}
+        bg-white shadow-lg transition-all duration-500 ease-in-out
+        ${isCollapsed ? 'w-20' : 'w-64'}
         h-full relative overflow-visible
       `}
     >
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-8 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 z-20 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        className="absolute -right-6 top-8 bg-white border border-gray-300 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out z-30 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         aria-label={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
       >
         <svg 
-          className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform duration-500 ease-in-out ${isCollapsed ? 'rotate-180' : 'rotate-0'}`}
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -206,7 +206,7 @@ export function Sidebar({ onNavigate, isPluxeePortal = false, portalType }: Side
             onClick={() => handleAction(item.action)}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-              transition-all duration-300 text-left ease-in-out
+              transition-all duration-500 ease-in-out
               ${
                 isActiveRoute(item.action)
                   ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-lg shadow-blue-100/50 scale-[1.02] backdrop-blur-sm'
@@ -216,13 +216,18 @@ export function Sidebar({ onNavigate, isPluxeePortal = false, portalType }: Side
             title={isCollapsed ? item.label : undefined}
           >
             <span className="flex-shrink-0">{item.icon}</span>
-            {!isCollapsed && (
-              <span className={`text-sm font-medium truncate ${
-                isActiveRoute(item.action) ? 'font-semibold' : ''
-              }`}>
-                {item.label}
-              </span>
-            )}
+            <span 
+              className={`
+                text-sm font-medium truncate transition-all duration-500 ease-in-out overflow-hidden
+                ${isCollapsed 
+                  ? 'w-0 opacity-0 transform translate-x-2' 
+                  : 'w-auto opacity-100 transform translate-x-0'
+                }
+                ${isActiveRoute(item.action) ? 'font-semibold' : ''}
+              `}
+            >
+              {item.label}
+            </span>
           </button>
         ))}
       </nav>
