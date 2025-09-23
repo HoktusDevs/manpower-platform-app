@@ -12,6 +12,7 @@ import { useCreateFolder } from '../../hooks/useFoldersApi';
 import { UniversalTableManager } from '../../components/UniversalTable/UniversalTableManager';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable/UniversalTableManager';
 import { jobsService, type JobPosting, type CreateJobInput, type UpdateJobInput } from '../../services/jobsService';
+import { DocumentTypeAutocomplete } from '../../components/DocumentTypeAutocomplete';
 
 // Tipos locales para compatibilidad con la UI
 interface CreateJobPostingInput {
@@ -24,9 +25,11 @@ interface CreateJobPostingInput {
   employmentType: JobPosting['employmentType'];
   experienceLevel: JobPosting['experienceLevel'];
   benefits?: string;
+  schedule?: string;
   expiresAt?: string;
   fieldValues?: Record<string, unknown>;
   status?: JobPosting['status'];
+  requiredDocuments?: string[];
 }
 
 
@@ -120,7 +123,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Hook for syncing folders with job operations
-  const { syncFoldersAfterJobOperation } = useFolderJobSync();
+  const { syncFoldersAfterJobOperation, deleteFoldersForJob } = useFolderJobSync();
   
   // Hook para creación optimista de carpetas
   const createFolderMutation = useCreateFolder(
@@ -156,7 +159,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'fields'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fields' | 'documents'>('basic');
   const [jobData, setJobData] = useState({
     title: '',
     description: '',
@@ -168,7 +171,9 @@ export const JobPostingsManagementPage: React.FC = () => {
     employmentType: 'FULL_TIME' as JobPosting['employmentType'],
     experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
     benefits: '',
-    expiresAt: ''
+    schedule: '',
+    expiresAt: '',
+    status: 'PUBLISHED' as JobPosting['status']
   });
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
@@ -176,6 +181,8 @@ export const JobPostingsManagementPage: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [showFieldConfigModal, setShowFieldConfigModal] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [requiredDocuments, setRequiredDocuments] = useState<string[]>([]);
+  const [documentInput, setDocumentInput] = useState('');
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -317,7 +324,9 @@ export const JobPostingsManagementPage: React.FC = () => {
       employmentType: 'FULL_TIME' as JobPosting['employmentType'],
       experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
       benefits: '',
-      expiresAt: ''
+      schedule: '',
+      expiresAt: '',
+      status: 'PUBLISHED' as JobPosting['status']
     });
     setSelectedFolderId(undefined);
     setSelectedFields(new Set());
@@ -327,10 +336,42 @@ export const JobPostingsManagementPage: React.FC = () => {
     setFieldErrors({});
     setShowFieldConfigModal(false);
     setHasAttemptedSubmit(false);
+    setRequiredDocuments([]);
+    setDocumentInput('');
     
     // Reset edit mode states
     setIsEditMode(false);
     setEditingJobId(null);
+  };
+
+  // Función para manejar la entrada de documentos (ahora manejada por el componente de autocompletado)
+  const handleDocumentInputChange = (value: string) => {
+    setDocumentInput(value);
+    
+    // Si hay una coma, procesar los elementos
+    if (value.includes(',')) {
+      const newDocuments = value
+        .split(',')
+        .map(doc => doc.trim())
+        .filter(doc => doc.length > 0);
+      
+      setRequiredDocuments(prev => [...prev, ...newDocuments]);
+      setDocumentInput('');
+    }
+  };
+
+  // Función para eliminar un documento
+  const removeDocument = (index: number) => {
+    setRequiredDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Función para agregar documento con Enter
+  const handleDocumentKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && documentInput.trim()) {
+      e.preventDefault();
+      setRequiredDocuments(prev => [...prev, documentInput.trim()]);
+      setDocumentInput('');
+    }
   };
 
   // Handle company selection from folder system
@@ -379,14 +420,109 @@ export const JobPostingsManagementPage: React.FC = () => {
       experienceLevel: job.experienceLevel,
       employmentType: job.employmentType,
       requirements: job.requirements || '',
-      benefits: (job as any).benefits || '',
-      expiresAt: (job as any).expiresAt || ''
+      benefits: job.benefits || '',
+      schedule: job.schedule || '',
+      expiresAt: job.expiresAt || '',
+      status: job.status
     });
     
     // If the job has a folderId, set it
     if (job.folderId) {
       setSelectedFolderId(job.folderId);
     }
+    
+    // Map backend data to fieldValues for additional fields
+    const mappedFieldValues: Record<string, unknown> = {};
+    
+    // Map location data if it exists
+    if (job.location && job.location !== 'Por definir') {
+      // Parse location string to extract type and address
+      let locationType = 'office'; // Default to presencial
+      let address = job.location;
+      
+      // Check if location contains type information in parentheses
+      const typeMatch = job.location.match(/\(([^)]+)\)/);
+      if (typeMatch) {
+        const typeText = typeMatch[1].toLowerCase();
+        if (typeText.includes('remoto') || typeText.includes('remote')) {
+          locationType = 'remote';
+        } else if (typeText.includes('híbrido') || typeText.includes('hybrid')) {
+          locationType = 'hybrid';
+        } else if (typeText.includes('presencial') || typeText.includes('office')) {
+          locationType = 'office';
+        }
+        // Remove the type from address
+        address = job.location.replace(/\s*\([^)]+\)/, '').trim();
+      }
+      
+      mappedFieldValues.location = {
+        type: locationType,
+        address: address
+      };
+    }
+    
+    // Map employment type (convert backend values to frontend options)
+    const employmentTypeMap: Record<string, string> = {
+      'FULL_TIME': 'Tiempo Completo',
+      'PART_TIME': 'Medio Tiempo',
+      'CONTRACT': 'Contrato',
+      'FREELANCE': 'Freelance',
+      'INTERNSHIP': 'Práctica',
+      'TEMPORARY': 'Temporal'
+    };
+    mappedFieldValues.employment_type = employmentTypeMap[job.employmentType] || 'Tiempo Completo';
+    
+    // Map experience level (convert backend values to frontend options)
+    const experienceLevelMap: Record<string, string> = {
+      'ENTRY_LEVEL': 'Junior',
+      'MID_LEVEL': 'Semi-Senior',
+      'SENIOR_LEVEL': 'Senior',
+      'EXECUTIVE': 'Ejecutivo',
+      'INTERNSHIP': 'Práctica'
+    };
+    mappedFieldValues.experience = experienceLevelMap[job.experienceLevel] || 'Junior';
+    
+    // Map salary if it exists
+    if (job.salary) {
+      mappedFieldValues.salary = {
+        min: '',
+        max: job.salary
+      };
+    }
+    
+    // Map schedule if it exists
+    if (job.schedule) {
+      mappedFieldValues.schedule = {
+        start: '',
+        end: '',
+        days: [],
+        description: job.schedule
+      };
+    }
+    
+    // Map benefits if it exists
+    if (job.benefits) {
+      mappedFieldValues.benefits = job.benefits;
+    }
+    
+    
+    // Set the mapped field values
+    setFieldValues(mappedFieldValues);
+    
+    // Set selected fields based on what data exists
+    const fieldsWithData = new Set<string>();
+    
+    // Always include required fields
+    fieldsWithData.add('location');
+    fieldsWithData.add('employment_type');
+    fieldsWithData.add('experience');
+    
+    // Include optional fields if they have data
+    if (job.salary) fieldsWithData.add('salary');
+    if (job.schedule) fieldsWithData.add('schedule');
+    if (job.benefits) fieldsWithData.add('benefits');
+    
+    setSelectedFields(fieldsWithData);
     
     // Reset other states
     setActiveTab('basic');
@@ -441,9 +577,24 @@ export const JobPostingsManagementPage: React.FC = () => {
         // Refresh the list
         await loadJobPostings();
 
-        // Sync folders to maintain consistency (non-blocking)
+        // Delete associated folders for each deleted job
         if (successCount > 0) {
+          for (const jobId of Array.from(selectedJobs)) {
+            const jobToDelete = jobPostings.find(job => job.jobId === jobId);
+            if (jobToDelete) {
+              await deleteFoldersForJob(jobToDelete);
+            }
+          }
+          
+          // Sync folders to maintain consistency (non-blocking)
           await syncFoldersAfterJobOperation();
+          
+          // Force refresh of folders if we're in the folders context
+          try {
+            window.dispatchEvent(new CustomEvent('foldersRefresh'));
+          } catch (error) {
+            console.warn('Could not trigger global folder refresh:', error);
+          }
         }
 
         // Clear selection and close modal
@@ -483,6 +634,13 @@ export const JobPostingsManagementPage: React.FC = () => {
 
             // Sync folders to maintain consistency (non-blocking)
             await syncFoldersAfterJobOperation();
+            
+            // Force refresh of folders if we're in the folders context
+            try {
+              window.dispatchEvent(new CustomEvent('foldersRefresh'));
+            } catch (error) {
+              console.warn('Could not trigger global folder refresh:', error);
+            }
           } else {
             showError('Error al eliminar', 'No se pudo eliminar la oferta de trabajo');
           }
@@ -560,6 +718,35 @@ export const JobPostingsManagementPage: React.FC = () => {
       mappedData.benefits = fieldValues.benefits.trim();
     }
     
+    // Handle schedule from fieldValues
+    if (fieldValues.schedule && typeof fieldValues.schedule === 'object') {
+      const scheduleObj = fieldValues.schedule as { 
+        start?: string; 
+        end?: string; 
+        days?: number[]; 
+        description?: string 
+      };
+      const scheduleParts = [];
+      
+      if (scheduleObj.start && scheduleObj.end) {
+        scheduleParts.push(`${scheduleObj.start} - ${scheduleObj.end}`);
+      }
+      
+      if (scheduleObj.days && scheduleObj.days.length > 0) {
+        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const selectedDays = scheduleObj.days.map(day => dayNames[day]).join(', ');
+        scheduleParts.push(`Días: ${selectedDays}`);
+      }
+      
+      if (scheduleObj.description) {
+        scheduleParts.push(scheduleObj.description);
+      }
+      
+      if (scheduleParts.length > 0) {
+        mappedData.schedule = scheduleParts.join(' | ');
+      }
+    }
+    
     // Handle experience level from fieldValues
     if (fieldValues.experience && typeof fieldValues.experience === 'string') {
       const experienceMap = {
@@ -584,6 +771,7 @@ export const JobPostingsManagementPage: React.FC = () => {
       };
       mappedData.employmentType = typeMap[fieldValues.employment_type as keyof typeof typeMap] as JobPosting['employmentType'];
     }
+    
     
     return mappedData;
   };
@@ -620,6 +808,22 @@ export const JobPostingsManagementPage: React.FC = () => {
     return 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
   };
 
+  // Validate required additional fields
+  const validateRequiredAdditionalFields = () => {
+    const requiredFields = AVAILABLE_JOB_FIELDS.filter(field => field.required);
+    const selectedRequiredFields = requiredFields.filter(field => selectedFields.has(field.id));
+    
+    // Check if all required fields are selected and have values
+    for (const field of selectedRequiredFields) {
+      if (!fieldValues[field.id]) {
+        showError('Campos requeridos', `El campo "${field.label}" es requerido y debe tener un valor.`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   // Handle job creation and update
   const handleCreateJob = async () => {
     // Prevent double-click/double-submission
@@ -630,6 +834,11 @@ export const JobPostingsManagementPage: React.FC = () => {
     setHasAttemptedSubmit(true);
     if (!validateAndShowErrors()) {
       // Validation failed and errors are now shown
+      return;
+    }
+
+    // Validate required additional fields
+    if (!validateRequiredAdditionalFields()) {
       return;
     }
 
@@ -654,8 +863,11 @@ export const JobPostingsManagementPage: React.FC = () => {
           // Optional fields
           ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
           ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
+          ...(mappedFieldData.schedule && { schedule: mappedFieldData.schedule }),
           ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
           ...(selectedFolderId && { folderId: selectedFolderId }),
+          ...(requiredDocuments.length > 0 && { requiredDocuments }),
+          status: jobData.status
         };
 
         const success = await updateJobPosting(editingJobId, updateJobData);
@@ -669,6 +881,13 @@ export const JobPostingsManagementPage: React.FC = () => {
 
           // Sync folders to maintain consistency (non-blocking)
           await syncFoldersAfterJobOperation();
+          
+          // Force refresh of folders if we're in the folders context
+          try {
+            window.dispatchEvent(new CustomEvent('foldersRefresh'));
+          } catch (error) {
+            console.warn('Could not trigger global folder refresh:', error);
+          }
         }
       } else {
         // Create new job
@@ -684,8 +903,11 @@ export const JobPostingsManagementPage: React.FC = () => {
           // Optional fields
           ...(mappedFieldData.salary && { salary: mappedFieldData.salary }),
           ...(mappedFieldData.benefits && { benefits: mappedFieldData.benefits }),
+          ...(mappedFieldData.schedule && { schedule: mappedFieldData.schedule }),
           ...(jobData.expiresAt.trim() && { expiresAt: jobData.expiresAt.trim() }),
           ...(selectedFolderId && { folderId: selectedFolderId }),
+          ...(requiredDocuments.length > 0 && { requiredDocuments }),
+          status: jobData.status
         };
 
         // Call the GraphQL service
@@ -701,6 +923,13 @@ export const JobPostingsManagementPage: React.FC = () => {
 
           // Sync folders to maintain consistency (non-blocking)
           await syncFoldersAfterJobOperation();
+          
+          // Force refresh of folders if we're in the folders context
+          try {
+            window.dispatchEvent(new CustomEvent('foldersRefresh'));
+          } catch (error) {
+            console.warn('Could not trigger global folder refresh:', error);
+          }
         }
       }
     } catch (err) {
@@ -762,6 +991,9 @@ export const JobPostingsManagementPage: React.FC = () => {
         employmentType: input.employmentType,
         experienceLevel: input.experienceLevel,
         requirements: input.requirements,
+        benefits: input.benefits,
+        schedule: input.schedule,
+        expiresAt: input.expiresAt,
         folderId: folderId
       };
 
@@ -834,8 +1066,8 @@ export const JobPostingsManagementPage: React.FC = () => {
     try {
       console.log('Eliminando job con jobs-service:', jobId);
       
-      // Find the job to get its folder info
-      // const jobToDelete = jobPostings.find(job => job.jobId === jobId);
+      // Find the job to get its info before deletion
+      const jobToDelete = jobPostings.find(job => job.jobId === jobId);
       
       const response = await jobsService.deleteJob(jobId);
       
@@ -843,8 +1075,22 @@ export const JobPostingsManagementPage: React.FC = () => {
         console.log('Job eliminado exitosamente');
         setJobPostings(prev => prev.filter(job => job.jobId !== jobId));
         
+        // Delete associated folders if job info is available
+        if (jobToDelete) {
+          await deleteFoldersForJob(jobToDelete);
+        }
+        
         // Sync folders after job deletion
         await syncFoldersAfterJobOperation();
+        
+        // Force refresh of folders if we're in the folders context
+        // This ensures folders are updated even if we're not in the folders page
+        try {
+          // Try to trigger a global folder refresh
+          window.dispatchEvent(new CustomEvent('foldersRefresh'));
+        } catch (error) {
+          console.warn('Could not trigger global folder refresh:', error);
+        }
         
         showSuccess('Empleo eliminado exitosamente');
         return true;
@@ -920,6 +1166,21 @@ export const JobPostingsManagementPage: React.FC = () => {
           {job.salary && (
             <div className="text-sm text-gray-500" title={job.salary}>
               Salario: {job.salary}
+            </div>
+          )}
+          {job.benefits && (
+            <div className="text-sm text-gray-500" title={job.benefits}>
+              Beneficios: {job.benefits.length > 30 ? `${job.benefits.substring(0, 30)}...` : job.benefits}
+            </div>
+          )}
+          {job.schedule && (
+            <div className="text-sm text-gray-500" title={job.schedule}>
+              Horario: {job.schedule.length > 30 ? `${job.schedule.substring(0, 30)}...` : job.schedule}
+            </div>
+          )}
+          {job.expiresAt && (
+            <div className="text-sm text-gray-500">
+              Expira: {new Date(job.expiresAt).toLocaleDateString()}
             </div>
           )}
           <div className="text-xs text-gray-400 mt-1">
@@ -1056,6 +1317,16 @@ export const JobPostingsManagementPage: React.FC = () => {
                 >
                   Campos Adicionales
                 </button>
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'documents'
+                      ? 'border-green-500 text-green-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  Documentación Necesaria
+                </button>
               </nav>
             </div>
 
@@ -1157,6 +1428,66 @@ export const JobPostingsManagementPage: React.FC = () => {
                       )}
                     </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fecha de Expiración
+                      </label>
+                      <input
+                        type="date"
+                        value={jobData.expiresAt}
+                        onChange={(e) => setJobData(prev => ({ ...prev, expiresAt: e.target.value }))}
+                        onBlur={handleFieldBlur}
+                        onFocus={() => handleFieldFocus('expiresAt')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        placeholder="Selecciona fecha de expiración (opcional)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Estado Inicial
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="status-active"
+                            name="initialStatus"
+                            value="PUBLISHED"
+                            checked={jobData.status === 'PUBLISHED'}
+                            onChange={(e) => setJobData(prev => ({ ...prev, status: e.target.value as JobPosting['status'] }))}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                          />
+                          <label htmlFor="status-active" className="ml-2 block text-sm text-gray-900">
+                            <span className="flex items-center">
+                              <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                              Activado
+                            </span>
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="status-inactive"
+                            name="initialStatus"
+                            value="PAUSED"
+                            checked={jobData.status === 'PAUSED'}
+                            onChange={(e) => setJobData(prev => ({ ...prev, status: e.target.value as JobPosting['status'] }))}
+                            className="h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300"
+                          />
+                          <label htmlFor="status-inactive" className="ml-2 block text-sm text-gray-900">
+                            <span className="flex items-center">
+                              <span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                              Desactivado
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        El empleo se creará en el estado seleccionado
+                      </p>
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -1239,6 +1570,75 @@ export const JobPostingsManagementPage: React.FC = () => {
                       <p>Selecciona al menos un campo adicional para continuar</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Documents Tab */}
+              {activeTab === 'documents' && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Documentación Necesaria</h4>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Especifica qué documentos deben presentar los candidatos para este empleo:
+                  </p>
+                  
+                  <div className="space-y-4">
+                    {/* Input para agregar documentos */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Agregar Documentos
+                      </label>
+                      <DocumentTypeAutocomplete
+                        value={documentInput}
+                        onChange={handleDocumentInputChange}
+                        onKeyPress={handleDocumentKeyPress}
+                        placeholder="Escribe un documento y presiona Enter o separa con comas (ej: CV, Certificado de estudios, Cédula de identidad)"
+                        className="w-full"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Separa múltiples documentos con comas o presiona Enter para agregar uno por uno. 
+                        <span className="text-green-600 font-medium"> Los tipos más usados aparecerán como sugerencias.</span>
+                      </p>
+                    </div>
+
+                    {/* Lista de documentos agregados */}
+                    {requiredDocuments.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Documentos Requeridos ({requiredDocuments.length})
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {requiredDocuments.map((document, index) => (
+                            <div
+                              key={index}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 border border-green-200"
+                            >
+                              <span className="mr-2">{document}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeDocument(index)}
+                                className="text-green-600 hover:text-green-800 focus:outline-none"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mensaje cuando no hay documentos */}
+                    {requiredDocuments.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p>No se han agregado documentos requeridos</p>
+                        <p className="text-sm">Agrega los documentos que deben presentar los candidatos</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

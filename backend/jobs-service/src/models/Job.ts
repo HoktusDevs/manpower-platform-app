@@ -9,6 +9,9 @@ export interface Job {
   employmentType: string;
   experienceLevel: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
   folderId: string;        // Carpeta destino donde se creará
   jobFolderId?: string;    // Carpeta específica auto-creada para este job
   status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
@@ -16,6 +19,7 @@ export interface Job {
   createdAt: string;
   updatedAt: string;
   createdBy: string;       // Admin que creó el job
+  requiredDocuments?: string[];  // Documentos necesarios para el empleo
 }
 
 export class JobModel {
@@ -29,6 +33,9 @@ export class JobModel {
   public employmentType: string;
   public experienceLevel: string;
   public requirements?: string;
+  public benefits?: string;
+  public schedule?: string;
+  public expiresAt?: string;
   public folderId: string;
   public jobFolderId?: string;
   public status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
@@ -36,6 +43,7 @@ export class JobModel {
   public createdAt: string;
   public updatedAt: string;
   public createdBy: string;
+  public requiredDocuments?: string[];
 
   constructor(data: Partial<Job>) {
     this.jobId = data.jobId || '';
@@ -48,6 +56,9 @@ export class JobModel {
     this.employmentType = data.employmentType || 'full-time';
     this.experienceLevel = data.experienceLevel || 'mid';
     this.requirements = data.requirements;
+    this.benefits = data.benefits;
+    this.schedule = data.schedule;
+    this.expiresAt = data.expiresAt;
     this.folderId = data.folderId || '';
     this.jobFolderId = data.jobFolderId;
     this.status = data.status || 'DRAFT';
@@ -55,6 +66,7 @@ export class JobModel {
     this.createdAt = data.createdAt || new Date().toISOString();
     this.updatedAt = data.updatedAt || new Date().toISOString();
     this.createdBy = data.createdBy || '';
+    this.requiredDocuments = data.requiredDocuments;
   }
 
   // Validate job data
@@ -109,13 +121,17 @@ export class JobModel {
       employmentType: this.employmentType,
       experienceLevel: this.experienceLevel,
       requirements: this.requirements,
+      benefits: this.benefits,
+      schedule: this.schedule,
+      expiresAt: this.expiresAt,
       folderId: this.folderId,
       jobFolderId: this.jobFolderId,
       status: this.status,
       isActive: this.isActive,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
-      createdBy: this.createdBy
+      createdBy: this.createdBy,
+      requiredDocuments: this.requiredDocuments
     };
   }
 

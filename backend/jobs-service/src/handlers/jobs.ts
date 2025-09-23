@@ -137,6 +137,7 @@ export const getPublishedJobs: APIGatewayProxyHandler = async (event) => {
 // Get single job
 export const getJob: APIGatewayProxyHandler = async (event) => {
   try {
+    const { userId } = extractUserFromEvent(event);
     const jobId = event.pathParameters?.jobId;
 
     if (!jobId) {
@@ -207,7 +208,7 @@ export const updateJob: APIGatewayProxyHandler = async (event) => {
       ...updateData,
     };
 
-    const result = await jobService.updateJob(input);
+    const result = await jobService.updateJob(input, userId);
 
     if (!result.success) {
       return createResponse(404, result);

@@ -1,0 +1,168 @@
+service: document-types-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    DOCUMENT_TYPES_TABLE: ${self:service}-${self:provider.stage}
+    DYNAMODB_ENDPOINT: ${env:DYNAMODB_ENDPOINT, ''}
+  
+  # Global CORS configuration
+  httpApi:
+    cors:
+      allowedOrigins:
+        - "*"  # For development - restrict in production
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Amz-User-Agent
+        - X-User-Id
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:service}-${self:provider.stage}"
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3003
+
+functions:
+  # Health Check
+  checkHealth:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # Document Types Management
+  getAllDocumentTypes:
+    handler: src/handlers/documentTypes.getAllDocumentTypes
+    events:
+      - http:
+          path: /document-types
+          method: get
+          cors: true
+
+  getDocumentType:
+    handler: src/handlers/documentTypes.getDocumentType
+    events:
+      - http:
+          path: /document-types/{typeId}
+          method: get
+          cors: true
+
+  createDocumentType:
+    handler: src/handlers/documentTypes.createDocumentType
+    events:
+      - http:
+          path: /document-types
+          method: post
+          cors: true
+
+  updateDocumentType:
+    handler: src/handlers/documentTypes.updateDocumentType
+    events:
+      - http:
+          path: /document-types/{typeId}
+          method: put
+          cors: true
+
+  deleteDocumentType:
+    handler: src/handlers/documentTypes.deleteDocumentType
+    events:
+      - http:
+          path: /document-types/{typeId}
+          method: delete
+          cors: true
+
+  # Search and suggestions
+  searchDocumentTypes:
+    handler: src/handlers/documentTypes.searchDocumentTypes
+    events:
+      - http:
+          path: /document-types/search
+          method: get
+          cors: true
+
+  # Auto-create from job documents
+  createFromJobDocuments:
+    handler: src/handlers/documentTypes.createFromJobDocuments
+    events:
+      - http:
+          path: /document-types/from-job
+          method: post
+          cors: true
+
+  # Check existing document types
+  checkExistingDocumentTypes:
+    handler: src/handlers/documentTypes.checkExistingDocumentTypes
+    events:
+      - http:
+          path: /document-types/check-existing
+          method: post
+          cors: true
+
+  # Handle OPTIONS requests for CORS preflight
+  handleOptions:
+    handler: src/handlers/documentTypes.handleOptions
+    events:
+      - http:
+          path: /{proxy+}
+          method: options
+          cors: true
+
+resources:
+  Resources:
+    DocumentTypesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: typeId
+            AttributeType: S
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: typeId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: NameIndex
+            KeySchema:
+              - AttributeName: name
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL

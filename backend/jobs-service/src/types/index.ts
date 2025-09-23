@@ -10,7 +10,12 @@ export interface CreateJobInput {
   employmentType: string;
   experienceLevel: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
+  status?: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
   folderId: string;        // Carpeta destino donde se auto-creará la carpeta del job
+  requiredDocuments?: string[];  // Documentos necesarios para el empleo
 }
 
 export interface UpdateJobInput {
@@ -24,7 +29,11 @@ export interface UpdateJobInput {
   employmentType?: string;
   experienceLevel?: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
   status?: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
+  requiredDocuments?: string[];  // Documentos necesarios para el empleo
 }
 
 export interface JobResponse {

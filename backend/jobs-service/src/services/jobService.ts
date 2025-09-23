@@ -2,11 +2,13 @@ import { randomUUID } from 'crypto';
 import { Job, JobModel } from '../models/Job';
 import { DynamoService } from './dynamoService';
 import { FoldersServiceClient } from './foldersServiceClient';
+import { DocumentTypesServiceClient } from './documentTypesServiceClient';
 import { CreateJobInput, UpdateJobInput, JobResponse, JobQuery } from '../types';
 
 export class JobService {
   private dynamoService: DynamoService;
   private foldersClient: FoldersServiceClient;
+  private documentTypesClient: DocumentTypesServiceClient;
 
   constructor() {
     console.log('JobService: Environment STAGE =', process.env.STAGE);
@@ -14,6 +16,7 @@ export class JobService {
     this.dynamoService = new DynamoService();
 
     this.foldersClient = new FoldersServiceClient();
+    this.documentTypesClient = new DocumentTypesServiceClient();
   }
 
   async createJob(input: CreateJobInput, userId: string): Promise<JobResponse> {
@@ -33,9 +36,13 @@ export class JobService {
         employmentType: input.employmentType,
         experienceLevel: input.experienceLevel,
         requirements: input.requirements,
+        benefits: input.benefits,
+        schedule: input.schedule,
+        expiresAt: input.expiresAt,
         folderId: input.folderId,
         createdBy: userId,
-        status: 'DRAFT' // Always start as draft
+        status: input.status || 'DRAFT', // Use provided status or default to draft
+        requiredDocuments: input.requiredDocuments
       });
 
       // Validate job data
@@ -48,6 +55,41 @@ export class JobService {
 
       // Create the job in database first
       const createdJob = await this.dynamoService.createJob(jobModel);
+
+      // Process document types if requiredDocuments are provided
+      if (input.requiredDocuments && input.requiredDocuments.length > 0) {
+        try {
+          console.log('Processing document types for job:', jobId);
+          
+          // First, check which document types already exist
+          const checkResult = await this.documentTypesClient.checkExistingDocumentTypes(input.requiredDocuments);
+          
+          if (checkResult.new.length > 0) {
+            console.log(`Creating ${checkResult.new.length} new document types:`, checkResult.new);
+            // Only create new document types
+            const documentTypesResult = await this.documentTypesClient.createFromJobDocuments(
+              checkResult.new,
+              userId
+            );
+            
+            if (documentTypesResult.success) {
+              console.log('New document types created successfully:', documentTypesResult.message);
+            } else {
+              console.warn('Failed to create new document types:', documentTypesResult.message);
+            }
+          }
+          
+          if (checkResult.existing.length > 0) {
+            console.log(`Found ${checkResult.existing.length} existing document types:`, checkResult.existing);
+            // TODO: Increment usage count for existing types
+            // This could be implemented as a separate endpoint or batch operation
+          }
+          
+        } catch (error) {
+          console.error('Error processing document types (non-blocking):', error);
+          // Don't fail the job creation if document types processing fails
+        }
+      }
 
       // Job created successfully - folder creation is handled by frontend
       console.log('Job created successfully:', jobId);
@@ -90,7 +132,7 @@ export class JobService {
     }
   }
 
-  async updateJob(input: UpdateJobInput): Promise<JobResponse> {
+  async updateJob(input: UpdateJobInput, userId: string): Promise<JobResponse> {
     try {
       const { jobId, ...updates } = input;
 
@@ -122,6 +164,40 @@ export class JobService {
           success: false,
           message: 'Job not found or update failed',
         };
+      }
+
+      // Process document types if requiredDocuments are being updated
+      if (updates.requiredDocuments && updates.requiredDocuments.length > 0) {
+        try {
+          console.log('Processing document types for job update:', jobId);
+          
+          // First, check which document types already exist
+          const checkResult = await this.documentTypesClient.checkExistingDocumentTypes(updates.requiredDocuments);
+          
+          if (checkResult.new.length > 0) {
+            console.log(`Creating ${checkResult.new.length} new document types:`, checkResult.new);
+            // Only create new document types
+            const documentTypesResult = await this.documentTypesClient.createFromJobDocuments(
+              checkResult.new,
+              userId
+            );
+            
+            if (documentTypesResult.success) {
+              console.log('New document types created successfully:', documentTypesResult.message);
+            } else {
+              console.warn('Failed to create new document types:', documentTypesResult.message);
+            }
+          }
+          
+          if (checkResult.existing.length > 0) {
+            console.log(`Found ${checkResult.existing.length} existing document types:`, checkResult.existing);
+            // TODO: Increment usage count for existing types
+          }
+          
+        } catch (error) {
+          console.error('Error processing document types (non-blocking):', error);
+          // Don't fail the job update if document types processing fails
+        }
       }
 
       return {

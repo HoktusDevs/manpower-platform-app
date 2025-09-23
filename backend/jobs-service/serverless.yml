@@ -9,6 +9,29 @@ provider:
     STAGE: ${self:provider.stage}
     JOBS_TABLE: manpower-jobs-${self:provider.stage}
     FOLDERS_SERVICE_URL: ${env:FOLDERS_SERVICE_URL, 'https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev'}
+    DOCUMENT_TYPES_SERVICE_URL: ${env:DOCUMENT_TYPES_SERVICE_URL, 'http://localhost:3003'}
+  
+  # Global CORS configuration
+  httpApi:
+    cors:
+      allowedOrigins:
+        - "*"  # For development - restrict in production
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Amz-User-Agent
+        - X-User-Id
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+      maxAge: 86400
   iamRoleStatements:
     - Effect: Allow
       Action:

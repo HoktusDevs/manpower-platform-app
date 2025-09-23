@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 import {
   useGetAllFolders,
@@ -48,6 +48,20 @@ export const useFoldersState = (
   const folders = useMemo(() => {
     return backendFolders.map(folderToFolderRow);
   }, [backendFolders]);
+
+  // Listen for global folder refresh events
+  useEffect(() => {
+    const handleFoldersRefresh = () => {
+      console.log('Global folder refresh event received, refreshing folders...');
+      loadFolders();
+    };
+
+    window.addEventListener('foldersRefresh', handleFoldersRefresh);
+    
+    return () => {
+      window.removeEventListener('foldersRefresh', handleFoldersRefresh);
+    };
+  }, [loadFolders]);
 
   // Memoized filtered folders for performance
   const filteredFolders = useMemo(() => {

@@ -1,0 +1,33 @@
+# CORS Configuration for Document Types Service
+# This file contains the CORS settings for both local development and production
+
+# Development Origins (for local testing)
+DEVELOPMENT_ORIGINS:
+  - "http://localhost:3000"   # React default
+  - "http://localhost:3001"   # Alternative React port
+  - "http://localhost:5173"   # Vite default
+  - "http://localhost:6100"   # Auth Frontend
+  - "http://localhost:6200"   # Applicant Frontend
+  - "http://localhost:6500"   # Admin Frontend
+  - "http://localhost:8080"   # Alternative port
+
+# Production Origins (replace with actual CloudFront URLs)
+PRODUCTION_ORIGINS:
+  - "https://admin.manpower-platform.com"
+  - "https://applicant.manpower-platform.com"
+  - "https://auth.manpower-platform.com"
+
+# CORS Headers for API Gateway
+CORS_HEADERS:
+  Access-Control-Allow-Origin: "*"  # Restrict in production
+  Access-Control-Allow-Methods: "GET, POST, PUT, DELETE, OPTIONS"
+  Access-Control-Allow-Headers: "Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token, X-Amz-User-Agent, X-User-Id"
+  Access-Control-Allow-Credentials: "true"
+  Access-Control-Max-Age: "86400"
+
+# Service URLs for different environments
+SERVICE_URLS:
+  local: "http://localhost:3003"
+  dev: "https://document-types-service-dev.execute-api.us-east-1.amazonaws.com/dev"
+  staging: "https://document-types-service-staging.execute-api.us-east-1.amazonaws.com/staging"
+  prod: "https://document-types-service-prod.execute-api.us-east-1.amazonaws.com/prod"

@@ -14,6 +14,9 @@ export interface JobPosting {
   employmentType: string;
   experienceLevel: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
   folderId: string;
   jobFolderId?: string;
   status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
@@ -21,6 +24,7 @@ export interface JobPosting {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  requiredDocuments?: string[];
 }
 
 export interface JobsResponse {
@@ -39,7 +43,11 @@ export interface CreateJobInput {
   employmentType: string;
   experienceLevel: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
   folderId: string;
+  requiredDocuments?: string[];
 }
 
 export interface UpdateJobInput {
@@ -53,7 +61,11 @@ export interface UpdateJobInput {
   employmentType?: string;
   experienceLevel?: string;
   requirements?: string;
+  benefits?: string;
+  schedule?: string;
+  expiresAt?: string;
   status?: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED';
+  requiredDocuments?: string[];
 }
 
 class JobsService {
