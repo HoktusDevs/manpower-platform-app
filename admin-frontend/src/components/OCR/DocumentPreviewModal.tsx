@@ -15,8 +15,9 @@ interface DocumentFile {
   file: File;
   previewUrl: string;
   title: string;
+  ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: OCRResult;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
   documentType?: string;

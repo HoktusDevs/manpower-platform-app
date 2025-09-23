@@ -225,11 +225,22 @@ export class DynamoService {
     await this.ensureTableExists();
 
     try {
-      console.log(`🗑️ Deleting application: ${applicationId}`);
+      console.log(`🗑️ Deleting application: ${applicationId}, userId: ${userId}`);
+      
+      // Si no tenemos userId, necesitamos buscarlo primero
+      if (!userId) {
+        const application = await this.getApplication(applicationId);
+        if (!application) {
+          console.log(`❌ Application ${applicationId} not found`);
+          return false;
+        }
+        userId = application.userId;
+      }
       
       const command = new DeleteCommand({
         TableName: this.tableName,
         Key: { 
+          userId: userId,
           applicationId: applicationId 
         },
         ReturnValues: 'ALL_OLD'

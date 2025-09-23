@@ -78,7 +78,7 @@ export const TestWhatsappPage = () => {
 
   const handleTestMessage = () => {
     setPhoneNumber('+56912345678');
-    setUserName('Usuario de Prueba');
+    setUserName('Test User');
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {

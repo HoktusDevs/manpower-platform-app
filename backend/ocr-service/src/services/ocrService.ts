@@ -254,6 +254,36 @@ export class OCRService {
     }
   }
 
+  async updateDocumentOwner(documentId: string, newOwnerName: string): Promise<APIResponse> {
+    try {
+      console.log('Updating document owner:', documentId, 'to:', newOwnerName);
+
+      const document = await this.dynamoService.getDocument(documentId);
+
+      if (!document) {
+        return {
+          success: false,
+          error: 'Document not found'
+        };
+      }
+
+      await this.dynamoService.updateDocumentOwner(documentId, newOwnerName);
+
+      return {
+        success: true,
+        message: 'Document owner updated successfully'
+      };
+
+    } catch (error: any) {
+      console.error('Error updating document owner:', error);
+
+      return {
+        success: false,
+        error: error.message || 'Failed to update document owner'
+      };
+    }
+  }
+
   async deleteDocument(documentId: string): Promise<APIResponse> {
     try {
       console.log('Deleting document:', documentId);

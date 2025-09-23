@@ -1,3 +1,7 @@
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { cognitoAuthService } from './cognitoAuthService';
+
 export interface S3UploadResult {
   success: boolean;
   fileUrl?: string;
@@ -14,14 +18,24 @@ export interface PresignedUrlResponse {
 class S3Service {
   private bucketName: string;
   private region: string;
+  private s3Client: S3Client;
 
   constructor() {
     this.region = 'us-east-1';
     this.bucketName = 'manpower-files-dev';
+    
+    // Initialize S3 client with Cognito credentials
+    this.s3Client = new S3Client({
+      region: this.region,
+      credentials: {
+        accessKeyId: 'dummy', // Will be replaced by Cognito credentials
+        secretAccessKey: 'dummy'
+      }
+    });
   }
 
   /**
-   * Simular subida de archivo (SIN AWS SDK)
+   * Obtener presigned URL para subir archivo
    */
   async getPresignedUploadUrl(
     fileName: string,
@@ -30,12 +44,39 @@ class S3Service {
     documentType: string
   ): Promise<PresignedUrlResponse> {
     try {
-      // Generar URL única para el archivo
-      const key = `documents/${userId}/${documentType}/${Date.now()}-${fileName}`;
-      const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      // Verificar autenticación
+      const accessToken = cognitoAuthService.getAccessToken();
+      if (!accessToken) {
+        return {
+          success: false,
+          error: 'No hay token de acceso disponible',
+        };
+      }
+
+      // Generar key único para el archivo
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const extension = fileName.split('.').pop();
+      const key = `documents/${userId}/${documentType}/${timestamp}_${randomString}.${extension}`;
       
-      // Simular presigned URL (en realidad será un blob URL)
-      const presignedUrl = URL.createObjectURL(new Blob([''], { type: fileType }));
+      const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+
+      // Crear comando para presigned URL
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: fileType,
+        Metadata: {
+          userId: userId,
+          documentType: documentType,
+          originalName: fileName
+        }
+      });
+
+      // Generar presigned URL (válida por 1 hora)
+      const presignedUrl = await getSignedUrl(this.s3Client, command, { 
+        expiresIn: 3600 
+      });
 
       return {
         success: true,
@@ -46,68 +87,110 @@ class S3Service {
       console.error('S3Service: Error getting presigned URL:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Error generando URL de subida',
       };
     }
   }
 
   /**
-   * Simular subida de archivo (SIN AWS SDK)
+   * Subir archivo usando presigned URL
    */
   async uploadFile(
-    _file: File,
+    file: File,
     presignedUrl: string,
     onProgress?: (progress: number) => void
   ): Promise<S3UploadResult> {
     try {
-      // Simular progreso de subida
-      if (onProgress) {
-        onProgress(0);
-        setTimeout(() => onProgress(50), 100);
-        setTimeout(() => onProgress(100), 200);
+      console.log('📤 Subiendo archivo a S3:', file.name);
+      
+      // Crear FormData para la subida
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Subir archivo usando fetch con presigned URL
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error subiendo archivo: ${response.status} ${response.statusText}`);
       }
 
-      // Simular subida exitosa
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Extraer URL del archivo desde la presigned URL
+      const fileUrl = presignedUrl.split('?')[0];
+
+      console.log('✅ Archivo subido exitosamente:', fileUrl);
+      
+      if (onProgress) {
+        onProgress(100);
+      }
 
       return {
         success: true,
-        fileUrl: presignedUrl,
+        fileUrl: fileUrl || '',
       };
     } catch (error) {
       console.error('S3Service: Error uploading file:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Error subiendo archivo',
       };
     }
   }
 
   /**
-   * Simular descarga de archivo (SIN AWS SDK)
+   * Obtener presigned URL para descargar archivo
    */
   async getPresignedDownloadUrl(fileUrl: string): Promise<PresignedUrlResponse> {
     try {
+      // Extraer key del archivo desde la URL
+      const key = fileUrl.replace(`https://${this.bucketName}.s3.${this.region}.amazonaws.com/`, '');
+      
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      // Generar presigned URL para descarga (válida por 1 hora)
+      const presignedUrl = await getSignedUrl(this.s3Client, command, { 
+        expiresIn: 3600 
+      });
+
       return {
         success: true,
-        presignedUrl: fileUrl,
+        presignedUrl,
         fileUrl,
       };
     } catch (error) {
       console.error('S3Service: Error getting download URL:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Error generando URL de descarga',
       };
     }
   }
 
   /**
-   * Simular eliminación de archivo (SIN AWS SDK)
+   * Eliminar archivo de S3
    */
-  async deleteFile(): Promise<S3UploadResult> {
+  async deleteFile(fileUrl: string): Promise<S3UploadResult> {
     try {
-      // Simular eliminación exitosa
+      // Extraer key del archivo desde la URL
+      const key = fileUrl.replace(`https://${this.bucketName}.s3.${this.region}.amazonaws.com/`, '');
+      
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      
+      console.log('✅ Archivo eliminado de S3:', key);
+      
       return {
         success: true,
       };
@@ -115,7 +198,7 @@ class S3Service {
       console.error('S3Service: Error deleting file:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Error eliminando archivo',
       };
     }
   }

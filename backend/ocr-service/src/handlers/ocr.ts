@@ -179,6 +179,12 @@ export const processDocumentsFromAdmin = async (
         status: 'pending'
       });
       
+      console.log('=== GUARDANDO DOCUMENTO EN DB ===');
+      console.log('Platform Document ID:', doc.platformDocumentId);
+      console.log('Owner User Name:', requestData.ownerUserName);
+      console.log('Document Object:', JSON.stringify(document.toDynamoDB(), null, 2));
+      console.log('=================================');
+      
       await dynamoService.saveDocument(document);
       console.log('Saved document to database:', doc.platformDocumentId);
     }
@@ -334,6 +340,12 @@ export const callback = async (
     }
 
     const document = documentResult.data;
+
+    console.log('=== DOCUMENTO ENCONTRADO EN DB ===');
+    console.log('Document ID:', document.id);
+    console.log('Owner User Name:', document.ownerUserName);
+    console.log('Platform Document ID:', document.platformDocumentId);
+    console.log('==================================');
 
     // Store Hoktus decision information
     document.setHoktusResult({
@@ -672,6 +684,95 @@ export const deleteDocument = async (
 
   } catch (error: any) {
     console.error('Error in deleteDocument handler:', error);
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+      },
+      body: JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      })
+    };
+  }
+};
+
+export const cleanupTestDocuments = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  try {
+    console.log('Cleaning up test documents with Usuario de Prueba');
+
+    const documentsResponse = await ocrService.getAllDocuments();
+
+    if (!documentsResponse.success || !documentsResponse.data) {
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'Failed to get documents'
+        })
+      };
+    }
+
+    // Find all documents with "Usuario de Prueba"
+    const testDocuments = documentsResponse.data.filter(doc =>
+      doc.ownerUserName === 'Usuario de Prueba'
+    );
+
+    console.log(`Found ${testDocuments.length} documents with "Usuario de Prueba"`);
+
+    const results = [];
+
+    // Delete old test documents since they're test data
+    for (const doc of testDocuments) {
+      try {
+        const deleteResult = await ocrService.deleteDocument(doc.id);
+        results.push({
+          documentId: doc.id,
+          fileName: doc.fileName,
+          action: 'deleted',
+          success: deleteResult.success,
+          error: deleteResult.error
+        });
+      } catch (error) {
+        results.push({
+          documentId: doc.id,
+          fileName: doc.fileName,
+          action: 'delete_failed',
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'DELETE,OPTIONS,POST,GET,PUT'
+      },
+      body: JSON.stringify({
+        success: true,
+        message: `Processed ${testDocuments.length} test documents`,
+        results
+      })
+    };
+
+  } catch (error: any) {
+    console.error('Error in cleanupTestDocuments handler:', error);
 
     return {
       statusCode: 500,

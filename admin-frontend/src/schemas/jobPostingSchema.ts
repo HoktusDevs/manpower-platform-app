@@ -6,41 +6,25 @@ export const jobPostingBasicSchema = z.object({
     .string()
     .min(3, 'El título debe tener al menos 3 caracteres')
     .max(100, 'El título no debe exceder 100 caracteres')
-    .nonempty('El título del empleo es requerido')
-    .refine(
-      (val) => !/[<>{}[\]\\|`~!@#$%^&*()_+=\-]/.test(val),
-      'El título no puede contener caracteres especiales como < > { } [ ] \\ | ` ~ ! @ # $ % ^ & * ( ) _ + = -'
-    ),
+    .nonempty('El título del empleo es requerido'),
   
   companyName: z
     .string()
     .min(2, 'El nombre de la empresa debe tener al menos 2 caracteres')
     .max(100, 'El nombre de la empresa no debe exceder 100 caracteres')
-    .nonempty('El nombre de la empresa es requerido')
-    .refine(
-      (val) => !/[<>{}[\]\\|`~!@#$%^&*()_+=\-]/.test(val),
-      'El nombre de la empresa no puede contener caracteres especiales como < > { } [ ] \\ | ` ~ ! @ # $ % ^ & * ( ) _ + = -'
-    ),
+    .nonempty('El nombre de la empresa es requerido'),
   
   description: z
     .string()
     .min(20, 'La descripción debe tener al menos 20 caracteres')
     .max(2000, 'La descripción no debe exceder 2000 caracteres')
-    .nonempty('La descripción es requerida')
-    .refine(
-      (val) => !/[<>{}[\]\\|`~!@#$%^&*()_+=\-]/.test(val),
-      'La descripción no puede contener caracteres especiales como < > { } [ ] \\ | ` ~ ! @ # $ % ^ & * ( ) _ + = -'
-    ),
+    .nonempty('La descripción es requerida'),
   
   requirements: z
     .string()
     .min(10, 'Los requisitos deben tener al menos 10 caracteres')
     .max(1000, 'Los requisitos no deben exceder 1000 caracteres')
-    .nonempty('Los requisitos son requeridos')
-    .refine(
-      (val) => !/[<>{}[\]\\|`~!@#$%^&*()_+=\-]/.test(val),
-      'Los requisitos no pueden contener caracteres especiales como < > { } [ ] \\ | ` ~ ! @ # $ % ^ & * ( ) _ + = -'
-    ),
+    .nonempty('Los requisitos son requeridos'),
 });
 
 // Employment Type Schema

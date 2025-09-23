@@ -1,0 +1,31 @@
+{
+  "name": "document-processing-microservice",
+  "version": "1.0.0",
+  "description": "Microservicio de procesamiento de documentos para AWS Lambda",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage prod",
+    "remove": "serverless remove",
+    "offline": "serverless offline",
+    "logs": "serverless logs -f",
+    "invoke": "serverless invoke",
+    "info": "serverless info"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-python-requirements": "^6.0.0",
+    "serverless-offline": "^13.0.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "serverless",
+    "document-processing",
+    "sqs",
+    "python"
+  ],
+  "author": "Document Processing Team",
+  "license": "MIT"
+}

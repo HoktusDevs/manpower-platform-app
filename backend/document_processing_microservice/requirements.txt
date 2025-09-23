@@ -1,0 +1,48 @@
+# Document Processing Microservice - Dependencies for AWS Lambda
+
+# AWS SDK (ya incluido en Lambda runtime, pero especificado para desarrollo local)
+boto3==1.34.0
+botocore==1.34.0
+
+# Data Validation
+pydantic==2.8.0
+
+# HTTP Requests
+requests==2.31.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# Azure Vision (OCR)
+azure-cognitiveservices-vision-computervision==0.9.0
+
+# OpenAI API
+openai==1.3.0
+
+# DeepSeek API (compatible with OpenAI)
+openai==1.3.0
+
+# Date/Time handling
+python-dateutil==2.8.2
+
+# JSON handling
+jsonschema==4.20.0
+
+# Logging
+structlog==23.2.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Serverless Framework (removed - these are Node.js packages)
+
+# Monitoring
+sentry-sdk==1.38.0

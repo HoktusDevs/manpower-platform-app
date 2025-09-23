@@ -133,6 +133,20 @@ export class DynamoService {
     }
   }
 
+  async updateDocumentOwner(id: string, newOwnerName: string): Promise<void> {
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      Key: { id },
+      UpdateExpression: 'SET ownerUserName = :ownerUserName, updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':ownerUserName': newOwnerName,
+        ':updatedAt': new Date().toISOString()
+      }
+    });
+
+    await this.client.send(command);
+  }
+
   async deleteDocument(id: string): Promise<void> {
     const command = new DeleteCommand({
       TableName: this.tableName,

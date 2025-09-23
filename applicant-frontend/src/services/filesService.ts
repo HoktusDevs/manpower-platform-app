@@ -1,4 +1,5 @@
 import { s3Service } from './s3Service';
+import { filesApiService } from './filesApiService';
 
 export interface DocumentUploadRequest {
   file: File;
@@ -88,8 +89,8 @@ class FilesService {
         };
       }
 
-      // Guardar referencia en DynamoDB
-      const saveResult = await this.saveDocumentReference({
+      // Guardar referencia en el backend
+      const saveResult = await filesApiService.saveDocumentReference({
         fileName: request.file.name,
         fileUrl: uploadResult.fileUrl,
         documentType: request.documentType,
@@ -102,7 +103,7 @@ class FilesService {
 
       if (!saveResult.success) {
         // Si falla guardar en DB, eliminar archivo de S3
-        await s3Service.deleteFile();
+        await s3Service.deleteFile(uploadResult.fileUrl);
         return {
           success: false,
           error: saveResult.error || 'Error guardando referencia del documento',
@@ -124,68 +125,11 @@ class FilesService {
   }
 
   /**
-   * Guardar referencia del documento en localStorage (SIN BACKEND)
-   */
-  private async saveDocumentReference(documentData: {
-    fileName: string;
-    fileUrl: string;
-    documentType: string;
-    jobId: string;
-    applicationId?: string;
-    userId: string;
-    fileSize: number;
-    mimeType: string;
-  }): Promise<{ success: boolean; documentId?: string; error?: string }> {
-    try {
-      // Generar ID único
-      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Guardar en localStorage
-      const documentInfo = {
-        documentId,
-        fileName: documentData.fileName,
-        fileUrl: documentData.fileUrl,
-        documentType: documentData.documentType,
-        jobId: documentData.jobId,
-        applicationId: documentData.applicationId,
-        userId: documentData.userId,
-        fileSize: documentData.fileSize,
-        mimeType: documentData.mimeType,
-        status: 'uploaded',
-        createdAt: new Date().toISOString(),
-      };
-
-      // Obtener documentos existentes
-      const existingDocs = JSON.parse(localStorage.getItem('user_documents') || '[]');
-      existingDocs.push(documentInfo);
-      localStorage.setItem('user_documents', JSON.stringify(existingDocs));
-
-      return {
-        success: true,
-        documentId,
-      };
-    } catch (error) {
-      console.error('FilesService: Error saving document reference:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Error de conexión',
-      };
-    }
-  }
-
-  /**
-   * Obtener documentos de un usuario desde localStorage (SIN BACKEND)
+   * Obtener documentos de un usuario desde el backend
    */
   async getUserDocuments(userId: string): Promise<{ success: boolean; documents?: DocumentInfo[]; error?: string }> {
     try {
-      // Obtener documentos desde localStorage
-      const allDocs = JSON.parse(localStorage.getItem('user_documents') || '[]');
-      const userDocs = allDocs.filter((doc: unknown) => (doc as DocumentInfo).userId === userId);
-
-      return {
-        success: true,
-        documents: userDocs,
-      };
+      return await filesApiService.getUserDocuments(userId);
     } catch (error) {
       console.error('FilesService: Error getting user documents:', error);
       return {
@@ -196,18 +140,11 @@ class FilesService {
   }
 
   /**
-   * Obtener documentos de una aplicación específica desde localStorage (SIN BACKEND)
+   * Obtener documentos de una aplicación específica desde el backend
    */
   async getApplicationDocuments(applicationId: string): Promise<{ success: boolean; documents?: DocumentInfo[]; error?: string }> {
     try {
-      // Obtener documentos desde localStorage
-      const allDocs = JSON.parse(localStorage.getItem('user_documents') || '[]');
-      const appDocs = allDocs.filter((doc: unknown) => (doc as DocumentInfo).applicationId === applicationId);
-
-      return {
-        success: true,
-        documents: appDocs,
-      };
+      return await filesApiService.getApplicationDocuments(applicationId);
     } catch (error) {
       console.error('FilesService: Error getting application documents:', error);
       return {
@@ -218,18 +155,11 @@ class FilesService {
   }
 
   /**
-   * Eliminar documento desde localStorage (SIN BACKEND)
+   * Eliminar documento desde el backend
    */
   async deleteDocument(documentId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Obtener documentos desde localStorage
-      const allDocs = JSON.parse(localStorage.getItem('user_documents') || '[]');
-      const filteredDocs = allDocs.filter((doc: unknown) => (doc as DocumentInfo).documentId !== documentId);
-      localStorage.setItem('user_documents', JSON.stringify(filteredDocs));
-
-      return {
-        success: true,
-      };
+      return await filesApiService.deleteDocument(documentId);
     } catch (error) {
       console.error('FilesService: Error deleting document:', error);
       return {
@@ -267,31 +197,14 @@ class FilesService {
   }
 
   /**
-   * Asociar documento existente con una aplicación en localStorage (SIN BACKEND)
+   * Asociar documento existente con una aplicación en el backend
    */
   async associateDocumentWithApplication(
     documentId: string,
     applicationId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Obtener documentos desde localStorage
-      const allDocs = JSON.parse(localStorage.getItem('user_documents') || '[]');
-      const docIndex = allDocs.findIndex((doc: unknown) => (doc as DocumentInfo).documentId === documentId);
-      
-      if (docIndex === -1) {
-        return {
-          success: false,
-          error: 'Documento no encontrado',
-        };
-      }
-
-      // Actualizar documento con applicationId
-      allDocs[docIndex].applicationId = applicationId;
-      localStorage.setItem('user_documents', JSON.stringify(allDocs));
-
-      return {
-        success: true,
-      };
+      return await filesApiService.associateDocumentWithApplication(documentId, applicationId);
     } catch (error) {
       console.error('FilesService: Error associating document:', error);
       return {

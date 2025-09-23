@@ -49,3 +49,5 @@ export const useOCRPolling = (onDocumentUpdate: (update: OCRDocumentUpdate) => v
   };
 };
 
+
+

@@ -1,0 +1,210 @@
+service: doc-processor-simple
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.10
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  timeout: 900  # 15 minutos máximo
+  memorySize: 1024
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}
+    # SQS Configuration (temporalmente comentado)
+    # DOCUMENT_PROCESSING_QUEUE_URL: !Ref DocumentProcessingQueue
+    # Callback Configuration
+    DOCUMENT_RESULTS_NOTIFICATION_URL: ${env:DOCUMENT_RESULTS_NOTIFICATION_URL, ''}
+    # Azure Vision
+    AZURE_VISION_ENDPOINT: ${env:AZURE_VISION_ENDPOINT, ''}
+    AZURE_VISION_KEY: ${env:AZURE_VISION_KEY, ''}
+    # AI Models
+    DOCUMENT_IA_PROVIDER: ${env:DOCUMENT_IA_PROVIDER, 'deepseek'}
+    DEEPSEEK_API_KEY: ${env:DEEPSEEK_API_KEY, ''}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    # Boostr
+    BOOSTR_API_KEY: ${env:BOOSTR_API_KEY, ''}
+    BOOSTR_BASE_URL: ${env:BOOSTR_BASE_URL, 'https://api.boostr.cl'}
+    # WebSocket Configuration
+    WEBSOCKET_ENDPOINT: ${self:custom.websocketEndpoint.${self:provider.stage}}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/doc-processor-websocket-connections-${self:provider.stage}"
+    - Effect: Allow
+      Action:
+        - execute-api:ManageConnections
+        - execute-api:Invoke
+      Resource:
+        - "arn:aws:execute-api:${self:provider.region}:*:*/*"
+        - "arn:aws:execute-api:${self:provider.region}:*:*/*/*"
+
+functions:
+  # API Gateway para recibir documentos
+  api:
+    handler: src/handlers/api_handler.handler
+    events:
+      - http:
+          path: /api/v1/platform/process-documents-platform
+          method: post
+          cors: true
+      - http:
+          path: /api/v1/health
+          method: get
+          cors: true
+    timeout: 30
+    memorySize: 512
+
+  # Worker para procesar documentos desde SQS
+  document-processor:
+    handler: src/handlers/document_processor.handler
+    timeout: 300  # 5 minutos
+    memorySize: 1024
+
+  # Health check Lambda
+  health-check:
+    handler: src/handlers/health_handler.handler
+    events:
+      - schedule: rate(5 minutes)  # Ejecutar cada 5 minutos
+    timeout: 30
+    memorySize: 256
+
+  # WebSocket Lambda functions
+  websocket-connect:
+    handler: src/handlers/websocket_handler.handler
+    events:
+      - websocket:
+          route: $connect
+    timeout: 30
+    memorySize: 256
+
+  websocket-disconnect:
+    handler: src/handlers/websocket_handler.handler
+    events:
+      - websocket:
+          route: $disconnect
+    timeout: 30
+    memorySize: 256
+
+  websocket-default:
+    handler: src/handlers/websocket_handler.handler
+    events:
+      - websocket:
+          route: $default
+    timeout: 30
+    memorySize: 256
+
+  # WebSocket notification endpoint
+  websocket-notify:
+    handler: src.handlers.websocket_notify_handler.handler
+    events:
+      - http:
+          path: /api/v1/websocket/notify
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 256
+
+resources:
+  Resources:
+    # SQS Queue para procesamiento de documentos (temporalmente comentado)
+    # DocumentProcessingQueue:
+    #   Type: AWS::SQS::Queue
+    #   Properties:
+    #     QueueName: doc-processor-queue-${self:provider.stage}
+    #     VisibilityTimeoutSeconds: 360  # 6 minutos (mayor que timeout de Lambda)
+    #     MessageRetentionPeriod: 1209600  # 14 días
+    #     ReceiveMessageWaitTimeSeconds: 20  # Long polling
+    #     RedrivePolicy:
+    #       deadLetterTargetArn: !GetAtt DocumentProcessingDLQ.Arn
+    #       maxReceiveCount: 3
+
+    # Dead Letter Queue (temporalmente comentado)
+    # DocumentProcessingDLQ:
+    #   Type: AWS::SQS::Queue
+    #   Properties:
+    #     QueueName: doc-processor-dlq-${self:provider.stage}
+    #     MessageRetentionPeriod: 1209600  # 14 días
+
+    # WebSocket Connections Table
+    WebSocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: doc-processor-websocket-connections-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    # CloudWatch Log Group
+    DocumentProcessingLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /aws/lambda/document-processing-microservice-${self:provider.stage}
+        RetentionInDays: 14
+
+  Outputs:
+    ApiGatewayRestApiId:
+      Value: !Ref ApiGatewayRestApi
+      Export:
+        Name: ${self:service}-${self:provider.stage}-api-id
+    
+    ApiGatewayRestApiRootResourceId:
+      Value: !GetAtt ApiGatewayRestApi.RootResourceId
+      Export:
+        Name: ${self:service}-${self:provider.stage}-api-root-resource-id
+    
+    # DocumentProcessingQueueUrl:
+    #   Value: !Ref DocumentProcessingQueue
+    #   Export:
+    #     Name: ${self:service}-${self:provider.stage}-queue-url
+
+plugins:
+  - serverless-python-requirements
+  - serverless-offline  # Para desarrollo local
+
+custom:
+  websocketEndpoint:
+    dev: wss://placeholder.execute-api.us-east-1.amazonaws.com/dev
+    staging: wss://staging-websocket.manpower-platform.com
+    prod: wss://websocket.manpower-platform.com
+  pythonRequirements:
+    dockerizePip: false
+    fileName: requirements-simple.txt
+    layer:
+      name: ${self:service}-${self:provider.stage}-layer
+      description: Dependencies for document processing microservice
+    slim: true
+    strip: false
+    noDeps:
+      - boto3
+      - botocore
+  serverless-offline:
+    httpPort: 3000
+    host: 0.0.0.0

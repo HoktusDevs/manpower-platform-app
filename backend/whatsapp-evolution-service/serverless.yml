@@ -1,0 +1,125 @@
+service: whatsapp-evolution-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  timeout: 30
+  memorySize: 512
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    # Evolution API Configuration
+    EVOLUTION_API_URL: ${env:EVOLUTION_API_URL, ''}
+    EVOLUTION_API_KEY: ${env:EVOLUTION_API_KEY, ''}
+    INSTANCE_NAME: ${env:INSTANCE_NAME, 'manpower-whatsapp'}
+    # Logging
+    LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+functions:
+  # Webhook handler para recibir mensajes de WhatsApp
+  webhook:
+    handler: src/handlers/webhook_handler.handler
+    events:
+      - http:
+          path: /api/whatsapp/webhook
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 256
+
+  # Envío de mensajes simples
+  send-message:
+    handler: src/handlers/message_handler.send_message
+    events:
+      - http:
+          path: /api/whatsapp/send-message
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 512
+
+  # Envío de templates
+  send-template:
+    handler: src/handlers/message_handler.send_template
+    events:
+      - http:
+          path: /api/whatsapp/send-template
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 512
+
+  # Estado de conexión
+  status:
+    handler: src/handlers/status_handler.get_status
+    events:
+      - http:
+          path: /api/whatsapp/status
+          method: get
+          cors: true
+    timeout: 15
+    memorySize: 256
+
+  # Health check
+  health:
+    handler: src/handlers/health_handler.handler
+    events:
+      - http:
+          path: /api/whatsapp/health
+          method: get
+          cors: true
+    timeout: 15
+    memorySize: 256
+
+  # Gestión de instancia
+  connect:
+    handler: src/handlers/instance_handler.connect
+    events:
+      - http:
+          path: /api/whatsapp/connect
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 512
+
+  disconnect:
+    handler: src/handlers/instance_handler.disconnect
+    events:
+      - http:
+          path: /api/whatsapp/disconnect
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 512
+
+plugins:
+  - serverless-python-requirements
+  - serverless-offline
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer:
+      name: ${self:service}-${self:provider.stage}-layer
+      description: Dependencies for WhatsApp Evolution service
+    slim: true
+    strip: false
+    noDeps:
+      - boto3
+      - botocore
+  serverless-offline:
+    httpPort: 3001
+    host: 0.0.0.0

@@ -15,8 +15,9 @@ interface DocumentFile {
   file: File;
   previewUrl: string;
   title: string;
+  ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: OCRResult;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
   documentType?: string;
@@ -44,9 +45,9 @@ const getHoktusStatusDisplay = (document: DocumentFile) => {
     };
   }
 
-  if (document.status === 'error') {
+  if (document.status === 'error' || document.status === 'failed') {
     return {
-      text: 'Error',
+      text: 'Rechazado',
       className: 'bg-red-100 text-red-800',
       icon: null
     };
@@ -115,11 +116,12 @@ const OCRResultsSkeleton = () => {
 };
 
 export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onDeleteDocument, onPreviewDocument, isLoading = false }) => {
-  // Mostrar documentos completados, en procesamiento y con error
+  // Mostrar documentos completados, en procesamiento, con error y fallidos
   const visibleDocuments = documents.filter(doc =>
     (doc.status === 'completed' && doc.ocrResult) ||
     doc.status === 'processing' ||
-    doc.status === 'error'
+    doc.status === 'error' ||
+    doc.status === 'failed'
   );
 
   if (visibleDocuments.length === 0 && !isLoading) {
@@ -186,7 +188,7 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onD
                   })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {document.status === 'processing' || document.status === 'error' ? '-' : `${document.ocrResult!.processingTime}s`}
+                  {document.status === 'processing' || document.status === 'error' || document.status === 'failed' ? '-' : `${document.ocrResult!.processingTime}s`}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
@@ -219,15 +221,15 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onD
                           URL.revokeObjectURL(url);
                         }
                       }}
-                      disabled={document.status === 'processing' || document.status === 'error'}
+                      disabled={document.status === 'processing' || document.status === 'error' || document.status === 'failed'}
                       className={`p-1 rounded ${
-                        document.status === 'processing' || document.status === 'error'
+                        document.status === 'processing' || document.status === 'error' || document.status === 'failed'
                           ? 'text-gray-400 cursor-not-allowed'
                           : 'text-green-600 hover:text-green-900 hover:bg-green-50'
                       }`}
                       title={
                         document.status === 'processing' ? 'Procesando...' :
-                        document.status === 'error' ? 'Error en procesamiento' :
+                        document.status === 'error' || document.status === 'failed' ? 'Error en procesamiento' :
                         'Descargar texto OCR'
                       }
                     >

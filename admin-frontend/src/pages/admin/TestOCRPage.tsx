@@ -2,14 +2,16 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useOCRWebSocket } from '../../hooks/useOCRWebSocket';
 import { OCRResultsTable } from '../../components/OCR/OCRResultsTable';
 import { DocumentPreviewModal } from '../../components/OCR/DocumentPreviewModal';
+import { cognitoAuthService } from '../../services/cognitoAuthService';
 
 interface DocumentFile {
   id: string;
   file: File;
   previewUrl: string;
   title: string;
+  ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: any;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
   documentType?: string;
@@ -127,6 +129,7 @@ export const TestOCRPage = () => {
         file,
         previewUrl,
         title: file.name,
+        ownerName: '', // ✅ CAMPO PARA NOMBRE DEL PROPIETARIO
         status: 'pending'
       };
       
@@ -221,8 +224,16 @@ export const TestOCRPage = () => {
       // Construir URL pública de S3
       const s3PublicUrl = `https://${presignedData.file.s3Bucket}.s3.us-east-1.amazonaws.com/${presignedData.file.s3Key}`;
       
+      // Usar el nombre del propietario del documento específico
+      const currentUser = cognitoAuthService.getCurrentUser();
+      const finalOwnerName = document.ownerName.trim() || currentUser?.fullName || currentUser?.email || 'Usuario Admin';
+      
+      console.log('🔍 DEBUG - Document ownerName:', document.ownerName);
+      console.log('🔍 DEBUG - Final owner name:', finalOwnerName);
+      console.log('🔍 DEBUG - Current user:', currentUser);
+      
       const requestData = {
-        ownerUserName: 'Usuario de Prueba',
+        ownerUserName: finalOwnerName,
         documents: [
           {
             fileName: document.file.name,
@@ -231,6 +242,8 @@ export const TestOCRPage = () => {
           }
         ]
       };
+
+      console.log('🔍 DEBUG - Request payload:', JSON.stringify(requestData, null, 2));
 
       // Llamar al microservicio OCR
       const response = await fetch('https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev/api/ocr/process-documents-admin', {
@@ -275,6 +288,13 @@ export const TestOCRPage = () => {
   const updateDocumentTitle = (documentId: string, title: string) => {
     setDocuments(prev => prev.map(doc =>
       doc.id === documentId ? { ...doc, title } : doc
+    ));
+  };
+
+  const updateDocumentOwnerName = (documentId: string, ownerName: string) => {
+    console.log('🔍 DEBUG - Updating owner name for document:', documentId, 'to:', ownerName);
+    setDocuments(prev => prev.map(doc =>
+      doc.id === documentId ? { ...doc, ownerName } : doc
     ));
   };
 
@@ -450,7 +470,18 @@ export const TestOCRPage = () => {
                               placeholder="Ej: Carnet Frontal"
                             />
                           </div>
-                          
+
+                          {/* Nombre del propietario */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Nombre del propietario:</label>
+                            <input
+                              type="text"
+                              value={document.ownerName}
+                              onChange={(e) => updateDocumentOwnerName(document.id, e.target.value)}
+                              className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Ej: Juan Pérez"
+                            />
+                          </div>
                           
                           {/* Estado y acciones */}
                           <div className="flex items-center justify-between">

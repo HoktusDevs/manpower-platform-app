@@ -196,6 +196,16 @@ functions:
     environment:
       FUNCTION_NAME: deleteDocument
 
+  cleanupTestDocuments:
+    handler: src/handlers/ocr.cleanupTestDocuments
+    events:
+      - http:
+          path: /api/ocr/cleanup-test-documents
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: cleanupTestDocuments
+
 resources:
   Resources:
     OCRDocumentsTable:

@@ -23,6 +23,17 @@ export const API_CONFIG = {
       stats: '/applications/stats',
       bulk: '/applications/bulk'
     }
+  },
+  ocr: {
+    baseUrl: import.meta.env.VITE_OCR_API_URL || 'https://xtspcl5cj6.execute-api.us-east-1.amazonaws.com/dev',
+    endpoints: {
+      processDocuments: '/api/ocr/process-documents-admin',
+      health: '/api/ocr/health',
+      documents: '/api/ocr/documents',
+      documentById: (documentId: string) => `/api/ocr/document/${documentId}`,
+      deleteDocument: (documentId: string) => `/api/ocr/delete/${documentId}`,
+      notifyUpdate: '/api/ocr/notify-update'
+    }
   }
 } as const;
 
