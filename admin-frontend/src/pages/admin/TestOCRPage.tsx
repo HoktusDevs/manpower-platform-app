@@ -37,12 +37,13 @@ interface DocumentFile {
   id: string;
   file: File;
   previewUrl: string;
+  fileUrl?: string; // ✅ URL real del archivo desde la base de datos
   title: string;
   ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: any;
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
-  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
-  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
   observations?: any[];
 }
@@ -71,8 +72,8 @@ export const TestOCRPage = () => {
             return {
               ...doc,
               status: lastNotification.status === 'completed' ? 'completed' as const : 'error' as const,
-              hoktusDecision: lastNotification.finalDecision,
-              hoktusProcessingStatus: lastNotification.processingStatus,
+              hoktusDecision: lastNotification.finalDecision as 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING',
+              hoktusProcessingStatus: lastNotification.processingStatus as 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING',
               documentType: lastNotification.documentType,
               observations: lastNotification.observations,
               ocrResult: lastNotification.ocrResult ? {
@@ -428,18 +429,20 @@ export const TestOCRPage = () => {
       if (response.success) {
         console.log('✅ Decisión actualizada exitosamente:', response);
         
-        // Recargar documentos históricos para reflejar el cambio
-        await loadHistoricalDocuments();
+        // Actualizar inmediatamente el estado local de la tabla
+        setHistoricalDocuments(prev => prev.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, hoktusDecision: decision }
+            : doc
+        ));
         
-        // Actualizar el previewDocument con los nuevos datos
-        const updatedDocument = historicalDocuments.find(doc => doc.id === documentId);
-        if (updatedDocument) {
-          setPreviewDocument(updatedDocument);
+        // Actualizar también el previewDocument si está abierto
+        if (previewDocument && previewDocument.id === documentId) {
+          setPreviewDocument(prev => prev ? { ...prev, hoktusDecision: decision } : null);
         }
         
-        // NO cerrar el modal para poder ver el cambio
-        // setShowPreviewModal(false);
-        // setPreviewDocument(null);
+        // Recargar documentos históricos para asegurar sincronización con el backend
+        await loadHistoricalDocuments();
         
         // Mostrar mensaje de éxito
         alert(`Documento ${decision === 'APPROVED' ? 'aprobado' : decision === 'REJECTED' ? 'rechazado' : decision === 'PENDING' ? 'marcado como pendiente' : 'marcado para revisión manual'} exitosamente`);

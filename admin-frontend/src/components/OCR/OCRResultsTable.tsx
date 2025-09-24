@@ -18,8 +18,8 @@ interface DocumentFile {
   ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: OCRResult;
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
-  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
-  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
   observations?: any[];
 }
@@ -71,6 +71,12 @@ const getHoktusStatusDisplay = (document: DocumentFile) => {
       return {
         text: 'Revisión Manual',
         className: 'bg-yellow-100 text-yellow-800',
+        icon: null
+      };
+    } else if (document.hoktusDecision === 'PENDING') {
+      return {
+        text: 'Pendiente',
+        className: 'bg-gray-100 text-gray-800',
         icon: null
       };
     }
@@ -191,7 +197,6 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onD
                     const statusDisplay = getHoktusStatusDisplay(document);
                     return (
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.className}`}>
-                        {statusDisplay.icon}
                         {statusDisplay.text}
                       </span>
                     );

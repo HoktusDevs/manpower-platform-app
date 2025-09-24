@@ -19,8 +19,8 @@ interface DocumentFile {
   ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
   ocrResult?: OCRResult;
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
-  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
-  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
   observations?: any[];
 }
@@ -92,6 +92,9 @@ const CustomDecisionSelector: React.FC<CustomDecisionSelectorProps> = ({
     console.log('🔄 handleUpdateState called', { selectedDecision, currentDecision });
     console.log('📤 Calling onDecisionChange with:', selectedDecision);
     onDecisionChange(selectedDecision as 'APPROVED' | 'REJECTED' | 'PENDING');
+    
+    // Resetear el estado local para que no muestre el botón de actualizar
+    setSelectedDecision(selectedDecision);
   };
 
   return (
