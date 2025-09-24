@@ -43,6 +43,7 @@ export const FoldersManager: React.FC = () => {
   // Job creation modal state
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
   const [selectedCompanyForJob, setSelectedCompanyForJob] = useState<string>('');
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string[]>([]);
 
   // Custom hooks for state management
   const {
@@ -248,6 +249,34 @@ export const FoldersManager: React.FC = () => {
     });
   };
 
+  // Helper function to get folder ID by name
+  const getFolderIdByName = (folderName: string): string | undefined => {
+    const folder = folders.find(f => f.name === folderName);
+    return folder?.id;
+  };
+
+  // Helper function to build folder path from folder ID
+  const getFolderPath = (folderId: string): string[] => {
+    const path: string[] = [];
+    let currentId: string | undefined = folderId;
+    
+    // Create a map for quick parent lookup
+    const folderMap = new Map<string, FolderRow>();
+    folders.forEach(folder => folderMap.set(folder.id, folder));
+    
+    while (currentId) {
+      const folder = folderMap.get(currentId);
+      if (folder) {
+        path.unshift(folder.name);
+        currentId = folder.parentId || undefined;
+      } else {
+        break;
+      }
+    }
+    
+    return path;
+  };
+
   const handleRowAction = (folderId: string, action: FolderAction): void => {
     switch (action) {
       case 'create-subfolder': {
@@ -261,6 +290,8 @@ export const FoldersManager: React.FC = () => {
         if (folder) {
           setSelectedCompanyForJob(folder.name);
         }
+        // Store the folder path for context
+        setSelectedFolderPath(getFolderPath(folderId));
         setShowCreateJobModal(true);
         break;
       }
@@ -494,16 +525,19 @@ export const FoldersManager: React.FC = () => {
         />
       )}
 
-      {/* Create Job Modal */}
-      <CreateJobModal
-        isOpen={showCreateJobModal}
-        onClose={() => setShowCreateJobModal(false)}
-        onSuccess={() => {
-          setShowCreateJobModal(false);
-          // Optionally refresh folders or show success message
-        }}
-        preselectedCompany={selectedCompanyForJob}
-      />
+        {/* Create Job Modal */}
+        <CreateJobModal
+          isOpen={showCreateJobModal}
+          onClose={() => setShowCreateJobModal(false)}
+          onSuccess={() => {
+            setShowCreateJobModal(false);
+            // Optionally refresh folders or show success message
+          }}
+          preselectedCompany={selectedCompanyForJob}
+          context="folders-management"
+          selectedFolderId={selectedCompanyForJob ? getFolderIdByName(selectedCompanyForJob) : undefined}
+          parentFolderPath={selectedFolderPath.join(' > ')}
+        />
     </div>
   );
 };

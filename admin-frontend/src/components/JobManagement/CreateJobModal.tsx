@@ -15,6 +15,10 @@ interface CreateJobModalProps {
   preselectedCompany?: string;
   isEditMode?: boolean;
   editingJobId?: string | null;
+  // Contexto para manejo de carpetas
+  context?: 'jobs-management' | 'folders-management';
+  selectedFolderId?: string; // Para contexto de carpetas
+  parentFolderPath?: string; // Para mostrar árbol desde carpeta específica
 }
 
 // Tipos locales para compatibilidad con la UI
@@ -97,7 +101,10 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   onSuccess,
   preselectedCompany = '',
   isEditMode = false,
-  editingJobId = null
+  editingJobId = null,
+  context = 'jobs-management',
+  selectedFolderId,
+  parentFolderPath
 }) => {
   const { showSuccess, showError } = useToast();
   
@@ -119,7 +126,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     expiresAt: '',
     status: 'PUBLISHED' as JobPosting['status']
   });
-  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
+  const [internalSelectedFolderId, setInternalSelectedFolderId] = useState<string | undefined>(undefined);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -135,6 +142,13 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       setJobData(prev => ({ ...prev, companyName: preselectedCompany }));
     }
   }, [isOpen, preselectedCompany]);
+
+  // Cargar datos del empleo para edición
+  useEffect(() => {
+    if (isOpen && isEditMode && editingJobId) {
+      loadJobForEdit(editingJobId);
+    }
+  }, [isOpen, isEditMode, editingJobId]);
 
   // Validación de campos
   const validateAndShowErrors = () => {
@@ -180,7 +194,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     setJobData({
       title: '',
       description: '',
-      companyName: preselectedCompany,
+      companyName: preselectedCompany || '',
       requirements: '',
       salary: '',
       location: '',
@@ -191,7 +205,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       expiresAt: '',
       status: 'PUBLISHED' as JobPosting['status']
     });
-    setSelectedFolderId(undefined);
+    setInternalSelectedFolderId(undefined);
     setSelectedFields(new Set());
     setFieldValues({});
     setActiveTab('basic');
@@ -236,7 +250,114 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   // Handle company selection from folder system
   const handleCompanySelection = (companyName: string, folderId?: string) => {
     setJobData(prev => ({ ...prev, companyName }));
-    setSelectedFolderId(folderId);
+    setInternalSelectedFolderId(folderId);
+  };
+
+  // Crear carpeta para el empleo según el contexto
+  const createFolderForJob = async (): Promise<string> => {
+    try {
+      const currentFolderId = selectedFolderId || internalSelectedFolderId;
+      
+      if (context === 'folders-management' && currentFolderId) {
+        // Desde Directorios y Archivos: crear subcarpeta dentro de la carpeta seleccionada
+        const subfolderName = `${jobData.companyName} - ${jobData.title}`;
+        // Aquí necesitarías llamar al servicio de carpetas para crear subcarpeta
+        // Por ahora retornamos el folderId padre
+        return currentFolderId;
+      } else {
+        // Desde Gestión de Empleos: crear carpeta principal de empresa
+        const folderName = jobData.companyName;
+        // Aquí necesitarías llamar al servicio de carpetas para crear carpeta principal
+        // Por ahora retornamos un ID temporal
+        return `temp-folder-${Date.now()}`;
+      }
+    } catch (error) {
+      console.error('Error creating folder for job:', error);
+      showError('Error al crear carpeta', 'No se pudo crear la carpeta para el empleo');
+      throw error;
+    }
+  };
+
+  // Cargar datos del empleo para edición
+  const loadJobForEdit = async (jobId: string) => {
+    try {
+      const response = await jobsService.getJob(jobId);
+      
+      if (response.success && response.job) {
+        const job = response.job;
+        
+        // Cargar datos básicos
+        setJobData({
+          title: job.title || '',
+          description: job.description || '',
+          companyName: job.companyName || '',
+          requirements: job.requirements || '',
+          salary: job.salary || '',
+          location: job.location || '',
+          employmentType: job.employmentType as JobPosting['employmentType'] || 'FULL_TIME',
+          experienceLevel: job.experienceLevel as JobPosting['experienceLevel'] || 'ENTRY_LEVEL',
+          benefits: job.benefits || '',
+          schedule: job.schedule || '',
+          expiresAt: job.expiresAt ? job.expiresAt.split('T')[0] : '', // Convertir ISO a YYYY-MM-DD
+          status: job.status as JobPosting['status'] || 'PUBLISHED'
+        });
+
+        // Cargar documentos requeridos
+        setRequiredDocuments(job.requiredDocuments || []);
+
+        // Cargar campos adicionales basados en los datos existentes
+        const newSelectedFields = new Set<string>();
+        const newFieldValues: Record<string, unknown> = {};
+
+        // Mapear ubicación si existe
+        if (job.location && job.location !== 'Por definir') {
+          newSelectedFields.add('location');
+          const locationData = parseLocationFromAPI(job.location);
+          newFieldValues.location = {
+            type: locationData.type,
+            address: locationData.address
+          };
+        }
+
+        // Mapear tipo de empleo si existe
+        if (job.employmentType) {
+          newSelectedFields.add('employment_type');
+          newFieldValues.employment_type = mapEmploymentTypeFromBackend(job.employmentType);
+        }
+
+        // Mapear nivel de experiencia si existe
+        if (job.experienceLevel) {
+          newSelectedFields.add('experience');
+          newFieldValues.experience = mapExperienceLevelFromBackend(job.experienceLevel);
+        }
+
+        // Mapear salario si existe
+        if (job.salary) {
+          newSelectedFields.add('salary');
+          newFieldValues.salary = parseSalaryFromAPI(job.salary);
+        }
+
+        // Mapear horario si existe
+        if (job.schedule) {
+          newSelectedFields.add('schedule');
+          newFieldValues.schedule = parseScheduleFromAPI(job.schedule);
+        }
+
+        // Mapear beneficios si existen
+        if (job.benefits) {
+          newSelectedFields.add('benefits');
+          newFieldValues.benefits = job.benefits;
+        }
+
+        setSelectedFields(newSelectedFields);
+        setFieldValues(newFieldValues);
+      } else {
+        showError('Error al cargar empleo', response.message || 'No se pudo cargar el empleo');
+      }
+    } catch (error) {
+      console.error('Error loading job for edit:', error);
+      showError('Error al cargar empleo', 'No se pudo cargar el empleo para edición');
+    }
   };
 
   // Handle job creation and update
@@ -255,6 +376,13 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     setIsCreating(true);
 
     try {
+      let folderId = selectedFolderId || internalSelectedFolderId;
+
+      // Si es modo creación y no hay folderId, crear carpeta según contexto
+      if (!isEditMode && !folderId) {
+        folderId = await createFolderForJob();
+      }
+
       const createJobInput: CreateJobInput = {
         title: jobData.title,
         description: jobData.description,
@@ -269,7 +397,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
         expiresAt: jobData.expiresAt ? new Date(jobData.expiresAt).toISOString() : undefined,
         fieldValues: { ...fieldValues, ...jobData.fieldValues },
         status: jobData.status,
-        requiredDocuments: requiredDocuments
+        requiredDocuments: requiredDocuments,
+        folderId: folderId
       };
 
       if (isEditMode && editingJobId) {
@@ -393,19 +522,43 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     onChange={handleCompanySelection}
                     onBlur={handleFieldBlur}
                     onFocus={() => handleFieldFocus('companyName')}
-                    placeholder="Buscar empresa en carpetas o escribir nombre..."
+                    placeholder={
+                      context === 'folders-management' 
+                        ? `Buscar en ${parentFolderPath || 'carpeta seleccionada'}...`
+                        : "Buscar empresa en carpetas o escribir nombre..."
+                    }
                     hasError={hasAttemptedSubmit && !!fieldErrors.companyName}
                   />
                   {hasAttemptedSubmit && fieldErrors.companyName && (
                     <p className="mt-1 text-sm text-red-600">{fieldErrors.companyName}</p>
                   )}
-                  {selectedFolderId && (
+                  {(selectedFolderId || internalSelectedFolderId) && (
                     <p className="mt-1 text-sm text-green-600 flex items-center">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
                       </svg>
                       Empresa vinculada con carpeta del sistema
                     </p>
+                  )}
+                  
+                  {/* Mostrar contexto de carpeta cuando viene desde Directorios y Archivos */}
+                  {context === 'folders-management' && parentFolderPath && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v1H8V5z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">
+                            Creando empleo desde carpeta:
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            {parentFolderPath}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -934,4 +1087,78 @@ const renderFieldSpecification = (fieldSpec: JobFieldSpec, value: unknown, onCha
     default:
       return null;
   }
+};
+
+// Helper functions to parse data from API
+const parseLocationFromAPI = (locationString: string): { type: string; address: string } => {
+  if (!locationString || locationString === 'Por definir') {
+    return { type: 'office', address: 'Por definir' };
+  }
+  
+  // Parse location string to extract type and address
+  const typeMatch = locationString.match(/\(([^)]+)\)/);
+  if (typeMatch) {
+    const locationType = typeMatch[1].toLowerCase();
+    const address = locationString.replace(/\s*\([^)]+\)/, '').trim();
+    return { type: locationType, address };
+  }
+  
+  return { type: 'office', address: locationString };
+};
+
+const mapEmploymentTypeFromBackend = (backendType: string): string => {
+  const typeMap: Record<string, string> = {
+    'FULL_TIME': 'Tiempo Completo',
+    'PART_TIME': 'Medio Tiempo',
+    'CONTRACT': 'Contrato',
+    'FREELANCE': 'Freelance',
+    'INTERNSHIP': 'Práctica',
+    'TEMPORARY': 'Temporal'
+  };
+  return typeMap[backendType] || 'Tiempo Completo';
+};
+
+const mapExperienceLevelFromBackend = (backendLevel: string): string => {
+  const levelMap: Record<string, string> = {
+    'ENTRY_LEVEL': 'Junior',
+    'MID_LEVEL': 'Semi-Senior',
+    'SENIOR_LEVEL': 'Senior',
+    'EXECUTIVE': 'Ejecutivo',
+    'INTERNSHIP': 'Práctica'
+  };
+  return levelMap[backendLevel] || 'Junior';
+};
+
+const parseSalaryFromAPI = (salaryString: string): { min?: string; max?: string } => {
+  if (!salaryString) return {};
+  
+  // Parse salary string like "$50000 - $80000" or "$50000"
+  const parts = salaryString.split(' - ');
+  if (parts.length === 2) {
+    return {
+      min: parts[0].replace('$', ''),
+      max: parts[1].replace('$', '')
+    };
+  } else if (parts.length === 1 && parts[0].includes('$')) {
+    return {
+      max: parts[0].replace('$', '')
+    };
+  }
+  
+  return {};
+};
+
+const parseScheduleFromAPI = (scheduleString: string): { start?: string; end?: string; days?: string[]; description?: string } => {
+  if (!scheduleString) return {};
+  
+  // Parse schedule string like "9:00 - 18:00, Lunes a Viernes"
+  const timeMatch = scheduleString.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+  const daysMatch = scheduleString.match(/(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo)/g);
+  
+  return {
+    start: timeMatch?.[1] || '',
+    end: timeMatch?.[2] || '',
+    days: daysMatch || [],
+    description: scheduleString
+  };
 };
