@@ -62,6 +62,14 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
         setIsConnected(true);
         setConnectionStatus('connected');
         reconnectAttempts.current = 0;
+        
+        // Enviar mensaje de inicialización con action
+        const initMessage = {
+          action: 'connect',
+          type: 'document_processing_connection'
+        };
+        wsRef.current?.send(JSON.stringify(initMessage));
+        console.log('WebSocket initialization message sent');
       };
 
       wsRef.current.onmessage = (event) => {
@@ -153,9 +161,12 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
   }, []);
 
   useEffect(() => {
+    // Conectar automáticamente al montar el componente
+    console.log('🔌 Auto-connecting to Document Processing WebSocket...');
     connect();
     
     return () => {
+      console.log('🔌 Disconnecting from Document Processing WebSocket...');
       disconnect();
     };
   }, [connect, disconnect]);

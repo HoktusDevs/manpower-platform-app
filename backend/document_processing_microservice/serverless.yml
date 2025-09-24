@@ -12,6 +12,7 @@ provider:
   apiGateway:
     websocketApi:
       routeSelectionExpression: $request.body.action
+      name: ${self:service}-${self:provider.stage}-websocket
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
@@ -52,10 +53,16 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
+        - dynamodb:DescribeStream
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:ListStreams
       Resource:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/doc-processor-websocket-connections-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/websocket-connections-dev"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}/index/*"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}/stream/*"
     - Effect: Allow
       Action:
         - execute-api:ManageConnections
@@ -142,6 +149,22 @@ functions:
           path: /api/v1/documents/delete/{documentId}
           method: post
           cors: true
+      - http:
+          path: /api/v1/documents/update-decision/{documentId}
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 256
+
+  # DynamoDB Stream Trigger - Se ejecuta automáticamente cuando cambia la tabla
+  document-processing-stream-trigger:
+    handler: src.handlers.dynamodb_stream_handler.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt DocumentProcessingResultsTable.StreamArn
+          batchSize: 10
+          startingPosition: LATEST
     timeout: 30
     memorySize: 256
 
@@ -189,6 +212,8 @@ resources:
           Properties:
             TableName: document-processing-results-${self:provider.stage}
             BillingMode: PAY_PER_REQUEST
+            StreamSpecification:
+              StreamViewType: NEW_AND_OLD_IMAGES
             AttributeDefinitions:
               - AttributeName: document_id
                 AttributeType: S

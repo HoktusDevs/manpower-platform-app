@@ -53,19 +53,33 @@ const getHoktusStatusDisplay = (document: DocumentFile) => {
     };
   }
 
-  // Para documentos completados, usar hoktusProcessingStatus
+  // Para documentos completados, usar finalDecision (hoktusDecision)
+  if (document.hoktusProcessingStatus === 'COMPLETED') {
+    if (document.hoktusDecision === 'APPROVED') {
+      return {
+        text: 'Aprobado',
+        className: 'bg-green-100 text-green-800',
+        icon: null
+      };
+    } else if (document.hoktusDecision === 'REJECTED') {
+      return {
+        text: 'Rechazado',
+        className: 'bg-red-100 text-red-800',
+        icon: null
+      };
+    } else if (document.hoktusDecision === 'MANUAL_REVIEW') {
+      return {
+        text: 'Revisión Manual',
+        className: 'bg-yellow-100 text-yellow-800',
+        icon: null
+      };
+    }
+  }
+
   if (document.hoktusProcessingStatus === 'FAILED') {
     return {
       text: 'Rechazado',
       className: 'bg-red-100 text-red-800',
-      icon: null
-    };
-  }
-
-  if (document.hoktusProcessingStatus === 'COMPLETED') {
-    return {
-      text: 'Aprobado',
-      className: 'bg-green-100 text-green-800',
       icon: null
     };
   }
@@ -144,9 +158,9 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onD
         Resultados del OCR {isLoading ? '(Cargando...)' : `(${visibleDocuments.length})`}
       </h3>
       
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-96 overflow-y-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Documento
@@ -165,7 +179,7 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ documents, onD
           <tbody className="bg-white divide-y divide-gray-200">
             {isLoading && visibleDocuments.length === 0 && <OCRResultsSkeleton />}
             {visibleDocuments.map((document) => (
-              <tr key={document.id} className={`hover:bg-gray-50 ${document.status === 'processing' ? 'opacity-60' : ''} ${document.status === 'error' ? 'bg-red-50' : ''}`}>
+              <tr key={document.id} className={`hover:bg-gray-50 ${document.status === 'processing' ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
                     <div className="text-sm font-medium text-gray-900">

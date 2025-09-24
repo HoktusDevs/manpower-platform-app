@@ -162,6 +162,31 @@ class DocumentProcessingService {
   }
 
   /**
+   * Update document decision (APPROVED, REJECTED, MANUAL_REVIEW)
+   */
+  async updateDocumentDecision(documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW'): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/documents/update-decision/${documentId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ decision }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update document decision');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating document decision:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get WebSocket URL for real-time connections
    */
   getWebSocketUrl(): string {

@@ -124,8 +124,9 @@ export const TestOCRPage = () => {
             fileUrl: doc.fileUrl, // ✅ Pasar el fileUrl real
             title: doc.fileName,
             ownerName: doc.ownerUserName || 'Unknown',
-            status: doc.status === 'COMPLETED' ? 'completed' as const : 
-                    doc.status === 'FAILED' ? 'error' as const : 'processing' as const,
+            status: doc.status === 'COMPLETED' ? 'completed' as const :
+                    doc.status === 'FAILED' ? 'error' as const : 
+                    doc.status === 'PROCESSING' ? 'processing' as const : 'processing' as const,
             hoktusDecision: doc.finalDecision,
             hoktusProcessingStatus: doc.status,
             documentType: doc.documentType,
@@ -137,7 +138,12 @@ export const TestOCRPage = () => {
               processingTime: 0,
               language: 'es',
               metadata: {},
-              fields: doc.extractedData || {}
+              fields: doc.extractedData ? {
+                name: doc.extractedData.name,
+                document_number: doc.extractedData.document_number,
+                file_name: doc.extractedData.file_name,
+                processed_at: doc.extractedData.processed_at
+              } : {}
             } : undefined
           };
           console.log('🔍 DEBUG - Formatted document:', formatted);
@@ -157,6 +163,23 @@ export const TestOCRPage = () => {
     loadHistoricalDocuments();
   }, [loadHistoricalDocuments]);
 
+  // WebSocket se encarga de las actualizaciones en tiempo real
+  // Escuchar notificaciones del WebSocket para actualizar la tabla
+  useEffect(() => {
+    if (lastNotification) {
+      console.log('🔔 WebSocket notification received:', lastNotification);
+      
+      // Si el documento se completó, recargar la tabla histórica
+      if (lastNotification.status === 'completed' || lastNotification.processingStatus === 'COMPLETED') {
+        console.log('📋 Document completed, reloading historical documents');
+        loadHistoricalDocuments();
+      }
+    }
+  }, [lastNotification, loadHistoricalDocuments]);
+
+  // WebSocket debe manejar las actualizaciones en tiempo real
+  // NO usar polling - el WebSocket debe funcionar correctamente
+
   const processFile = useCallback((file: File) => {
     const id = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
@@ -170,7 +193,7 @@ export const TestOCRPage = () => {
         previewUrl,
         title: file.name,
         ownerName: '', // ✅ CAMPO PARA NOMBRE DEL PROPIETARIO
-        status: 'pending'
+        status: 'pending' // ✅ MOSTRAR COMO PENDIENTE HASTA QUE SE ENVÍE
       };
       
       setDocuments(prev => [...prev, newDocument]);
@@ -218,7 +241,27 @@ export const TestOCRPage = () => {
     setIsLoading(true);
     setError(null);
 
-    // Actualizar estado del documento
+    // PASO 1: Crear documento "optimista" en la tabla histórica inmediatamente
+    const optimisticDocument: DocumentFile = {
+      id: documentId,
+      file: document.file,
+      previewUrl: document.previewUrl,
+      fileUrl: document.fileUrl,
+      title: document.title,
+      ownerName: document.ownerName,
+      status: 'processing' as const,
+      hoktusProcessingStatus: 'PROCESSING',
+      hoktusDecision: undefined,
+      documentType: undefined,
+      observations: [],
+      ocrResult: undefined
+    };
+
+    // Agregar inmediatamente a la tabla histórica como "Procesando"
+    setHistoricalDocuments(prev => [optimisticDocument, ...prev]);
+    console.log('📋 Documento agregado optimistamente como "Procesando"');
+
+    // Cambiar estado a 'processing' cuando se presiona el botón
     setDocuments(prev => prev.map(doc => 
       doc.id === documentId ? { ...doc, status: 'processing' } : doc
     ));
@@ -289,16 +332,26 @@ export const TestOCRPage = () => {
       const response = await documentProcessingService.processDocuments(requestData);
 
       if (response.status === 'success') {
-        // El WebSocket se encargará de notificar cuando esté listo
+        // Limpiar documento local ya que se procesó y está en la tabla histórica
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
         console.log('Document sent for processing, waiting for WebSocket notification');
         console.log('Response:', response);
+        // El documento optimista ya está en la tabla histórica, el WebSocket lo actualizará
       } else {
+        // Actualizar documento optimista con error
+        setHistoricalDocuments(prev => prev.map(doc => 
+          doc.id === documentId ? { ...doc, status: 'error' as const, hoktusProcessingStatus: 'FAILED' } : doc
+        ));
         setDocuments(prev => prev.map(doc => 
           doc.id === documentId ? { ...doc, status: 'error' } : doc
         ));
         setError('Error al enviar documento: ' + response.message);
       }
     } catch (err) {
+      // Actualizar documento optimista con error
+      setHistoricalDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'error' as const, hoktusProcessingStatus: 'FAILED' } : doc
+      ));
       setDocuments(prev => prev.map(doc => 
         doc.id === documentId ? { ...doc, status: 'error' } : doc
       ));
@@ -357,6 +410,34 @@ export const TestOCRPage = () => {
   const handleClosePreview = () => {
     setShowPreviewModal(false);
     setPreviewDocument(null);
+  };
+
+  const handleManualDecision = async (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => {
+    try {
+      console.log(`🔄 Cambiando decisión del documento ${documentId} a: ${decision}`);
+      
+      const response = await documentProcessingService.updateDocumentDecision(documentId, decision);
+      
+      if (response.success) {
+        console.log('✅ Decisión actualizada exitosamente:', response);
+        
+        // Recargar documentos históricos para reflejar el cambio
+        await loadHistoricalDocuments();
+        
+        // Cerrar el modal
+        setShowPreviewModal(false);
+        setPreviewDocument(null);
+        
+        // Mostrar mensaje de éxito
+        alert(`Documento ${decision === 'APPROVED' ? 'aprobado' : decision === 'REJECTED' ? 'rechazado' : 'marcado para revisión manual'} exitosamente`);
+      } else {
+        console.error('❌ Error actualizando decisión:', response);
+        alert('Error al actualizar la decisión del documento');
+      }
+    } catch (error) {
+      console.error('❌ Error en decisión manual:', error);
+      alert('Error al actualizar la decisión del documento');
+    }
   };
 
 
@@ -643,17 +724,11 @@ export const TestOCRPage = () => {
 
         {/* Tabla de resultados del OCR */}
         <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
+          <div className="mb-4">
             <h2 className="text-2xl font-semibold text-gray-700">Resultados Históricos</h2>
-            <button
-              onClick={loadHistoricalDocuments}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Recargar ({historicalDocuments.length})
-            </button>
           </div>
           <OCRResultsTable
-            documents={[...documents, ...historicalDocuments]}
+            documents={historicalDocuments}
             onDeleteDocument={deleteDocument}
             onPreviewDocument={handlePreviewDocument}
             isLoading={isLoading}
@@ -665,6 +740,7 @@ export const TestOCRPage = () => {
           document={previewDocument}
           isOpen={showPreviewModal}
           onClose={handleClosePreview}
+          onManualDecision={handleManualDecision}
         />
 
       </div>

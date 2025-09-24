@@ -7,6 +7,7 @@ import logging
 import boto3
 from decimal import Decimal
 from typing import Dict, Any
+from datetime import datetime, timezone
 
 # Configurar logging
 logger = logging.getLogger()
@@ -74,6 +75,91 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'count': len(formatted_documents)
                 })
             }
+        
+        elif '/api/v1/documents/update-decision/' in path and http_method == 'POST':
+            # Actualizar decisión del documento
+            document_id = path.split('/')[-1]
+            
+            if not document_id:
+                return {
+                    'statusCode': 400,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({
+                        'error': 'Document ID is required'
+                    })
+                }
+            
+            # Parse request body
+            try:
+                body = json.loads(event.get('body', '{}'))
+                new_decision = body.get('decision')
+                
+                if not new_decision or new_decision not in ['APPROVED', 'REJECTED', 'MANUAL_REVIEW']:
+                    return {
+                        'statusCode': 400,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({
+                            'error': 'Valid decision (APPROVED, REJECTED, MANUAL_REVIEW) is required'
+                        })
+                    }
+                
+                logger.info(f"Updating document {document_id} decision to: {new_decision}")
+                
+                # Update document decision
+                results_table.update_item(
+                    Key={'document_id': document_id},
+                    UpdateExpression='SET final_decision = :decision, updated_at = :updated_at',
+                    ExpressionAttributeValues={
+                        ':decision': new_decision,
+                        ':updated_at': datetime.now(timezone.utc).isoformat()
+                    }
+                )
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({
+                        'success': True,
+                        'message': f'Document decision updated to {new_decision}',
+                        'documentId': document_id,
+                        'newDecision': new_decision
+                    })
+                }
+                
+            except json.JSONDecodeError:
+                return {
+                    'statusCode': 400,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({
+                        'error': 'Invalid JSON in request body'
+                    })
+                }
+                
+            except Exception as e:
+                logger.error(f"Error updating document decision: {e}")
+                return {
+                    'statusCode': 500,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({
+                        'error': 'Failed to update document decision',
+                        'message': str(e)
+                    })
+                }
         
         elif '/api/v1/documents/delete/' in path and http_method == 'POST':
             # Eliminar documento

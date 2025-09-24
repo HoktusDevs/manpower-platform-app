@@ -29,16 +29,24 @@ interface DocumentPreviewModalProps {
   document: DocumentFile | null;
   isOpen: boolean;
   onClose: () => void;
+  onManualDecision?: (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => void;
 }
 
 export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   document,
   isOpen,
   onClose,
+  onManualDecision,
 }) => {
   if (!isOpen || !document) return null;
 
-  const getStatusColor = (status: string, hoktusStatus?: string) => {
+  const handleManualDecision = (decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => {
+    if (onManualDecision && document.id) {
+      onManualDecision(document.id, decision);
+    }
+  };
+
+  const getStatusColor = (status: string, hoktusStatus?: string, hoktusDecision?: string) => {
     if (status === 'processing') {
       return 'bg-blue-100 text-blue-800';
     }
@@ -49,6 +57,14 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       return 'bg-red-100 text-red-800';
     }
     if (hoktusStatus === 'COMPLETED') {
+      // Usar finalDecision para determinar el color
+      if (hoktusDecision === 'APPROVED') {
+        return 'bg-green-100 text-green-800';
+      } else if (hoktusDecision === 'REJECTED') {
+        return 'bg-red-100 text-red-800';
+      } else if (hoktusDecision === 'MANUAL_REVIEW') {
+        return 'bg-yellow-100 text-yellow-800';
+      }
       return 'bg-green-100 text-green-800';
     }
     if (hoktusStatus === 'VALIDATION') {
@@ -57,18 +73,24 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     return 'bg-green-100 text-green-800';
   };
 
-  const getStatusText = (status: string, hoktusStatus?: string) => {
+  const getStatusText = (status: string, hoktusStatus?: string, hoktusDecision?: string) => {
     if (status === 'processing') return 'Procesando...';
     if (status === 'error') return 'Error';
     if (hoktusStatus === 'FAILED') return 'Rechazado';
-    if (hoktusStatus === 'COMPLETED') return 'Aprobado';
+    if (hoktusStatus === 'COMPLETED') {
+      // Usar finalDecision para determinar el texto
+      if (hoktusDecision === 'APPROVED') return 'Aprobado';
+      if (hoktusDecision === 'REJECTED') return 'Rechazado';
+      if (hoktusDecision === 'MANUAL_REVIEW') return 'Revisión Manual';
+      return 'Aprobado';
+    }
     if (hoktusStatus === 'VALIDATION') return 'Revisión Manual';
     return 'Completado';
   };
 
   const isImage = document.file.type.startsWith('image/');
   const isPdf = document.file.type === 'application/pdf';
-  
+
   // Usar fileUrl si está disponible, sino usar previewUrl
   const documentUrl = document.fileUrl || document.previewUrl;
 
@@ -82,8 +104,8 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             <p className="text-sm text-gray-500">{document.file.name}</p>
           </div>
           <div className="flex items-center space-x-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(document.status, document.hoktusProcessingStatus)}`}>
-              {getStatusText(document.status, document.hoktusProcessingStatus)}
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(document.status, document.hoktusProcessingStatus, document.hoktusDecision)}`}>
+              {getStatusText(document.status, document.hoktusProcessingStatus, document.hoktusDecision)}
             </span>
             <button
               onClick={onClose}
@@ -139,16 +161,6 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     <span className="text-sm font-medium text-gray-500">Nombre:</span>
                     <span className="text-sm text-gray-900">{document.file.name}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Tamaño:</span>
-                    <span className="text-sm text-gray-900">
-                      {(document.file.size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Tipo:</span>
-                    <span className="text-sm text-gray-900">{document.file.type || 'Desconocido'}</span>
-                  </div>
                   {document.documentType && (
                     <div className="flex justify-between">
                       <span className="text-sm font-medium text-gray-500">Tipo de documento:</span>
@@ -163,30 +175,17 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-900 mb-3">Resultados del OCR</h4>
                   <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium text-gray-700">Confianza:</span>
-                      <span className="text-sm font-bold text-blue-900">
-                        {document.ocrResult.confidence}%
-                      </span>
-                    </div>
 
-                    {document.ocrResult.text && document.ocrResult.text !== 'null' && (
-                      <div className="mb-4">
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Texto extraído:</h5>
-                        <div className="bg-white p-3 rounded border text-xs text-gray-600 max-h-32 overflow-y-auto">
-                          {document.ocrResult.text}
-                        </div>
-                      </div>
-                    )}
 
                     {document.ocrResult.fields && Object.keys(document.ocrResult.fields).length > 0 && (
                       <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Campos extraídos:</h5>
                         <div className="space-y-2">
                           {Object.entries(document.ocrResult.fields).map(([key, value]) => (
                             <div key={key} className="flex justify-between">
                               <span className="text-xs text-gray-600 capitalize">{key}:</span>
-                              <span className="text-xs text-gray-900 font-medium">{value as string}</span>
+                              <span className="text-xs text-gray-900 font-medium">
+                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -201,21 +200,41 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 <div>
                   <h4 className="text-md font-medium text-gray-900 mb-3">Observaciones</h4>
                   <div className="space-y-3">
-                    {document.observations.map((obs, index) => (
-                      <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-sm font-medium text-yellow-800">{obs.regla || obs.capa}</span>
-                          {obs.capa && (
-                            <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">
-                              {obs.capa}
-                            </span>
-                          )}
+                    {document.observations
+                      .filter(obs => !obs.message?.includes('Documento no cumple con los criterios de calidad'))
+                      .map((obs, index) => (
+                        <div key={index} className="mb-2">
+                          <p className="text-sm text-gray-700">
+                            {obs.razon_interna || obs.razon || obs.message}
+                          </p>
                         </div>
-                        <p className="text-sm text-yellow-700">
-                          {obs.razon_interna || obs.razon || obs.message}
-                        </p>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
+                </div>
+              )}
+              {/* Manual Decision Actions - Solo mostrar si está completado */}
+              {document.hoktusProcessingStatus === 'COMPLETED' && (
+                <div className='pt-2'>
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Acción Manual</h4>
+                  <div className="flex space-x-3">
+                    {/* Solo mostrar "Aprobar" si está rechazado */}
+                    {document.hoktusDecision === 'REJECTED' && (
+                      <button
+                        onClick={() => handleManualDecision('APPROVED')}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                      >
+                      Aprobar
+                      </button>
+                    )}
+                    {/* Solo mostrar "Rechazar" si está aprobado */}
+                    {document.hoktusDecision === 'APPROVED' && (
+                      <button
+                        onClick={() => handleManualDecision('REJECTED')}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Rechazar
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
