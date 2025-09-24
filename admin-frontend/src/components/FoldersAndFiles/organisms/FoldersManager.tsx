@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
+import { CreateJobModal } from '../../JobManagement/CreateJobModal';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
@@ -29,12 +31,18 @@ import type {
  * Follows Clean Architecture and acts as a controller
  */
 export const FoldersManager: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Filter state
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
     type: 'all',
     sortBy: 'name',
     sortOrder: 'asc'
   });
+
+  // Job creation modal state
+  const [showCreateJobModal, setShowCreateJobModal] = useState(false);
+  const [selectedCompanyForJob, setSelectedCompanyForJob] = useState<string>('');
 
   // Custom hooks for state management
   const {
@@ -245,6 +253,15 @@ export const FoldersManager: React.FC = () => {
       case 'create-subfolder': {
         // Open create modal with parent folder set
         openCreateModal(folderId);
+        break;
+      }
+      case 'create-job': {
+        // Get folder name to pre-fill company name
+        const folder = getFolderById(folderId);
+        if (folder) {
+          setSelectedCompanyForJob(folder.name);
+        }
+        setShowCreateJobModal(true);
         break;
       }
       case 'edit': {
@@ -476,6 +493,17 @@ export const FoldersManager: React.FC = () => {
           onClose={clearProgress}
         />
       )}
+
+      {/* Create Job Modal */}
+      <CreateJobModal
+        isOpen={showCreateJobModal}
+        onClose={() => setShowCreateJobModal(false)}
+        onSuccess={() => {
+          setShowCreateJobModal(false);
+          // Optionally refresh folders or show success message
+        }}
+        preselectedCompany={selectedCompanyForJob}
+      />
     </div>
   );
 };

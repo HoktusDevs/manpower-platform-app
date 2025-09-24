@@ -40,7 +40,7 @@ export interface CreateModalFormData {
 }
 
 // Action types for folder operations
-export type FolderAction = 'edit' | 'delete' | 'create-subfolder';
+export type FolderAction = 'edit' | 'delete' | 'create-subfolder' | 'create-job';
 
 // Event handler types
 export interface FolderEventHandlers {
