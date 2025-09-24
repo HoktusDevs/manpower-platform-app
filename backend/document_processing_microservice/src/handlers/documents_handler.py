@@ -97,7 +97,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 body = json.loads(event.get('body', '{}'))
                 new_decision = body.get('decision')
                 
-                if not new_decision or new_decision not in ['APPROVED', 'REJECTED', 'MANUAL_REVIEW']:
+                if not new_decision or new_decision not in ['APPROVED', 'REJECTED', 'MANUAL_REVIEW', 'PENDING']:
                     return {
                         'statusCode': 400,
                         'headers': {
@@ -105,7 +105,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                             'Access-Control-Allow-Origin': '*'
                         },
                         'body': json.dumps({
-                            'error': 'Valid decision (APPROVED, REJECTED, MANUAL_REVIEW) is required'
+                            'error': 'Valid decision (APPROVED, REJECTED, MANUAL_REVIEW, PENDING) is required'
                         })
                     }
                 

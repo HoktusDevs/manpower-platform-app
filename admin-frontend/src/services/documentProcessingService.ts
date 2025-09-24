@@ -164,7 +164,7 @@ class DocumentProcessingService {
   /**
    * Update document decision (APPROVED, REJECTED, MANUAL_REVIEW)
    */
-  async updateDocumentDecision(documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW'): Promise<any> {
+  async updateDocumentDecision(documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING'): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/documents/update-decision/${documentId}`, {
         method: 'POST',

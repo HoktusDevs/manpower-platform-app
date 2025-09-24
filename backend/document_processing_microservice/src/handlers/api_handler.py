@@ -111,9 +111,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     try:
                         logger.info(f"Procesando documento en segundo plano: {doc['file_name']}")
                         
-                        # Simular procesamiento asíncrono
-                        import time
-                        time.sleep(2)  # Simular 2 segundos de procesamiento
+                        # Procesamiento inmediato sin delays artificiales
                         
                         # Actualizar documento con resultados reales
                         from decimal import Decimal
@@ -265,47 +263,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         
                         logger.info(f"Documento {doc['platform_document_id']} procesado y actualizado en DynamoDB")
                         
-                        # 8. ENVIAR NOTIFICACIÓN WEBSOCKET
-                        try:
-                            import requests
-                            websocket_notify_url = f"https://sr4qzksrak.execute-api.us-east-1.amazonaws.com/dev/api/v1/websocket/notify"
-                            
-                            notification_data = {
-                                'documentId': doc['platform_document_id'],
-                                'status': 'completed',
-                                'processingStatus': 'COMPLETED',
-                                'finalDecision': final_decision,
-                                'documentType': file_extension.upper(),
-                                'ocrResult': {
-                                    'text': extracted_text,
-                                    'confidence': Decimal(str(content_analysis['confidence_score']))
-                                },
-                                'extractedData': {
-                                    'name': extracted_name,
-                                    'document_number': extracted_document_number,
-                                    'file_name': file_name,
-                                    'file_url': file_url,
-                                    'processed_at': datetime.now(timezone.utc).isoformat()
-                                },
-                                'observations': observations,
-                                'message': f'Documento {file_name} procesado exitosamente',
-                                'ownerUserName': owner_user_name,
-                                'fileName': file_name,
-                                'processingTime': 2,  # Simulado
-                                'timestamp': datetime.now(timezone.utc).isoformat(),
-                                'error': None,
-                                'lambdaError': False
-                            }
-                            
-                            # Enviar notificación WebSocket
-                            response = requests.post(websocket_notify_url, json=notification_data, timeout=10)
-                            if response.status_code == 200:
-                                logger.info(f"✅ Notificación WebSocket enviada para documento {doc['platform_document_id']}")
-                            else:
-                                logger.warning(f"⚠️ Error enviando notificación WebSocket: {response.status_code}")
-                                
-                        except Exception as ws_error:
-                            logger.error(f"❌ Error enviando notificación WebSocket: {ws_error}")
+                        # El DynamoDB Stream trigger se encargará de enviar la notificación WebSocket automáticamente
+                        # No es necesario enviar notificación manual aquí
+                        logger.info(f"✅ Documento actualizado en DynamoDB - Stream trigger enviará notificación WebSocket")
                         
                     except Exception as e:
                         logger.error(f"Error procesando documento {doc['platform_document_id']}: {e}")

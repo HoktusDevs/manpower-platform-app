@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface OCRResult {
   success: boolean;
@@ -29,8 +29,125 @@ interface DocumentPreviewModalProps {
   document: DocumentFile | null;
   isOpen: boolean;
   onClose: () => void;
-  onManualDecision?: (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => void;
+  onManualDecision?: (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING') => void;
 }
+
+interface CustomDecisionSelectorProps {
+  currentDecision: string;
+  onDecisionChange: (decision: 'APPROVED' | 'REJECTED' | 'PENDING') => void;
+}
+
+const CustomDecisionSelector: React.FC<CustomDecisionSelectorProps> = ({
+  currentDecision,
+  onDecisionChange,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedDecision, setSelectedDecision] = useState(currentDecision);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sincronizar selectedDecision con currentDecision
+  useEffect(() => {
+    setSelectedDecision(currentDecision);
+  }, [currentDecision]);
+
+  // Cerrar al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const options = [
+    { value: 'PENDING', label: 'Pendiente' },
+    { value: 'REJECTED', label: 'Rechazar' },
+    { value: 'APPROVED', label: 'Aprobar' },
+  ];
+
+  const currentOption = options.find(opt => opt.value === selectedDecision) || options[0];
+  const hasChanges = selectedDecision !== currentDecision;
+  
+  console.log('🔍 CustomDecisionSelector debug:', {
+    selectedDecision,
+    currentDecision,
+    hasChanges,
+    options: options.map(opt => opt.value)
+  });
+
+  const handleOptionClick = (option: typeof options[0]) => {
+    setSelectedDecision(option.value);
+    setIsOpen(false);
+  };
+
+  const handleUpdateState = () => {
+    console.log('🔄 handleUpdateState called', { selectedDecision, currentDecision });
+    console.log('📤 Calling onDecisionChange with:', selectedDecision);
+    onDecisionChange(selectedDecision as 'APPROVED' | 'REJECTED' | 'PENDING');
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative w-fit">
+      {/* Trigger Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between min-w-[120px]"
+      >
+        <span>{currentOption.label}</span>
+        <svg
+          className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-50">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => handleOptionClick(option)}
+              className={`w-full px-3 py-2 text-sm text-left hover:bg-gray-50 flex items-center ${
+                option.value === selectedDecision ? 'bg-blue-50 text-blue-900' : 'text-gray-900'
+              }`}
+            >
+              {option.value === selectedDecision && (
+                <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {/* Botón Actualizar Estado */}
+      {hasChanges && (
+        <div className="mt-2">
+          <button
+            onClick={handleUpdateState}
+            className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Actualizar estado
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   document,
@@ -40,7 +157,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 }) => {
   if (!isOpen || !document) return null;
 
-  const handleManualDecision = (decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => {
+  const handleManualDecision = (decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING') => {
     if (onManualDecision && document.id) {
       onManualDecision(document.id, decision);
     }
@@ -64,6 +181,8 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         return 'bg-red-100 text-red-800';
       } else if (hoktusDecision === 'MANUAL_REVIEW') {
         return 'bg-yellow-100 text-yellow-800';
+      } else if (hoktusDecision === 'PENDING') {
+        return 'bg-gray-100 text-gray-800';
       }
       return 'bg-green-100 text-green-800';
     }
@@ -82,6 +201,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       if (hoktusDecision === 'APPROVED') return 'Aprobado';
       if (hoktusDecision === 'REJECTED') return 'Rechazado';
       if (hoktusDecision === 'MANUAL_REVIEW') return 'Revisión Manual';
+      if (hoktusDecision === 'PENDING') return 'Pendiente';
       return 'Aprobado';
     }
     if (hoktusStatus === 'VALIDATION') return 'Revisión Manual';
@@ -212,32 +332,16 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   </div>
                 </div>
               )}
-              {/* Manual Decision Actions - Solo mostrar si está completado */}
-              {document.hoktusProcessingStatus === 'COMPLETED' && (
-                <div className='pt-2'>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Acción Manual</h4>
-                  <div className="flex space-x-3">
-                    {/* Solo mostrar "Aprobar" si está rechazado */}
-                    {document.hoktusDecision === 'REJECTED' && (
-                      <button
-                        onClick={() => handleManualDecision('APPROVED')}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                      >
-                      Aprobar
-                      </button>
-                    )}
-                    {/* Solo mostrar "Rechazar" si está aprobado */}
-                    {document.hoktusDecision === 'APPROVED' && (
-                      <button
-                        onClick={() => handleManualDecision('REJECTED')}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-                      >
-                        Rechazar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
+               {/* Manual Decision Actions - Solo mostrar si está completado */}
+               {document.hoktusProcessingStatus === 'COMPLETED' && (
+                 <div className='pt-2'>
+                   <h4 className="text-sm font-medium text-gray-900 mb-3">Acción Manual</h4>
+                   <CustomDecisionSelector
+                     currentDecision={document.hoktusDecision || 'PENDING'}
+                     onDecisionChange={handleManualDecision}
+                   />
+                 </div>
+               )}
             </div>
           </div>
         </div>

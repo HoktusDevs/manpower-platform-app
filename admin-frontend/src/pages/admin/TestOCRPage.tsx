@@ -117,6 +117,13 @@ export const TestOCRPage = () => {
         console.log('🔍 DEBUG - Raw data from API:', result.data);
         
         const formattedDocs: DocumentFile[] = result.data.map((doc: any) => {
+          console.log('🔍 Mapping document:', {
+            id: doc.id,
+            finalDecision: doc.finalDecision,
+            status: doc.status,
+            fileName: doc.fileName
+          });
+          
           const formatted = {
             id: doc.id,
             file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }),
@@ -412,7 +419,7 @@ export const TestOCRPage = () => {
     setPreviewDocument(null);
   };
 
-  const handleManualDecision = async (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW') => {
+  const handleManualDecision = async (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING') => {
     try {
       console.log(`🔄 Cambiando decisión del documento ${documentId} a: ${decision}`);
       
@@ -424,12 +431,18 @@ export const TestOCRPage = () => {
         // Recargar documentos históricos para reflejar el cambio
         await loadHistoricalDocuments();
         
-        // Cerrar el modal
-        setShowPreviewModal(false);
-        setPreviewDocument(null);
+        // Actualizar el previewDocument con los nuevos datos
+        const updatedDocument = historicalDocuments.find(doc => doc.id === documentId);
+        if (updatedDocument) {
+          setPreviewDocument(updatedDocument);
+        }
+        
+        // NO cerrar el modal para poder ver el cambio
+        // setShowPreviewModal(false);
+        // setPreviewDocument(null);
         
         // Mostrar mensaje de éxito
-        alert(`Documento ${decision === 'APPROVED' ? 'aprobado' : decision === 'REJECTED' ? 'rechazado' : 'marcado para revisión manual'} exitosamente`);
+        alert(`Documento ${decision === 'APPROVED' ? 'aprobado' : decision === 'REJECTED' ? 'rechazado' : decision === 'PENDING' ? 'marcado como pendiente' : 'marcado para revisión manual'} exitosamente`);
       } else {
         console.error('❌ Error actualizando decisión:', response);
         alert('Error al actualizar la decisión del documento');
@@ -725,7 +738,7 @@ export const TestOCRPage = () => {
         {/* Tabla de resultados del OCR */}
         <div className="mt-8">
           <div className="mb-4">
-            <h2 className="text-2xl font-semibold text-gray-700">Resultados Históricos</h2>
+            <h2 className="text-2xl font-semibold text-gray-700">Resultados Históricos del OCR</h2>
           </div>
           <OCRResultsTable
             documents={historicalDocuments}
