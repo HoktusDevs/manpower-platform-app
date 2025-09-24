@@ -64,8 +64,6 @@ export const TestOCRPage = () => {
   // Manejar notificaciones del WebSocket
   useEffect(() => {
     if (lastNotification) {
-      console.log('Document Processing notification received:', lastNotification);
-
       const updateDoc = (doc: DocumentFile) => {
         if (doc.id === lastNotification.documentId) {
           if (lastNotification.status === 'completed' || lastNotification.status === 'failed') {
@@ -115,16 +113,7 @@ export const TestOCRPage = () => {
       const result = await documentProcessingService.getDocuments();
 
       if (result.success && result.data) {
-        console.log('🔍 DEBUG - Raw data from API:', result.data);
-        
         const formattedDocs: DocumentFile[] = result.data.map((doc: any) => {
-          console.log('🔍 Mapping document:', {
-            id: doc.id,
-            finalDecision: doc.finalDecision,
-            status: doc.status,
-            fileName: doc.fileName
-          });
-          
           const formatted = {
             id: doc.id,
             file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }),
@@ -154,16 +143,13 @@ export const TestOCRPage = () => {
               } : {}
             } : undefined
           };
-          console.log('🔍 DEBUG - Formatted document:', formatted);
           return formatted;
         });
 
-        console.log('🔍 DEBUG - Total formatted documents:', formattedDocs.length);
         setHistoricalDocuments(formattedDocs);
       }
     } catch (error) {
-      console.error('Error loading historical documents:', error);
-    }
+      }
   }, []);
 
   // Cargar documentos históricos al montar el componente
@@ -175,11 +161,8 @@ export const TestOCRPage = () => {
   // Escuchar notificaciones del WebSocket para actualizar la tabla
   useEffect(() => {
     if (lastNotification) {
-      console.log('🔔 WebSocket notification received:', lastNotification);
-      
       // Si el documento se completó, recargar la tabla histórica
       if (lastNotification.status === 'completed' || lastNotification.processingStatus === 'COMPLETED') {
-        console.log('📋 Document completed, reloading historical documents');
         loadHistoricalDocuments();
       }
     }
@@ -267,8 +250,6 @@ export const TestOCRPage = () => {
 
     // Agregar inmediatamente a la tabla histórica como "Procesando"
     setHistoricalDocuments(prev => [optimisticDocument, ...prev]);
-    console.log('📋 Documento agregado optimistamente como "Procesando"');
-
     // Cambiar estado a 'processing' cuando se presiona el botón
     setDocuments(prev => prev.map(doc => 
       doc.id === documentId ? { ...doc, status: 'processing' } : doc
@@ -319,10 +300,6 @@ export const TestOCRPage = () => {
       const currentUser = cognitoAuthService.getCurrentUser();
       const finalOwnerName = document.ownerName.trim() || currentUser?.fullName || currentUser?.email || 'Usuario Admin';
       
-      console.log('🔍 DEBUG - Document ownerName:', document.ownerName);
-      console.log('🔍 DEBUG - Final owner name:', finalOwnerName);
-      console.log('🔍 DEBUG - Current user:', currentUser);
-      
       const requestData: ProcessDocumentsRequest = {
         owner_user_name: finalOwnerName,
         documents: [
@@ -334,16 +311,12 @@ export const TestOCRPage = () => {
         ]
       };
 
-      console.log('🔍 DEBUG - Request payload:', JSON.stringify(requestData, null, 2));
-
       // Llamar al nuevo document_processing_microservice
       const response = await documentProcessingService.processDocuments(requestData);
 
       if (response.status === 'success') {
         // Limpiar documento local ya que se procesó y está en la tabla histórica
         setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-        console.log('Document sent for processing, waiting for WebSocket notification');
-        console.log('Response:', response);
         // El documento optimista ya está en la tabla histórica, el WebSocket lo actualizará
       } else {
         // Actualizar documento optimista con error
@@ -369,7 +342,6 @@ export const TestOCRPage = () => {
     }
   };
 
-
   const handleClear = () => {
     setDocuments([]);
     setError(null);
@@ -386,7 +358,6 @@ export const TestOCRPage = () => {
   };
 
   const updateDocumentOwnerName = (documentId: string, ownerName: string) => {
-    console.log('🔍 DEBUG - Updating owner name for document:', documentId, 'to:', ownerName);
     setDocuments(prev => prev.map(doc =>
       doc.id === documentId ? { ...doc, ownerName } : doc
     ));
@@ -403,9 +374,7 @@ export const TestOCRPage = () => {
       // Actualizar la lista de documentos
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       setHistoricalDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      console.log(`Document ${documentId} deleted successfully`);
-    } catch (error) {
-      console.error('Error calling delete API:', error);
+      } catch (error) {
       setError('Error al eliminar el documento. Por favor, inténtalo de nuevo.');
     }
   };
@@ -422,13 +391,9 @@ export const TestOCRPage = () => {
 
   const handleManualDecision = async (documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING') => {
     try {
-      console.log(`🔄 Cambiando decisión del documento ${documentId} a: ${decision}`);
-      
       const response = await documentProcessingService.updateDocumentDecision(documentId, decision);
       
       if (response.success) {
-        console.log('✅ Decisión actualizada exitosamente:', response);
-        
         // Actualizar inmediatamente el estado local de la tabla
         setHistoricalDocuments(prev => prev.map(doc => 
           doc.id === documentId 
@@ -447,15 +412,12 @@ export const TestOCRPage = () => {
         // Mostrar mensaje de éxito
         alert(`Documento ${decision === 'APPROVED' ? 'aprobado' : decision === 'REJECTED' ? 'rechazado' : decision === 'PENDING' ? 'marcado como pendiente' : 'marcado para revisión manual'} exitosamente`);
       } else {
-        console.error('❌ Error actualizando decisión:', response);
         alert('Error al actualizar la decisión del documento');
       }
     } catch (error) {
-      console.error('❌ Error en decisión manual:', error);
       alert('Error al actualizar la decisión del documento');
     }
   };
-
 
   return (
     <div className="max-w-6xl mx-auto">

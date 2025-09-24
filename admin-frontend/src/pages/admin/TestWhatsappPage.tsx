@@ -14,7 +14,6 @@ export const TestWhatsappPage = () => {
   const [excelData, setExcelData] = useState<Array<{ nombre: string; telefono: string }>>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-
   const handleSendTemplateMessage = async () => {
     if (!phoneNumber.trim() || !userName.trim()) {
       alert('Por favor, completa el número de teléfono y nombre del usuario');
@@ -65,7 +64,6 @@ export const TestWhatsappPage = () => {
       const data = await response.json();
       setResponse(data);
     } catch (error) {
-      console.error('Error details:', error);
       setResponse({ 
         error: 'Error al enviar mensaje de plantilla: ' + error,
         details: 'Posible problema de CORS. Verifica que el servidor permita requests desde este dominio.',
@@ -135,8 +133,6 @@ export const TestWhatsappPage = () => {
           // Convertir a JSON
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
-          console.log('Datos raw del Excel:', jsonData);
-
           if (jsonData.length === 0) {
             alert('El archivo Excel está vacío');
             return;
@@ -144,8 +140,6 @@ export const TestWhatsappPage = () => {
 
           // La primera fila debería contener los headers
           const headers = jsonData[0];
-          console.log('Headers detectados:', headers);
-
           // Buscar las columnas de Nombre y Telefono (case-insensitive)
           const nombreIndex = headers.findIndex((header: string) =>
             header && header.toString().toLowerCase().includes('nombre')
@@ -158,8 +152,6 @@ export const TestWhatsappPage = () => {
               header.toString().toLowerCase().includes('phone')
             )
           );
-
-          console.log('Índice Nombre:', nombreIndex, 'Índice Teléfono:', telefonoIndex);
 
           if (nombreIndex === -1 || telefonoIndex === -1) {
             alert('No se encontraron las columnas "Nombre" y "Telefono". Asegúrate de que el Excel tenga estas columnas en la primera fila.');
@@ -195,25 +187,19 @@ export const TestWhatsappPage = () => {
             }
           }
 
-          console.log('Contactos procesados:', contacts);
-
           if (contacts.length === 0) {
             alert('No se encontraron contactos válidos en el archivo Excel. Verifica que las filas tengan datos en las columnas Nombre y Telefono.');
             return;
           }
 
           setExcelData(contacts);
-          console.log(`Procesados ${contacts.length} contactos del archivo Excel`);
-
-        } catch (parseError) {
-          console.error('Error parseando Excel:', parseError);
+          } catch (parseError) {
           alert('Error al procesar el contenido del archivo Excel. Asegúrate de que sea un archivo Excel válido.');
         }
       };
 
       reader.readAsArrayBuffer(file);
     } catch (error) {
-      console.error('Error procesando archivo Excel:', error);
       alert('Error al procesar el archivo Excel');
     }
   };
@@ -319,7 +305,6 @@ export const TestWhatsappPage = () => {
             Prueba la funcionalidad de envío de mensajes por WhatsApp usando los endpoints reales
           </p>
         </div>
-
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Panel izquierdo - Envío individual */}

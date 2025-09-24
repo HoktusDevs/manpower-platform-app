@@ -14,13 +14,11 @@ export const useOCRPolling = (onDocumentUpdate: (update: OCRDocumentUpdate) => v
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const startPolling = () => {
-    console.log('Starting OCR polling...');
     setIsConnected(true);
     setConnectionError(null);
     
     // Simular actualizaciones cada 5 segundos
     pollingIntervalRef.current = setInterval(() => {
-      console.log('Polling for OCR updates...');
       // Aquí iría la lógica de polling real
     }, 5000);
   };
@@ -48,6 +46,4 @@ export const useOCRPolling = (onDocumentUpdate: (update: OCRDocumentUpdate) => v
     stopPolling
   };
 };
-
-
 

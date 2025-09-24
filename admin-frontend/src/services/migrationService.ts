@@ -171,8 +171,7 @@ class MigrationService {
     this.checkRollbackConditions();
 
     // Log metrics for debugging
-    console.log('🔍 Performance Metric:', fullMetric);
-  }
+    }
 
   /**
    * Get performance comparison between systems
@@ -253,8 +252,7 @@ class MigrationService {
     this.config = { ...this.config, ...newConfig };
     this.saveConfigToStorage();
     
-    console.log('🔧 Migration config updated:', this.config);
-  }
+    }
 
   /**
    * Force a feature to use a specific system (admin override)
@@ -271,8 +269,7 @@ class MigrationService {
     }
     this.saveConfigToStorage();
     
-    console.log(`🔀 Feature '${feature}' forced to '${system}' system`);
-  }
+    }
 
   /**
    * Get current configuration
@@ -293,13 +290,11 @@ class MigrationService {
     
     // Check error rate threshold
     if (comparison.aws_native.errorRate > this.config.rollback.errorThreshold) {
-      console.warn('🚨 AWS-Native error rate exceeds threshold, considering rollback');
       this.triggerRollback('error_rate', comparison.aws_native.errorRate);
     }
 
     // Check latency threshold
     if (comparison.aws_native.averageLatency > this.config.rollback.latencyThreshold) {
-      console.warn('🚨 AWS-Native latency exceeds threshold, considering rollback');
       this.triggerRollback('latency', comparison.aws_native.averageLatency);
     }
   }
@@ -308,8 +303,6 @@ class MigrationService {
    * Trigger automatic rollback
    */
   private triggerRollback(reason: 'error_rate' | 'latency', value: number): void {
-    console.error(`🚨 ROLLBACK TRIGGERED: ${reason} = ${value}`);
-    
     // Set all features to legacy system
     Object.keys(this.config.features).forEach(feature => {
       const featureKey = feature as keyof MigrationConfig['features'];
@@ -353,16 +346,14 @@ class MigrationService {
         this.config = { ...this.config, ...storedConfig };
       }
     } catch (error) {
-      console.warn('Failed to load migration config from storage:', error);
-    }
+      }
   }
 
   private saveConfigToStorage(): void {
     try {
       localStorage.setItem('migration_config', JSON.stringify(this.config));
     } catch (error) {
-      console.warn('Failed to save migration config to storage:', error);
-    }
+      }
   }
 
   private saveMetricsToStorage(): void {
@@ -371,8 +362,7 @@ class MigrationService {
       const metricsToStore = this.metrics.slice(-100);
       localStorage.setItem('performance_metrics', JSON.stringify(metricsToStore));
     } catch (error) {
-      console.warn('Failed to save metrics to storage:', error);
-    }
+      }
   }
 
   private startPerformanceMonitoring(): void {
@@ -383,8 +373,7 @@ class MigrationService {
         this.metrics = JSON.parse(stored);
       }
     } catch (error) {
-      console.warn('Failed to load metrics from storage:', error);
-    }
+      }
 
     // Periodic cleanup of old metrics
     setInterval(() => {
@@ -395,8 +384,6 @@ class MigrationService {
 
   private notifyRollback(reason: string, value: number): void {
     // In production, send alerts to monitoring systems
-    console.error(`🚨 ROLLBACK NOTIFICATION: ${reason} = ${value}`);
-    
     // Example: Send to monitoring service
     // fetch('/api/monitoring/rollback', {
     //   method: 'POST',

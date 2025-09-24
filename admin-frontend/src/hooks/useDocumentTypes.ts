@@ -27,8 +27,7 @@ export const useDocumentTypes = (): UseDocumentTypesReturn => {
       }
     } catch (err) {
       setError('Failed to load document types');
-      console.error('Error loading document types:', err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   }, []);
@@ -51,7 +50,6 @@ export const useDocumentTypes = (): UseDocumentTypesReturn => {
       }
       return [];
     } catch (err) {
-      console.error('Error searching document types:', err);
       return [];
     }
   }, [documentTypes]);

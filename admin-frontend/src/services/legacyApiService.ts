@@ -78,7 +78,6 @@ class LegacyApiService {
 
       return await this.handleResponse<Application[]>(response);
     } catch (error) {
-      console.error('❌ Legacy API: Failed to fetch my applications:', error);
       throw new Error(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -96,7 +95,6 @@ class LegacyApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Legacy API: Failed to create application:', error);
       throw new Error(`Failed to create application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -114,7 +112,6 @@ class LegacyApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Legacy API: Failed to update application:', error);
       throw new Error(`Failed to update application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -131,7 +128,6 @@ class LegacyApiService {
 
       return await this.handleResponse<Application[]>(response);
     } catch (error) {
-      console.error('❌ Legacy API: Failed to fetch all applications:', error);
       throw new Error(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -153,7 +149,6 @@ class LegacyApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Legacy API: Failed to update application status:', error);
       throw new Error(`Failed to update application status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -170,7 +165,6 @@ class LegacyApiService {
 
       return response.ok;
     } catch (error) {
-      console.error('❌ Legacy API: Health check failed:', error);
       return false;
     }
   }

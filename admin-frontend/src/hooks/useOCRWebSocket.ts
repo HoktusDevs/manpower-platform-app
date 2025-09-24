@@ -53,11 +53,9 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
     }
 
     try {
-      console.log('Connecting to WebSocket:', config.url);
       wsRef.current = new WebSocket(config.url);
 
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
         setIsConnected(true);
         setConnectionError(null);
         reconnectAttemptsRef.current = 0;
@@ -83,12 +81,10 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
             onDocumentUpdate(data);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
+          }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
         cleanup();
 
@@ -106,12 +102,10 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
         setConnectionError('Error de conexi�n WebSocket');
       };
 
     } catch (error) {
-      console.error('Error creating WebSocket:', error);
       setConnectionError('Error al crear conexi�n WebSocket');
     }
   };

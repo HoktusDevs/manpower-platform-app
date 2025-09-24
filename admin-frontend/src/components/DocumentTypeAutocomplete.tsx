@@ -42,7 +42,6 @@ export const DocumentTypeAutocomplete: React.FC<DocumentTypeAutocompleteProps> =
         setSuggestions(suggestionNames);
         setShowSuggestions(suggestionNames.length > 0);
       } catch (error) {
-        console.error('Error searching suggestions:', error);
         setSuggestions([]);
         setShowSuggestions(false);
       } finally {

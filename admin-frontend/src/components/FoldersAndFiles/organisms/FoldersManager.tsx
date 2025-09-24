@@ -233,7 +233,6 @@ export const FoldersManager: React.FC = () => {
         // Execute server deletion in background (no await)
         deleteFolders(deletedIds)
           .catch(error => {
-            console.error('Error deleting folders:', error);
             // Rollback the optimistic deletion
             refreshFolders();
           });
@@ -245,7 +244,6 @@ export const FoldersManager: React.FC = () => {
     switch (action) {
       case 'create-subfolder': {
         // Open create modal with parent folder set
-        console.log('🗂️ Creando subcarpeta para:', folderId);
         openCreateModal(folderId);
         break;
       }
@@ -307,7 +305,6 @@ export const FoldersManager: React.FC = () => {
     try {
       await downloadAllContent();
     } catch (error) {
-      console.error('Error downloading all content:', error);
       // El error ya se maneja en el hook
     }
   };
@@ -322,7 +319,6 @@ export const FoldersManager: React.FC = () => {
       const selectedIds = Array.from(selectedRows);
       await downloadSelectedItems(selectedIds, folders);
     } catch (error) {
-      console.error('Error downloading selected items:', error);
       // El error ya se maneja en el hook
     }
   };
@@ -369,7 +365,6 @@ export const FoldersManager: React.FC = () => {
           </div>
         </div>
       )}
-
 
       {/* Content View (Table or Grid) */}
       <div className="overflow-visible">

@@ -53,7 +53,6 @@ export const useFoldersState = (
   // Listen for global folder refresh events
   useEffect(() => {
     const handleFoldersRefresh = () => {
-      console.log('Global folder refresh event received, refreshing folders...');
       loadFolders();
     };
 
@@ -84,7 +83,6 @@ export const useFoldersState = (
     return folders.filter(folder => folder.parentId === currentFolderId);
   }, [folders, searchTerm, currentFolderId]);
 
-
   /**
    * Create new folder
    */
@@ -100,15 +98,8 @@ export const useFoldersState = (
 
       // Console.log for tracking
       if (result.folder) {
-        console.log(FOLDER_OPERATION_MESSAGES.CREATE_SUCCESS, {
-          id: result.folder.folderId,
-          name: result.folder.name,
-          type: result.folder.type,
-          createdAt: result.folder.createdAt
-        });
-      }
+        }
     } catch (error) {
-      console.error('Error creating folder:', error);
       throw error;
     }
   };
@@ -124,13 +115,7 @@ export const useFoldersState = (
       await deleteFolderMutation.mutateAsync(folderId);
       
       // Console.log for tracking
-      console.log(FOLDER_OPERATION_MESSAGES.DELETE_SUCCESS, {
-        id: folderToDelete.id,
-        name: folderToDelete.name,
-        type: folderToDelete.type
-      });
-    } catch (error) {
-      console.error('Error deleting folder:', error);
+      } catch (error) {
       throw error;
     }
   };
@@ -197,17 +182,15 @@ export const useFoldersState = (
       });
 
       console.log('Deleting folders in order:', sortedIdsToDelete.map(id => {
-        const folder = folders.find(f => f.id === id);
+        const folder = foldersMap[id];
         return { id, name: folder?.name, depth: getFolderDepth(id) };
       }));
-      
+
       await deleteFoldersMutation.mutateAsync(sortedIdsToDelete);
     } catch (error) {
-      console.error('Error deleting folders:', error);
       throw error;
     }
   };
-
 
   /**
    * Update existing folder with new data
@@ -223,16 +206,10 @@ export const useFoldersState = (
       };
 
       await updateFolderMutation.mutateAsync({ folderId, input });
-      
+
       // Console.log for tracking
-      console.log('📝 Carpeta actualizada', {
-        id: folderId,
-        newName: data.name,
-        newType: data.type,
-        timestamp: new Date().toISOString()
-      });
+      console.log('Folder updated successfully:', { folderId, input, timestamp: new Date().toISOString() });
     } catch (error) {
-      console.error('Error updating folder:', error);
       throw error;
     }
   };

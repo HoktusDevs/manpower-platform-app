@@ -58,7 +58,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error fetching document types:', error);
       return {
         success: false,
         message: 'Failed to fetch document types',
@@ -91,7 +90,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error searching document types:', error);
       return {
         success: false,
         message: 'Failed to search document types',
@@ -122,7 +120,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error creating document type:', error);
       return {
         success: false,
         message: 'Failed to create document type',
@@ -154,7 +151,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error updating document type:', error);
       return {
         success: false,
         message: 'Failed to update document type',
@@ -180,7 +176,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error deleting document type:', error);
       return {
         success: false,
         message: 'Failed to delete document type',
@@ -206,7 +201,6 @@ class DocumentTypesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error fetching document type:', error);
       return {
         success: false,
         message: 'Failed to fetch document type',

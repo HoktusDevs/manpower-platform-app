@@ -27,8 +27,6 @@ export class SessionExchangeService {
    */
   static async exchangeSessionKey(sessionKey: string): Promise<{ success: boolean; message: string; tokens?: { accessToken: string; refreshToken: string; idToken: string; expiresIn: number }; user?: { id: string; email: string; userType: string } }> {
     try {
-      console.log('🔄 Exchanging sessionKey for tokens...');
-
       const response = await fetch(`${this.AUTH_SERVICE_URL}/auth/exchange-session`, {
         method: 'POST',
         headers: {
@@ -40,7 +38,6 @@ export class SessionExchangeService {
       const data: ExchangeSessionResponse = await response.json();
 
       if (!response.ok) {
-        console.error('❌ Session exchange failed:', data.message);
         return {
           success: false,
           message: data.message || 'Session exchange failed',
@@ -59,8 +56,6 @@ export class SessionExchangeService {
           email_verified: true,
         }));
 
-        console.log('✅ Session exchanged successfully for user:', data.user.email);
-
         return {
           success: true,
           message: 'Session exchanged successfully',
@@ -74,7 +69,6 @@ export class SessionExchangeService {
         message: 'Invalid session response',
       };
     } catch (error) {
-      console.error('❌ Error exchanging session:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Network error',
@@ -86,20 +80,14 @@ export class SessionExchangeService {
    * Get sessionKey from URL parameters
    */
   static getSessionKeyFromURL(): string | null {
-    console.log('🔍 Current URL:', window.location.href);
-    console.log('🔍 Search params:', window.location.search);
-
     const urlParams = new URLSearchParams(window.location.search);
     const sessionKey = urlParams.get('sessionKey');
-
-    console.log('🔍 Extracted sessionKey:', sessionKey ? `FOUND: ${sessionKey.substring(0, 20)}...` : 'NOT FOUND');
 
     if (sessionKey) {
       // Clean up URL after getting sessionKey
       const newUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, newUrl);
-      console.log('✨ URL cleaned, sessionKey extracted');
-    }
+      }
 
     return sessionKey;
   }

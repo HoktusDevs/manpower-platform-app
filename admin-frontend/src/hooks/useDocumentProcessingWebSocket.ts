@@ -53,12 +53,9 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
     try {
       setConnectionStatus('connecting');
       const wsUrl = documentProcessingService.getWebSocketUrl();
-      console.log('Connecting to Document Processing WebSocket:', wsUrl);
-      
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('Document Processing WebSocket connected');
         setIsConnected(true);
         setConnectionStatus('connected');
         reconnectAttempts.current = 0;
@@ -69,14 +66,11 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
           type: 'document_processing_connection'
         };
         wsRef.current?.send(JSON.stringify(initMessage));
-        console.log('WebSocket initialization message sent');
-      };
+        };
 
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Document Processing WebSocket message received:', data);
-          
           if (data.type === 'document_processing_update' || data.type === 'document_update') {
             const notification: WebSocketNotification = {
               documentId: data.documentId,
@@ -100,12 +94,10 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
             setLastNotification(notification);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
+          }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('Document Processing WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
         setConnectionStatus('disconnected');
         
@@ -113,7 +105,7 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
         if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
           console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts.current + 1})`);
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttempts.current++;
             connect();
@@ -122,12 +114,10 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('Document Processing WebSocket error:', error);
         setConnectionStatus('error');
       };
 
     } catch (error) {
-      console.error('Error creating Document Processing WebSocket connection:', error);
       setConnectionStatus('error');
     }
   }, []);
@@ -151,8 +141,7 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket is not connected. Cannot send message.');
-    }
+      }
   }, []);
 
   const clearNotifications = useCallback(() => {
@@ -162,11 +151,9 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
 
   useEffect(() => {
     // Conectar automáticamente al montar el componente
-    console.log('🔌 Auto-connecting to Document Processing WebSocket...');
     connect();
     
     return () => {
-      console.log('🔌 Disconnecting from Document Processing WebSocket...');
       disconnect();
     };
   }, [connect, disconnect]);

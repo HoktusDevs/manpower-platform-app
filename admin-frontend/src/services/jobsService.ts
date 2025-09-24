@@ -82,8 +82,6 @@ class JobsService {
    */
   async getAllJobs(): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Obteniendo todos los jobs desde', `${this.baseUrl}/jobs`);
-      
       const response = await fetch(`${this.baseUrl}/jobs`, {
         method: 'GET',
         headers: {
@@ -98,11 +96,8 @@ class JobsService {
       }
 
       const data = await response.json();
-      console.log('JobsService: Respuesta recibida', data);
-      
       return data;
     } catch (error) {
-      console.error('JobsService: Error obteniendo jobs:', error);
       return {
         success: false,
         message: 'Error al obtener jobs del servidor',
@@ -115,8 +110,6 @@ class JobsService {
    */
   async getPublishedJobs(): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Obteniendo jobs publicados desde', `${this.baseUrl}/jobs/published`);
-      
       const response = await fetch(`${this.baseUrl}/jobs/published`, {
         method: 'GET',
         headers: {
@@ -129,11 +122,8 @@ class JobsService {
       }
 
       const data = await response.json();
-      console.log('JobsService: Jobs publicados recibidos', data);
-      
       return data;
     } catch (error) {
-      console.error('JobsService: Error obteniendo jobs publicados:', error);
       return {
         success: false,
         message: 'Error al obtener jobs publicados del servidor',
@@ -146,8 +136,6 @@ class JobsService {
    */
   async getJob(jobId: string): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Obteniendo job', jobId, 'desde', `${this.baseUrl}/jobs/${jobId}`);
-      
       const response = await fetch(`${this.baseUrl}/jobs/${jobId}`, {
         method: 'GET',
         headers: {
@@ -160,11 +148,8 @@ class JobsService {
       }
 
       const data = await response.json();
-      console.log('JobsService: Job recibido', data);
-      
       return data;
     } catch (error) {
-      console.error('JobsService: Error obteniendo job:', error);
       return {
         success: false,
         message: 'Error al obtener el job del servidor',
@@ -177,8 +162,6 @@ class JobsService {
    */
   async createJob(input: CreateJobInput): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Creando job', input);
-      
       // Add timeout and retry logic
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -202,19 +185,17 @@ class JobsService {
           clearTimeout(timeoutId);
 
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error('HTTP error! status: ' + response.status);
           }
 
           const data = await response.json();
-          console.log('JobsService: Job creado', data);
-          
           return data;
         } catch (error) {
           lastError = error as Error;
           retries--;
           
           if (retries > 0 && !controller.signal.aborted) {
-            console.warn(`JobsService: Request failed, retrying... (${retries} attempts left)`, error);
+            console.log('Retrying job request, retries left:', retries, error);
             // Exponential backoff: 1s, 2s, 4s
             const delay = Math.pow(2, 3 - retries) * 1000;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -234,7 +215,6 @@ class JobsService {
       
       throw lastError || new Error('Unknown error');
     } catch (error) {
-      console.error('JobsService: Error creando job:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Error al crear el job en el servidor',
@@ -247,8 +227,6 @@ class JobsService {
    */
   async updateJob(input: UpdateJobInput): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Actualizando job', input);
-      
       // Add timeout and retry logic
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -258,12 +236,13 @@ class JobsService {
       
       while (retries > 0) {
         try {
-          const response = await fetch(`${this.baseUrl}/jobs/${input.jobId}`, {
+          const url = this.baseUrl + '/jobs/' + input.jobId;
+          const response = await fetch(url, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               // TODO: Agregar token de autorización cuando esté implementado
-              // 'Authorization': `Bearer ${token}`
+              // 'Authorization': 'Bearer ' + token
             },
             body: JSON.stringify(input),
             signal: controller.signal,
@@ -272,19 +251,17 @@ class JobsService {
           clearTimeout(timeoutId);
 
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error('HTTP error! status: ' + response.status);
           }
 
           const data = await response.json();
-          console.log('JobsService: Job actualizado', data);
-          
           return data;
         } catch (error) {
           lastError = error as Error;
           retries--;
           
           if (retries > 0 && !controller.signal.aborted) {
-            console.warn(`JobsService: Update request failed, retrying... (${retries} attempts left)`, error);
+            console.log('Retrying job request, retries left:', retries, error);
             // Exponential backoff: 1s, 2s, 4s
             const delay = Math.pow(2, 3 - retries) * 1000;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -304,7 +281,6 @@ class JobsService {
       
       throw lastError || new Error('Unknown error');
     } catch (error) {
-      console.error('JobsService: Error actualizando job:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Error al actualizar el job en el servidor',
@@ -317,8 +293,6 @@ class JobsService {
    */
   async deleteJob(jobId: string): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Eliminando job', jobId);
-      
       const response = await fetch(`${this.baseUrl}/jobs/${jobId}`, {
         method: 'DELETE',
         headers: {
@@ -333,11 +307,8 @@ class JobsService {
       }
 
       const data = await response.json();
-      console.log('JobsService: Job eliminado', data);
-      
       return data;
     } catch (error) {
-      console.error('JobsService: Error eliminando job:', error);
       return {
         success: false,
         message: 'Error al eliminar el job del servidor',
@@ -350,8 +321,6 @@ class JobsService {
    */
   async getJobsByFolder(folderId: string): Promise<JobsResponse> {
     try {
-      console.log('JobsService: Obteniendo jobs por carpeta', folderId);
-      
       const response = await fetch(`${this.baseUrl}/jobs/folder/${folderId}`, {
         method: 'GET',
         headers: {
@@ -364,11 +333,8 @@ class JobsService {
       }
 
       const data = await response.json();
-      console.log('JobsService: Jobs por carpeta recibidos', data);
-      
       return data;
     } catch (error) {
-      console.error('JobsService: Error obteniendo jobs por carpeta:', error);
       return {
         success: false,
         message: 'Error al obtener jobs por carpeta del servidor',
@@ -387,7 +353,6 @@ class JobsService {
 
       return response.ok;
     } catch (error) {
-      console.error('JobsService: Error verificando salud del servicio:', error);
       return false;
     }
   }

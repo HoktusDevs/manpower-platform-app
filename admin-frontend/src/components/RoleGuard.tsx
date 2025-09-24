@@ -38,13 +38,11 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // CHECK SINGLE REQUIRED ROLE
   if (requiredRole && userRole !== requiredRole) {
     // This should not happen in admin-frontend since App.tsx already filters
-    console.warn(`🚨 ROLE MISMATCH: User role ${userRole} doesn't match required ${requiredRole}`);
     return <>{children}</>;
   }
 
   // CHECK MULTIPLE ALLOWED ROLES
   if (allowedRoles && !allowedRoles.includes(userRole)) {
-    console.warn(`🚨 ROLE MISMATCH: User role ${userRole} not in allowed roles [${allowedRoles.join(', ')}]`);
     return <>{children}</>;
   }
 

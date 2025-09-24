@@ -75,13 +75,8 @@ const CustomDecisionSelector: React.FC<CustomDecisionSelectorProps> = ({
 
   const currentOption = options.find(opt => opt.value === selectedDecision) || options[0];
   const hasChanges = selectedDecision !== currentDecision;
-  
-  console.log('🔍 CustomDecisionSelector debug:', {
-    selectedDecision,
-    currentDecision,
-    hasChanges,
-    options: options.map(opt => opt.value)
-  });
+
+  console.log('Current decision:', currentDecision, 'Selected:', selectedDecision, 'Has changes:', hasChanges);
 
   const handleOptionClick = (option: typeof options[0]) => {
     setSelectedDecision(option.value);
@@ -89,8 +84,6 @@ const CustomDecisionSelector: React.FC<CustomDecisionSelectorProps> = ({
   };
 
   const handleUpdateState = () => {
-    console.log('🔄 handleUpdateState called', { selectedDecision, currentDecision });
-    console.log('📤 Calling onDecisionChange with:', selectedDecision);
     onDecisionChange(selectedDecision as 'APPROVED' | 'REJECTED' | 'PENDING');
     
     // Resetear el estado local para que no muestre el botón de actualizar
@@ -298,7 +291,6 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-900 mb-3">Resultados del OCR</h4>
                   <div className="bg-blue-50 rounded-lg p-4">
-
 
                     {document.ocrResult.fields && Object.keys(document.ocrResult.fields).length > 0 && (
                       <div>

@@ -21,7 +21,6 @@ export function DashboardMetrics(): ReactNode {
         const dashboardStats = await applicationsService.getDashboardStats();
         setStats(dashboardStats);
       } catch (err) {
-        console.error('Error loading dashboard stats:', err);
         setError('Error al cargar las estadísticas');
       } finally {
         setIsLoading(false);

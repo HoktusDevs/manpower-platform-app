@@ -62,8 +62,7 @@ export const useAWSNative = () => {
             awsNativeService.reinitialize();
           }
         } catch (error) {
-          console.error('❌ Failed to initialize AWS-Native service:', error);
-        }
+          }
       }
     };
 
@@ -90,16 +89,14 @@ export const useAWSNative = () => {
       let data: Application[];
       if (systemUsed === 'aws_native') {
         data = await awsNativeService.getMyApplications();
-        console.log(`✅ Fetched ${data.length} applications directly from DynamoDB`);
-      } else {
+        } else {
         // Legacy API fallback
         const token = cognitoAuthService.getIdToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
         data = await legacyApiService.getMyApplications();
-        console.log(`📊 Fetched ${data.length} applications via Legacy API`);
-      }
+        }
 
       // Track performance metrics
       migrationService.trackPerformance({
@@ -130,8 +127,7 @@ export const useAWSNative = () => {
       }
 
       setError(errorMessage);
-      console.error('❌ Error fetching applications:', err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -156,16 +152,14 @@ export const useAWSNative = () => {
       let newApplication: Application;
       if (systemUsed === 'aws_native') {
         newApplication = await awsNativeService.createApplication(input);
-        console.log('✅ Application created successfully via AWS-Native');
-      } else {
+        } else {
         // Legacy API fallback
         const token = cognitoAuthService.getIdToken();
         if (token) {
           legacyApiService.setAuthToken(token);
         }
         newApplication = await legacyApiService.createApplication(input);
-        console.log('📊 Application created successfully via Legacy API');
-      }
+        }
 
       // Track performance metrics
       migrationService.trackPerformance({
@@ -199,7 +193,6 @@ export const useAWSNative = () => {
       }
 
       setError(errorMessage);
-      console.error('❌ Error creating application:', err);
       return null;
     } finally {
       setLoading(false);
@@ -231,12 +224,10 @@ export const useAWSNative = () => {
         )
       );
       
-      console.log('✅ Application updated successfully via AWS-Native');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update application';
       setError(errorMessage);
-      console.error('❌ Error updating application:', err);
       return false;
     } finally {
       setLoading(false);
@@ -258,13 +249,10 @@ export const useAWSNative = () => {
 
       const data = await awsNativeService.getAllApplications();
       setApplications(data);
-      
-      console.log(`✅ Fetched ${data.length} applications (admin) directly from DynamoDB`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch applications';
       setError(errorMessage);
-      console.error('❌ Error fetching all applications:', err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -301,12 +289,10 @@ export const useAWSNative = () => {
         )
       );
       
-      console.log('✅ Application status updated successfully via AWS-Native');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update application status';
       setError(errorMessage);
-      console.error('❌ Error updating application status:', err);
       return false;
     } finally {
       setLoading(false);

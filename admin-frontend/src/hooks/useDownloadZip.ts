@@ -28,7 +28,6 @@ export const useDownloadZip = (): UseDownloadZipReturn => {
       setProgress(null);
       await downloadZipService.downloadAllContent(handleProgress);
     } catch (error) {
-      console.error('Error downloading all content:', error);
       throw error;
     } finally {
       setIsDownloading(false);
@@ -44,7 +43,6 @@ export const useDownloadZip = (): UseDownloadZipReturn => {
       setProgress(null);
       await downloadZipService.downloadSelectedItems(selectedIds, allFolders, handleProgress);
     } catch (error) {
-      console.error('Error downloading selected items:', error);
       throw error;
     } finally {
       setIsDownloading(false);

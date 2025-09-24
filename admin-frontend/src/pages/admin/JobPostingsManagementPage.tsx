@@ -32,7 +32,6 @@ interface CreateJobPostingInput {
   requiredDocuments?: string[];
 }
 
-
 const getEmploymentTypeText = (type: JobPosting['employmentType']) => {
   switch (type) {
     case 'FULL_TIME': return 'Tiempo Completo';
@@ -127,8 +126,8 @@ export const JobPostingsManagementPage: React.FC = () => {
   
   // Hook para creación optimista de carpetas
   const createFolderMutation = useCreateFolder(
-    () => console.log('Carpeta creada exitosamente'),
-    (error) => console.error('Error creando carpeta:', error)
+    () => showSuccess('Carpeta creada exitosamente'),
+    (error) => showError('Error al crear carpeta', getUserFriendlyErrorMessage(error))
   );
 
   const [selectedStatus] = useState<JobPosting['status'] | 'ALL'>('ALL');
@@ -193,26 +192,21 @@ export const JobPostingsManagementPage: React.FC = () => {
   const loadJobPostings = async () => {
     setLoading(true);
     try {
-      console.log('Cargando jobs desde jobs-service...');
       const response = await jobsService.getAllJobs();
       
       if (response.success && response.jobs) {
-        console.log('Jobs cargados exitosamente:', response.jobs);
         setJobPostings(response.jobs);
       } else {
-        console.error('Error en respuesta del servidor:', response.message);
         showError(response.message || 'Error al cargar empleos');
         setJobPostings([]);
       }
     } catch (error) {
-      console.error('Error loading job postings:', error);
       showError('Error de conexión al cargar empleos');
       setJobPostings([]);
     } finally {
       setLoading(false);
     }
   };
-
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job => 
@@ -286,7 +280,6 @@ export const JobPostingsManagementPage: React.FC = () => {
 
     return { ...basicErrors, ...customErrors };
   };
-
 
   // Function to validate and show errors (only used on submit)
   const validateAndShowErrors = () => {
@@ -502,7 +495,6 @@ export const JobPostingsManagementPage: React.FC = () => {
     setShowCreateModal(true);
   };
 
-
   const handleBulkDelete = () => {
     if (selectedJobs.size === 0) return;
     
@@ -526,7 +518,6 @@ export const JobPostingsManagementPage: React.FC = () => {
               errorCount++;
             }
           } catch (error) {
-            console.error(`Error deleting job ${jobId}:`, error);
             errorCount++;
           }
         }
@@ -562,8 +553,7 @@ export const JobPostingsManagementPage: React.FC = () => {
           try {
             window.dispatchEvent(new CustomEvent('foldersRefresh'));
           } catch (error) {
-            console.warn('Could not trigger global folder refresh:', error);
-          }
+            }
         }
 
         // Clear selection and close modal
@@ -608,13 +598,11 @@ export const JobPostingsManagementPage: React.FC = () => {
             try {
               window.dispatchEvent(new CustomEvent('foldersRefresh'));
             } catch (error) {
-              console.warn('Could not trigger global folder refresh:', error);
-            }
+              }
           } else {
             showError('Error al eliminar', 'No se pudo eliminar la oferta de trabajo');
           }
         } catch (error) {
-          console.error('Error deleting job:', error);
           showError('Error al eliminar', 'Ocurrió un error al eliminar la oferta de trabajo');
         } finally {
           setModalLoading(false);
@@ -639,7 +627,6 @@ export const JobPostingsManagementPage: React.FC = () => {
         showError('Error al actualizar', 'No se pudo actualizar el estado de la oferta de trabajo');
       }
     } catch (error) {
-      console.error('Error updating job status:', error);
       showError('Error al actualizar', 'Ocurrió un error al actualizar el estado de la oferta de trabajo');
     }
   };
@@ -813,8 +800,7 @@ export const JobPostingsManagementPage: React.FC = () => {
     if (fieldValues.employment_type && typeof fieldValues.employment_type === 'string') {
       mappedData.employmentType = mapEmploymentTypeToBackend(fieldValues.employment_type) as JobPosting['employmentType'];
     }
-    
-    
+
     return mappedData;
   };
 
@@ -928,8 +914,7 @@ export const JobPostingsManagementPage: React.FC = () => {
           try {
             window.dispatchEvent(new CustomEvent('foldersRefresh'));
           } catch (error) {
-            console.warn('Could not trigger global folder refresh:', error);
-          }
+            }
         }
       } else {
         // Create new job
@@ -970,12 +955,10 @@ export const JobPostingsManagementPage: React.FC = () => {
           try {
             window.dispatchEvent(new CustomEvent('foldersRefresh'));
           } catch (error) {
-            console.warn('Could not trigger global folder refresh:', error);
-          }
+            }
         }
       }
     } catch (err) {
-      console.error('Error handling job posting:', err);
       const friendlyMessage = getUserFriendlyErrorMessage(err);
       showError('Error', friendlyMessage);
       
@@ -992,8 +975,6 @@ export const JobPostingsManagementPage: React.FC = () => {
     let optimisticFolderId: string | null = null;
     
     try {
-      console.log('Creando job con jobs-service:', input);
-      
       // Obtener folderId real - usar la primera carpeta disponible
       let folderId = selectedFolderId;
       if (!folderId) {
@@ -1006,7 +987,6 @@ export const JobPostingsManagementPage: React.FC = () => {
       const jobFolderName = `${input.title} - ${input.companyName} - ${input.location || 'Por definir'}`;
       
       // Crear carpeta optimista ANTES de crear el job
-      console.log('Creando carpeta optimista:', jobFolderName);
       const folderResult = await createFolderMutation.mutateAsync({
         name: jobFolderName,
         type: 'Cargo',
@@ -1020,8 +1000,7 @@ export const JobPostingsManagementPage: React.FC = () => {
       
       if (folderResult.success && folderResult.folder) {
         optimisticFolderId = folderResult.folder.folderId;
-        console.log('Carpeta optimista creada:', optimisticFolderId);
-      }
+        }
       
       // Convertir input local a formato del servicio
       const createJobInput: CreateJobInput = {
@@ -1040,21 +1019,18 @@ export const JobPostingsManagementPage: React.FC = () => {
         requiredDocuments: input.requiredDocuments || []
       };
 
-      console.log('Enviando datos al jobs-service:', createJobInput);
       const response = await jobsService.createJob(createJobInput);
       
       if (response.success && (response as any).job) {
-        console.log('Job creado exitosamente:', (response as any).job);
+        console.log('Job created successfully:', (response as any).job);
         setJobPostings(prev => [...prev, (response as any).job!]);
         showSuccess('Empleo creado exitosamente con carpeta automática');
         return true;
       } else {
-        console.error('Error creando job:', response.message);
         showError(response.message || 'Error al crear empleo');
         return false;
       }
     } catch (error) {
-      console.error('Error creating job posting:', error);
       showError('Error de conexión al crear empleo');
       return false;
     } finally {
@@ -1065,8 +1041,6 @@ export const JobPostingsManagementPage: React.FC = () => {
   // Función para actualizar job posting usando jobs-service
   const updateJobPosting = async (jobId: string, input: Partial<CreateJobPostingInput>): Promise<boolean> => {
     try {
-      console.log('Actualizando job con jobs-service:', jobId, input);
-      
       // Convertir input local a formato del servicio
       const updateJobInput: UpdateJobInput = {
         jobId,
@@ -1088,21 +1062,19 @@ export const JobPostingsManagementPage: React.FC = () => {
       const response = await jobsService.updateJob(updateJobInput);
       
       if (response.success && (response as any).job) {
-        console.log('Job actualizado exitosamente:', (response as any).job);
-        setJobPostings(prev => 
-          prev.map(job => 
+        console.log('Job updated successfully:', (response as any).job);
+        setJobPostings(prev =>
+          prev.map(job =>
             job.jobId === jobId ? (response as any).job! : job
           )
         );
         showSuccess('Empleo actualizado exitosamente');
         return true;
       } else {
-        console.error('Error actualizando job:', response.message);
         showError(response.message || 'Error al actualizar empleo');
         return false;
       }
     } catch (error) {
-      console.error('Error updating job posting:', error);
       showError('Error de conexión al actualizar empleo');
       return false;
     }
@@ -1111,15 +1083,12 @@ export const JobPostingsManagementPage: React.FC = () => {
   // Función para eliminar job posting usando jobs-service
   const deleteJobPosting = async (jobId: string): Promise<boolean> => {
     try {
-      console.log('Eliminando job con jobs-service:', jobId);
-      
       // Find the job to get its info before deletion
       const jobToDelete = jobPostings.find(job => job.jobId === jobId);
       
       const response = await jobsService.deleteJob(jobId);
       
       if (response.success) {
-        console.log('Job eliminado exitosamente');
         setJobPostings(prev => prev.filter(job => job.jobId !== jobId));
         
         // Delete associated folders if job info is available
@@ -1136,18 +1105,15 @@ export const JobPostingsManagementPage: React.FC = () => {
           // Try to trigger a global folder refresh
           window.dispatchEvent(new CustomEvent('foldersRefresh'));
         } catch (error) {
-          console.warn('Could not trigger global folder refresh:', error);
-        }
+          }
         
         showSuccess('Empleo eliminado exitosamente');
         return true;
       } else {
-        console.error('Error eliminando job:', response.message);
         showError(response.message || 'Error al eliminar empleo');
         return false;
       }
     } catch (error) {
-      console.error('Error deleting job posting:', error);
       showError('Error de conexión al eliminar empleo');
       return false;
     }

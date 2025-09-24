@@ -44,8 +44,7 @@ export const foldersAlova = createAlova({
     onError: (error: Error) => {
       // Log errors in development
       if (import.meta.env.VITE_ENABLE_DEBUG === 'true') {
-        console.error('[Alova Error]:', error);
-      }
+        }
       throw error;
     }
   }

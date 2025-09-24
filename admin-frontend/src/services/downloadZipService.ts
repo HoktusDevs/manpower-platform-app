@@ -46,7 +46,6 @@ class DownloadZipService {
 
       await this.createAndDownloadZip(allContent, 'todo-el-contenido.zip', onProgress);
     } catch (error) {
-      console.error('Error downloading all content:', error);
       onProgress?.({
         current: 0,
         total: 1,
@@ -95,7 +94,6 @@ class DownloadZipService {
       const fileName = `contenido-seleccionado-${new Date().toISOString().split('T')[0]}.zip`;
       await this.createAndDownloadZip(selectedItems, fileName, onProgress);
     } catch (error) {
-      console.error('Error downloading selected items:', error);
       onProgress?.({
         current: 0,
         total: 1,
@@ -171,7 +169,6 @@ class DownloadZipService {
         status: 'completed'
       });
     } catch (error) {
-      console.error('Error creating ZIP:', error);
       throw error;
     }
   }
@@ -206,14 +203,12 @@ class DownloadZipService {
       const downloadResponse = await this.getFileDownloadUrl(file.id);
       
       if (!downloadResponse.downloadUrl) {
-        console.warn(`No se pudo obtener URL de descarga para ${file.name}`);
         return;
       }
 
       // Descargar archivo
       const response = await fetch(downloadResponse.downloadUrl);
       if (!response.ok) {
-        console.warn(`Error descargando ${file.name}: ${response.statusText}`);
         return;
       }
 
@@ -223,8 +218,7 @@ class DownloadZipService {
       // Agregar archivo al ZIP
       zip.file(filePath, fileBlob);
     } catch (error) {
-      console.error(`Error adding file ${file.name} to ZIP:`, error);
-    }
+      }
   }
 
   /**
@@ -249,7 +243,6 @@ class DownloadZipService {
         downloadUrl: data.downloadUrl
       };
     } catch (error) {
-      console.error('Error getting download URL:', error);
       return {};
     }
   }

@@ -45,11 +45,6 @@ export const useAuth = (): UseAuthReturn => {
         const idToken = localStorage.getItem('cognito_id_token');
         const accessToken = localStorage.getItem('cognito_access_token');
 
-        console.log('🔍 Auth tokens check:', {
-          hasIdToken: !!idToken,
-          hasAccessToken: !!accessToken
-        });
-
         if (idToken || accessToken) {
           // Get user from localStorage (saved during sessionExchange)
           const savedUser = localStorage.getItem('user');
@@ -58,16 +53,13 @@ export const useAuth = (): UseAuthReturn => {
               const user = JSON.parse(savedUser);
               setUser(user);
               setIdToken(idToken);
-              console.log('✅ User loaded from localStorage:', user.email);
-            } catch (error) {
-              console.error('Error parsing saved user:', error);
-            }
+              } catch (error) {
+              }
           }
         }
 
         setIsInitialized(true);
       } catch (error) {
-        console.error('Error initializing auth:', error);
         setIsInitialized(true);
       }
     };
@@ -233,15 +225,13 @@ export const useAuth = (): UseAuthReturn => {
             return true;
           }
         } catch (loginError) {
-          console.warn('Auto-login after registration failed:', loginError);
-        }
+          }
         
         // Fallback: Set user without full authentication (will need to login)
         if (result.data?.user) {
           // Don't set user state immediately - this prevents redirect loops
           // User will need to manually login
-          console.log('Registration successful, please login');
-        }
+          }
         
         return true;
       } else {

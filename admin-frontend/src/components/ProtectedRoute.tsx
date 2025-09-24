@@ -13,12 +13,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isAuthenticated = cognitoAuthService.isAuthenticated();
   const user = cognitoAuthService.getCurrentUser();
   
-  console.log('🛡️ ProtectedRoute - isAuthenticated:', isAuthenticated);
-  console.log('🛡️ ProtectedRoute - user:', user);
-  console.log('🛡️ ProtectedRoute - requiredRole:', requiredRole);
-
   if (!isAuthenticated) {
-    console.log('❌ ProtectedRoute - Not authenticated, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 

@@ -20,11 +20,10 @@ export const useApplications = () => {
     setError(null);
 
     try {
-      console.log('🔄 Fetching all applications...');
       const response = await applicationsApiService.getAllApplications();
-      
-      console.log('📊 API Response:', { response, isArray: Array.isArray(response), type: typeof response });
-      
+
+      console.log('Applications response:', response, 'type:', typeof response);
+
       // Extraer applications del objeto de respuesta
       let applicationsArray = [];
       if (Array.isArray(response)) {
@@ -36,12 +35,9 @@ export const useApplications = () => {
       }
       
       setApplications(applicationsArray);
-      console.log(`✅ Fetched ${applicationsArray.length} applications`);
-    } catch (err) {
+      } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch applications';
       setError(errorMessage);
-      console.error('❌ Error fetching applications:', err);
-      
       // Si es error de autenticación, mostrar mensaje específico
       if (errorMessage.includes('authentication') || errorMessage.includes('token')) {
         setError('Error de autenticación. Por favor, inicia sesión nuevamente.');
@@ -61,12 +57,10 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getMyApplications();
       setApplications(data);
-      console.log(`✅ Fetched ${data.length} my applications`);
-    } catch (err) {
+      } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch my applications';
       setError(errorMessage);
-      console.error('❌ Error fetching my applications:', err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
@@ -78,10 +72,8 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getApplicationStats();
       setStats(data);
-      console.log('✅ Fetched application stats:', data);
-    } catch (err) {
-      console.error('❌ Error fetching application stats:', err);
-    }
+      } catch (err) {
+      }
   };
 
   /**
@@ -103,12 +95,10 @@ export const useApplications = () => {
         )
       );
       
-      console.log(`✅ Updated application ${applicationId} status to ${status}`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update application status';
       setError(errorMessage);
-      console.error('❌ Error updating application status:', err);
       return false;
     }
   };
@@ -132,12 +122,10 @@ export const useApplications = () => {
         )
       );
       
-      console.log(`✅ Updated my application ${applicationId}`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update my application';
       setError(errorMessage);
-      console.error('❌ Error updating my application:', err);
       return false;
     }
   };
@@ -153,14 +141,12 @@ export const useApplications = () => {
         setApplications(prev => 
           prev.filter(app => app.applicationId !== applicationId)
         );
-        console.log(`✅ Deleted application ${applicationId}`);
-      }
+        }
       
       return success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete application';
       setError(errorMessage);
-      console.error('❌ Error deleting application:', err);
       return false;
     }
   };
@@ -170,18 +156,14 @@ export const useApplications = () => {
    */
   const deleteApplications = async (applicationIds: string[]): Promise<boolean> => {
     try {
-      console.log(`🗑️ Attempting to delete ${applicationIds.length} applications:`, applicationIds);
-      
       const success = await applicationsApiService.deleteApplications(applicationIds);
       
       if (success) {
         setApplications(prev => 
           prev.filter(app => !applicationIds.includes(app.applicationId))
         );
-        console.log(`✅ Deleted ${applicationIds.length} applications`);
         setError(null); // Clear any previous errors
       } else {
-        console.log('❌ Delete operation returned false');
         setError('Failed to delete applications');
       }
       
@@ -189,7 +171,6 @@ export const useApplications = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete applications';
       setError(errorMessage);
-      console.error('❌ Error deleting applications:', err);
       return false;
     }
   };

@@ -38,8 +38,6 @@ export const useRouteProtection = () => {
       );
 
       if (isAccessingAdminRoute) {
-        console.error(`🚨 SECURITY VIOLATION: Postulante ${user.email} attempted admin route: ${location.pathname}`);
-        
         // SECURITY: Clear browser data and redirect
         sessionStorage.clear();
         localStorage.removeItem('adminCache');
@@ -68,7 +66,6 @@ export const useRouteProtection = () => {
         );
         
         if (isAdminPath) {
-          console.error('🚨 SECURITY: Prevented back/forward navigation to admin route');
           navigate('/postulante', { replace: true });
         }
       }
@@ -93,8 +90,6 @@ export const useRouteProtection = () => {
         );
         
         if (isAdminAPI) {
-          console.error(`🚨 SECURITY: Blocked admin API request: ${url}`);
-          
           logSecurityViolation({
             userId: user.userId,
             email: user.email,
@@ -150,8 +145,6 @@ const logSecurityViolation = (violation: {
   action: string;
 }) => {
   // Log to console for immediate visibility
-  console.error('🚨 SECURITY VIOLATION LOGGED:', violation);
-  
   // TODO: Send to monitoring service (CloudWatch, DataDog, etc.)
   // Example:
   // fetch('/api/security/violations', {

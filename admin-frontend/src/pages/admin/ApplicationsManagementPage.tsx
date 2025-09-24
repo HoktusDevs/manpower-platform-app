@@ -207,8 +207,7 @@ export const ApplicationsManagementPage: React.FC = () => {
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
         } catch (error) {
-          console.error('Error approving applications:', error);
-        }
+          }
       }
     },
     {
@@ -228,8 +227,7 @@ export const ApplicationsManagementPage: React.FC = () => {
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
         } catch (error) {
-          console.error('Error updating applications:', error);
-        }
+          }
       }
     },
     {
@@ -250,8 +248,7 @@ export const ApplicationsManagementPage: React.FC = () => {
             await fetchAllApplications(); // Refresh list
             setSelectedItems(new Set()); // Clear selection
           } catch (error) {
-            console.error('Error rejecting applications:', error);
-          }
+            }
         }
       }
     },
@@ -272,13 +269,11 @@ export const ApplicationsManagementPage: React.FC = () => {
             await fetchAllApplications(); // Refresh list
             setSelectedItems(new Set()); // Clear selection
           } catch (error) {
-            console.error('Error deleting applications:', error);
-          }
+            }
         }
       }
     }
   ];
-
 
   if (error) {
     return (

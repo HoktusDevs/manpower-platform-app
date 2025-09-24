@@ -129,12 +129,9 @@ class CognitoAuthService {
       }
     }
 
-    console.log('📋 Registrando usuario con atributos completos:', attributeList.map(attr => `${attr.getName()}: ${attr.getValue()}`));
-
     return new Promise((resolve) => {
       this.userPool!.signUp(email, password, attributeList, [], (err, result) => {
         if (err) {
-          console.error('Registration error:', err);
           resolve({
             success: false,
             message: this.translateCognitoError(err.message),
@@ -143,8 +140,6 @@ class CognitoAuthService {
         }
 
         if (result?.user) {
-          console.log('✅ Usuario registrado exitosamente con todos los atributos en Cognito');
-
           // Mantener localStorage solo como backup/cache para aplicaciones
           if (role === 'postulante') {
             const completeUserData = {
@@ -163,8 +158,7 @@ class CognitoAuthService {
             };
 
             localStorage.setItem('userApplicationData', JSON.stringify(completeUserData));
-            console.log('💾 Datos guardados como backup en localStorage:', completeUserData);
-          }
+            }
 
           // Don't return user data immediately after registration
           // This prevents token mismatch issues - user should login after registration
@@ -219,7 +213,6 @@ class CognitoAuthService {
               },
             });
           } catch (error) {
-            console.error('Error parsing user data:', error);
             resolve({
               success: false,
               message: 'Error parsing user information',
@@ -228,7 +221,6 @@ class CognitoAuthService {
         },
 
         onFailure: (err) => {
-          console.error('Login error:', err);
           resolve({
             success: false,
             message: this.translateCognitoError(err.message),
@@ -263,8 +255,7 @@ class CognitoAuthService {
       try {
         this.currentUser.signOut();
       } catch (error) {
-        console.warn('Error signing out current user:', error);
-      }
+        }
       this.currentUser = null;
     }
   }
@@ -283,7 +274,6 @@ class CognitoAuthService {
     try {
       const user = this.getCurrentUser();
       if (!user || !user.role) {
-        console.warn('🚨 SECURITY: No user or role found');
         return false;
       }
 
@@ -292,7 +282,6 @@ class CognitoAuthService {
       const idToken = localStorage.getItem('cognito_id_token');
       
       if (!accessToken && !idToken) {
-        console.warn('🚨 SECURITY: No tokens found');
         return false;
       }
       
@@ -304,7 +293,6 @@ class CognitoAuthService {
       const now = Math.floor(Date.now() / 1000);
       
       if (tokenPayload.exp && tokenPayload.exp < now) {
-        console.warn('🚨 SECURITY: Access token expired');
         return false;
       }
 
@@ -312,22 +300,15 @@ class CognitoAuthService {
       // In Cognito, 'sub' is the user ID
       // Only check if both values exist to avoid false positives
       if (tokenPayload.sub && user.userId && tokenPayload.sub !== user.userId) {
-        console.warn('🚨 SECURITY: Token user ID mismatch - updating user data', {
-          tokenSub: tokenPayload.sub,
-          userId: user.userId
-        });
-        
         // Update user data with correct ID from token instead of clearing everything
         const updatedUser = { ...user, userId: tokenPayload.sub };
         this.setUserData(updatedUser);
         
-        console.log('✅ User ID synchronized with token');
         return true;
       }
 
       return true;
     } catch (error) {
-      console.error('🚨 SECURITY: Token validation failed:', error);
       return false;
     }
   }
@@ -366,18 +347,14 @@ class CognitoAuthService {
    */
   async refreshUserSession(): Promise<boolean> {
     try {
-      console.log('🔄 Refreshing user session...');
       const newToken = await this.refreshAccessToken();
 
       if (newToken) {
-        console.log('✅ User session refreshed successfully');
         return true;
       }
 
-      console.error('❌ Failed to refresh user session');
       return false;
     } catch (error) {
-      console.error('❌ Error refreshing user session:', error);
       return false;
     }
   }
@@ -401,17 +378,13 @@ class CognitoAuthService {
 
       this.currentUser.updateAttributes(attributeList, (err, result) => {
         if (err) {
-          console.error('❌ Failed to update user role:', err);
           reject(err);
           return;
         }
         
-        console.log('✅ User role updated successfully:', result);
-        
         // Refresh the session to get updated tokens
         this.currentUser!.getSession((err: Error | null, session: CognitoUserSession | null) => {
           if (err) {
-            console.error('❌ Failed to refresh session after role update:', err);
             reject(err);
             return;
           }
@@ -426,7 +399,6 @@ class CognitoAuthService {
             localStorage.setItem('cognito_access_token', accessToken);
             localStorage.setItem('cognito_refresh_token', refreshToken);
             
-            console.log('✅ Session refreshed with new role');
             resolve(true);
           } else {
             reject(new Error('No session after refresh'));
@@ -460,30 +432,25 @@ class CognitoAuthService {
           const idPayload = JSON.parse(atob(idToken.split('.')[1]));
           hasRoleClaim = Boolean(idPayload['custom:role']);
         } catch {
-          console.warn('Could not parse ID token for role check');
-        }
+          }
       }
       
       // If missing role claim, force logout immediately (but not during session renewal)
       if (!hasRoleClaim && !isSessionRenewal) {
-        console.error('🚨 Token missing custom:role claim - forcing logout');
         this.logout();
         localStorage.clear();
         window.location.href = '/login?reason=missing_role';
         return null;
       } else if (!hasRoleClaim && isSessionRenewal) {
-        console.warn('⚠️ Token missing custom:role claim during session renewal - allowing continuation');
-      }
+        }
       
       // If token is expired, try to refresh
       if (payload.exp <= now + 300) {
-        console.log('🔄 Token expired, refreshing...');
         return await this.refreshAccessToken();
       }
 
       return accessToken;
     } catch (error) {
-      console.error('Error checking token validity:', error);
       return null;
     }
   }
@@ -492,23 +459,18 @@ class CognitoAuthService {
    * Refresh access token
    */
   private async refreshAccessToken(): Promise<string | null> {
-    console.log('🔄 Attempting to refresh access token...');
-    
     if (!this.userPool) {
-      console.error('❌ UserPool not initialized for token refresh');
       return null;
     }
 
     const refreshToken = localStorage.getItem('cognito_refresh_token');
     if (!refreshToken) {
-      console.error('❌ No refresh token available');
       return null;
     }
 
     // Get user data from localStorage to reconstruct CognitoUser
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
-      console.error('❌ No user data found for token refresh');
       return null;
     }
 
@@ -518,35 +480,28 @@ class CognitoAuthService {
       
       // If no current user, reconstruct from stored data
       if (!cognitoUser) {
-        console.log('🔧 Reconstructing CognitoUser from stored data...');
         cognitoUser = new CognitoUser({
           Username: currentUser.email,
           Pool: this.userPool!,
         });
       }
 
-      console.log('🔍 Calling cognitoUser.getSession()...');
       cognitoUser.getSession((err: Error | null, session: CognitoUserSession) => {
         if (err) {
-          console.error('❌ Error refreshing token:', err.message);
-          
           // If session is invalid, the refresh token might be expired
           if (err.message.includes('Refresh Token has expired') || 
               err.message.includes('NotAuthorizedException')) {
-            console.error('❌ Refresh token expired - need to re-authenticate');
-          }
+            }
           
           resolve(null);
           return;
         }
 
         if (session && session.isValid()) {
-          console.log('✅ Session refreshed successfully');
           this.currentUser = cognitoUser; // Update current user reference
           this.saveTokens(session);
           resolve(session.getAccessToken().getJwtToken());
         } else {
-          console.error('❌ Invalid session after refresh');
           resolve(null);
         }
       });
@@ -701,7 +656,6 @@ class CognitoAuthService {
         // Now change password
         cognitoUser!.changePassword(oldPassword, newPassword, (err) => {
           if (err) {
-            console.error('Change password error:', err);
             resolve({
               success: false,
               message: this.translateCognitoError(err.message),

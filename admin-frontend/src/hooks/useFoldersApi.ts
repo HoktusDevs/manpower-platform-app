@@ -34,7 +34,6 @@ export const useGetAllFolders = (limit?: number, nextToken?: string) => {
         const response = await FoldersApiService.getAllFolders(limit, nextToken);
         return response.folders || [];
       } catch (error) {
-        console.error('Error fetching folders:', error);
         throw error;
       }
     },
@@ -56,7 +55,6 @@ export const useGetFolder = (folderId: string, enabled = true) => {
         const response = await FoldersApiService.getFolder(folderId);
         return response.folder;
       } catch (error) {
-        console.error('Error fetching folder:', error);
         throw error;
       }
     },
@@ -79,7 +77,6 @@ export const useGetFolderChildren = (folderId: string, limit?: number) => {
         const response = await FoldersApiService.getFolderChildren(folderId, limit);
         return response.folders || [];
       } catch (error) {
-        console.error('Error fetching folder children:', error);
         throw error;
       }
     },
@@ -102,7 +99,6 @@ export const useGetRootFolders = () => {
         const response = await FoldersApiService.getRootFolders();
         return response.folders || [];
       } catch (error) {
-        console.error('Error fetching root folders:', error);
         throw error;
       }
     },
@@ -203,7 +199,6 @@ export const useCreateFolder = (onSuccess?: () => void, onError?: (error: Error)
         });
       });
       
-      console.log('Folder created successfully:', data);
       onSuccess?.();
     },
     onError: (error, _variables, context) => {
@@ -213,7 +208,6 @@ export const useCreateFolder = (onSuccess?: () => void, onError?: (error: Error)
           queryClient.setQueryData(queryKey, data);
         });
       }
-      console.error('Error creating folder:', error);
       onError?.(error);
     },
     onSettled: () => {
@@ -236,7 +230,6 @@ export const useUpdateFolder = () => {
       try {
         return await FoldersApiService.updateFolder(folderId, input);
       } catch (error) {
-        console.error('Error updating folder:', error);
         throw error;
       }
     },
@@ -285,8 +278,7 @@ export const useUpdateFolder = () => {
       return { previousData };
     },
     onSuccess: (data) => {
-      console.log('Folder updated successfully:', data);
-    },
+      },
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
@@ -294,8 +286,7 @@ export const useUpdateFolder = () => {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      console.error('Error updating folder:', error);
-    },
+      },
     onSettled: () => {
       // Don't invalidate - we already updated optimistically and with real data
       // queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
@@ -316,7 +307,6 @@ export const useDeleteFolder = (onJobSync?: (folderId: string, folderType: strin
       try {
         return await FoldersApiService.deleteFolder(folderId);
       } catch (error) {
-        console.error('Error deleting folder:', error);
         throw error;
       }
     },
@@ -361,7 +351,6 @@ export const useDeleteFolder = (onJobSync?: (folderId: string, folderType: strin
       return { previousData };
     },
     onSuccess: (data, folderId) => {
-      console.log('Folder deleted successfully:', data);
       // The optimistic update already removed the folder, so we just confirm success
       // No need to update cache again since deletion is already reflected
       
@@ -377,8 +366,7 @@ export const useDeleteFolder = (onJobSync?: (folderId: string, folderType: strin
           queryClient.setQueryData(queryKey, data);
         });
       }
-      console.error('Error deleting folder:', error);
-    },
+      },
     onSettled: () => {
       // Don't invalidate - we already updated optimistically and with real data
       // queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
@@ -399,7 +387,6 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
       try {
         return await FoldersApiService.deleteFolders(folderIds);
       } catch (error) {
-        console.error('Error deleting folders:', error);
         throw error;
       }
     },
@@ -444,7 +431,6 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
       return { previousData };
     },
     onSuccess: (data) => {
-      console.log('Folders deleted successfully:', data);
       // The optimistic update already removed the folders, so we just confirm success
       // No need to update cache again since deletion is already reflected
       onSuccess?.();
@@ -456,7 +442,6 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
           queryClient.setQueryData(queryKey, data);
         });
       }
-      console.error('Error deleting folders:', error);
       onError?.(error);
     },
     onSettled: () => {

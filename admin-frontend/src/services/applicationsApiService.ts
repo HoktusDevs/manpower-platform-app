@@ -51,8 +51,8 @@ export interface UpdateApplicationInput {
 
 class ApplicationsApiService {
   private getHeaders(): HeadersInit {
-    console.log('📡 Making request to applications API (no auth required)');
-    
+    console.log('Getting headers for API request');
+
     return {
       'Content-Type': 'application/json',
     };
@@ -78,7 +78,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<Application[]>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to fetch all applications:', error);
       throw new Error(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -95,7 +94,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<Application[]>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to fetch my applications:', error);
       throw new Error(`Failed to fetch my applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -112,7 +110,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<ApplicationStats>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to fetch application stats:', error);
       throw new Error(`Failed to fetch application stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -130,7 +127,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to create application:', error);
       throw new Error(`Failed to create application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -151,7 +147,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to update application status:', error);
       throw new Error(`Failed to update application status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -172,7 +167,6 @@ class ApplicationsApiService {
 
       return await this.handleResponse<Application>(response);
     } catch (error) {
-      console.error('❌ Applications API: Failed to update my application:', error);
       throw new Error(`Failed to update my application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -189,7 +183,6 @@ class ApplicationsApiService {
 
       return response.ok;
     } catch (error) {
-      console.error('❌ Applications API: Failed to delete application:', error);
       throw new Error(`Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -199,8 +192,6 @@ class ApplicationsApiService {
    */
   async deleteApplications(applicationIds: string[]): Promise<boolean> {
     try {
-      console.log(`🗑️ Deleting ${applicationIds.length} applications via API`);
-      
       const response = await fetch(`${API_CONFIG.applications.baseUrl}${API_CONFIG.applications.endpoints.bulk}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
@@ -209,22 +200,17 @@ class ApplicationsApiService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Applications API: Delete failed:', response.status, errorText);
         throw new Error(`Delete failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Delete response:', result);
-      
       // Verificar que la respuesta del backend sea exitosa
       if (!result.success) {
-        console.error('❌ Backend returned success: false:', result.message);
         throw new Error(result.message || 'Delete operation failed');
       }
       
       return true;
     } catch (error) {
-      console.error('❌ Applications API: Failed to delete applications:', error);
       throw new Error(`Failed to delete applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

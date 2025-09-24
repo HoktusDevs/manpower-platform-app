@@ -32,7 +32,6 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
         setError(response.error || 'Error cargando documentos');
       }
     } catch (error) {
-      console.error('Error loading documents:', error);
       setError('Error de conexión');
     } finally {
       setLoading(false);
@@ -47,11 +46,9 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
         // Abrir en nueva pestaña para descarga
         window.open(response.downloadUrl, '_blank');
       } else {
-        console.error('Error downloading document:', response.error);
-      }
+        }
     } catch (error) {
-      console.error('Error downloading document:', error);
-    }
+      }
   };
 
   const handleView = (documentId: string) => {

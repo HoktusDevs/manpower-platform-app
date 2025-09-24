@@ -79,7 +79,6 @@ class ApplicationsService {
 
       return await response.json();
     } catch (error) {
-      console.error(`HTTP request failed for ${endpoint}:`, error);
       throw error;
     }
   }
@@ -130,7 +129,6 @@ class ApplicationsService {
         activeApplications,
       };
     } catch (error) {
-      console.error('Error getting dashboard stats:', error);
       return {
         totalApplicants: 0,
         approvedApplications: 0,
@@ -180,7 +178,6 @@ class ApplicationsService {
         period: group.periodLabel,
       }));
     } catch (error) {
-      console.error('Error getting activity data:', error);
       return this.generateEmptyData(filter, granularity);
     }
   }
@@ -254,12 +251,13 @@ class ApplicationsService {
   ): ActivityData[] {
     const now = new Date();
     const data: ActivityData[] = [];
-    
-    console.log('🔍 DEBUG: Today is', {
-      now: now.toISOString(),
+
+    console.log('Generating activity data for filter:', filter);
+    data.push({
       dateString: now.toISOString().split('T')[0],
       dayOfWeek: now.getDay(),
-      dayName: now.toLocaleDateString('es-ES', { weekday: 'long' })
+      dayName: now.toLocaleDateString('es-ES', { weekday: 'long' }),
+      count: 0
     });
     
     // Generar la semana actual (lunes a domingo)
@@ -272,12 +270,8 @@ class ApplicationsService {
       date.setDate(now.getDate() + mondayOffset + i); // Empezar desde el lunes de esta semana
       const dateString = date.toISOString().split('T')[0];
       
-      console.log('🔍 DEBUG: Processing day', {
-        i,
-        dateString,
-        dayName: date.toLocaleDateString('es-ES', { weekday: 'short' })
-      });
-      
+      console.log('Processing date:', dateString);
+
       // Contar aplicaciones para este día
       const dayApplications = applications.filter(app => {
         const appDate = new Date(app.createdAt);
@@ -285,24 +279,15 @@ class ApplicationsService {
         const matches = appDateString === dateString;
         
         if (matches) {
-          console.log('🔍 DEBUG: Found match!', {
-            appId: app.applicationId,
-            appDate: app.createdAt,
-            appDateString,
-            targetDate: dateString
-          });
+          console.log('Found match for date:', dateString);
         }
-        
+
         return matches;
       });
       
       const count = dayApplications.length;
-      
-      console.log('🔍 DEBUG: Day result', {
-        dateString,
-        count,
-        dayName: date.toLocaleDateString('es-ES', { weekday: 'short' })
-      });
+
+      console.log('Applications count for', dateString, ':', count);
       
       data.push({
         date: dateString,
@@ -313,7 +298,6 @@ class ApplicationsService {
       });
     }
     
-    console.log('🔍 DEBUG: Final week data', data);
     return data;
   }
 

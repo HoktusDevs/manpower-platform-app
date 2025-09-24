@@ -109,7 +109,6 @@ class AWSNativeService {
 
       return result.Items as Application[] || [];
     } catch (error) {
-      console.error('❌ Error fetching applications:', error);
       throw new Error('Failed to fetch applications');
     }
   }
@@ -158,7 +157,6 @@ class AWSNativeService {
 
       return application;
     } catch (error) {
-      console.error('❌ Error creating application:', error);
       throw new Error('Failed to create application');
     }
   }
@@ -214,7 +212,6 @@ class AWSNativeService {
 
       return result.Attributes as Application;
     } catch (error) {
-      console.error('❌ Error updating application:', error);
       throw new Error('Failed to update application');
     }
   }
@@ -229,7 +226,6 @@ class AWSNativeService {
 
     const user = cognitoAuthService.getCurrentUser();
     if (!user || user.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to access all applications');
       throw new Error('Unauthorized: Admin access required');
     }
 
@@ -249,7 +245,6 @@ class AWSNativeService {
 
       return result.Items as Application[] || [];
     } catch (error) {
-      console.error('❌ Error fetching all applications:', error);
       throw new Error('Failed to fetch applications');
     }
   }
@@ -268,7 +263,6 @@ class AWSNativeService {
 
     const user = cognitoAuthService.getCurrentUser();
     if (!user || user.role !== 'admin') {
-      console.error('🚨 SECURITY: Non-admin attempted to update application status');
       throw new Error('Unauthorized: Admin access required');
     }
 
@@ -293,11 +287,9 @@ class AWSNativeService {
 
       return result.Attributes as Application;
     } catch (error) {
-      console.error('❌ Error updating application status:', error);
       throw new Error('Failed to update application status');
     }
   }
-
 
   /**
    * Check if service is initialized

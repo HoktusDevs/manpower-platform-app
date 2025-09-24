@@ -111,11 +111,9 @@ class AnalyticsService {
 
       if (systemUsed === 'aws_native') {
         await this.sendToAWSNative([event]);
-        console.log('✅ Analytics event sent via AWS-Native');
-      } else {
+        } else {
         await this.sendToLegacyAPI([event]);
-        console.log('📊 Analytics event sent via Legacy API');
-      }
+        }
 
       // Remove from queue after successful send
       this.queue = this.queue.filter(e => e !== event);
@@ -145,7 +143,6 @@ class AnalyticsService {
         });
       }
 
-      console.warn('⚠️ Failed to send analytics event:', error);
       // Event remains in queue for retry
     }
   }
@@ -162,8 +159,7 @@ class AnalyticsService {
     // - CloudWatch for monitoring and dashboards
     // - S3 for long-term storage and analysis
     
-    console.log('🚀 Events sent to AWS Kinesis:', events.length);
-  }
+    }
 
   /**
    * Legacy: Send events to legacy analytics API
@@ -182,8 +178,7 @@ class AnalyticsService {
     // };
 
     // In production, this would POST to legacy analytics endpoint
-    console.log('📊 Events sent to Legacy Analytics API:', events.length);
-  }
+    }
 
   /**
    * Flush queued events periodically
@@ -215,9 +210,7 @@ class AnalyticsService {
 
       // Clear queue on success
       this.queue = [];
-      console.log(`✅ Flushed ${eventsToFlush.length} queued analytics events`);
-    } catch (error) {
-      console.warn('⚠️ Failed to flush analytics queue:', error);
+      } catch (error) {
       // Keep events in queue for next retry
     }
   }
@@ -276,9 +269,7 @@ class AnalyticsService {
     localStorage.setItem('analytics_consent', consent.toString());
     
     if (consent) {
-      console.log('✅ Analytics consent granted');
-    } else {
-      console.log('❌ Analytics consent revoked');
+      } else {
       this.queue = []; // Clear queue if consent is revoked
     }
   }

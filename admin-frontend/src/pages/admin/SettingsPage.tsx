@@ -53,7 +53,6 @@ export function SettingsPage(): ReactNode {
         setPasswordError(response.message || 'Error al cambiar la contraseña');
       }
     } catch (error) {
-      console.error('Error changing password:', error);
       setPasswordError('Error al cambiar la contraseña. Verifica tu contraseña actual.');
     } finally {
       setIsChangingPassword(false);

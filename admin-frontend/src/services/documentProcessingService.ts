@@ -72,7 +72,6 @@ class DocumentProcessingService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error processing documents:', error);
       throw error;
     }
   }
@@ -90,7 +89,6 @@ class DocumentProcessingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error checking health:', error);
       throw error;
     }
   }
@@ -114,7 +112,6 @@ class DocumentProcessingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error sending WebSocket notification:', error);
       throw error;
     }
   }
@@ -132,7 +129,6 @@ class DocumentProcessingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting documents:', error);
       throw error;
     }
   }
@@ -156,7 +152,6 @@ class DocumentProcessingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error deleting document:', error);
       throw error;
     }
   }
@@ -181,7 +176,6 @@ class DocumentProcessingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error updating document decision:', error);
       throw error;
     }
   }

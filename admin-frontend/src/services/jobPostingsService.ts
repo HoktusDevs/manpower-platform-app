@@ -457,8 +457,7 @@ class JobPostingsService {
         })
       );
     } catch (error) {
-      console.error('Failed to increment view count:', error);
-    }
+      }
   }
 
   private async incrementApplicationCount(jobId: string, idToken?: string): Promise<void> {
@@ -476,8 +475,7 @@ class JobPostingsService {
         })
       );
     } catch (error) {
-      console.error('Failed to increment application count:', error);
-    }
+      }
   }
 
   // Search job postings by text

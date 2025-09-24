@@ -264,8 +264,7 @@ const FormsManager: React.FC = () => {
         const jobs = await jobPostingsService.listJobPostings({});
         setJobPostings(jobs);
       } catch (error) {
-        console.error('Failed to load job postings:', error);
-      }
+        }
     };
     
     loadJobPostings();
@@ -286,8 +285,7 @@ const FormsManager: React.FC = () => {
       setShowFormBuilder(false);
       setSelectedJobId('');
     } catch (error) {
-      console.error('Failed to create form:', error);
-    }
+      }
   };
 
   const handleUpdateForm = async (title: string, description: string, fields: FormField[]) => {
@@ -298,8 +296,7 @@ const FormsManager: React.FC = () => {
       setShowFormBuilder(false);
       setEditingForm(undefined);
     } catch (error) {
-      console.error('Failed to update form:', error);
-    }
+      }
   };
 
   const handleDeleteForm = async (formId: string) => {
@@ -310,8 +307,7 @@ const FormsManager: React.FC = () => {
     try {
       await deleteForm(formId);
     } catch (error) {
-      console.error('Failed to delete form:', error);
-    }
+      }
   };
 
   const handleEditForm = (form: JobApplicationForm) => {
@@ -323,8 +319,7 @@ const FormsManager: React.FC = () => {
     try {
       await updateForm(formId, { status: 'active' });
     } catch (error) {
-      console.error('Failed to publish form:', error);
-    }
+      }
   };
 
   if (!user || user.role !== 'admin') {

@@ -60,7 +60,6 @@ class DocumentsService {
         documents: folderDocuments,
       };
     } catch (error) {
-      console.error('DocumentsService: Error getting documents by folder:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -102,7 +101,6 @@ class DocumentsService {
         documents: folderDocuments,
       };
     } catch (error) {
-      console.error('DocumentsService: Error getting all documents:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -119,11 +117,8 @@ class DocumentsService {
       const response = await applicantDataService.getApplicantDocuments();
       
       if (!response.success || !response.documents) {
-        console.log('No hay documentos disponibles');
         return [];
       }
-
-      console.log('Documentos encontrados:', response.documents);
 
       // Convertir formato de ApplicantDocument a DocumentInfo
       return response.documents.map((doc: any) => ({
@@ -141,7 +136,6 @@ class DocumentsService {
         ocrResult: doc.ocrResult || null,
       }));
     } catch (error) {
-      console.error('DocumentsService: Error getting stored documents:', error);
       return [];
     }
   }
@@ -175,7 +169,6 @@ class DocumentsService {
         document,
       };
     } catch (error) {
-      console.error('DocumentsService: Error getting document by ID:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -203,7 +196,6 @@ class DocumentsService {
         downloadUrl: documentResult.document.fileUrl,
       };
     } catch (error) {
-      console.error('DocumentsService: Error downloading document:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -232,7 +224,6 @@ class DocumentsService {
         stats,
       };
     } catch (error) {
-      console.error('DocumentsService: Error getting document stats:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',

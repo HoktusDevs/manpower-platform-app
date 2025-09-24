@@ -85,7 +85,6 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         setResponse(prev => [...(prev || []), { recipient: recipient.name, data }]);
       }
     } catch (error) {
-      console.error('Error details:', error);
       setResponse({ 
         error: 'Error al enviar mensaje de plantilla: ' + error,
         details: 'Posible problema de CORS. Verifica que el servidor permita requests desde este dominio.',

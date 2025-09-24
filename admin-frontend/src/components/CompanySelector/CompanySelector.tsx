@@ -39,7 +39,6 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
 
   // Build company options from folders
   const buildCompanyOptions = (folders: FolderRow[]): CompanyOption[] => {
-    console.log('CompanySelector - Raw folders data:', folders);
     const options: CompanyOption[] = [];
     
     // Create a map for quick parent lookup
@@ -84,8 +83,6 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
       });
     });
 
-    console.log('CompanySelector - Built options before sort:', options);
-    
     // Simple sort by name for accordion display (hierarchy is handled visually)
     const sortedOptions = [...options].sort((a, b) => {
       const aFolderName = a.path[a.path.length - 1] || '';
@@ -93,7 +90,6 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
       return aFolderName.localeCompare(bFolderName);
     });
     
-    console.log('CompanySelector - Final sorted options:', sortedOptions);
     return sortedOptions;
   };
 

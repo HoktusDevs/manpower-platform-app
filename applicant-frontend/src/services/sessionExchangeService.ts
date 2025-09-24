@@ -27,7 +27,6 @@ export class SessionExchangeService {
    */
   static async exchangeSessionKey(sessionKey: string): Promise<{ success: boolean; message: string; tokens?: { accessToken: string; refreshToken: string; idToken: string; expiresIn: number }; user?: { id: string; email: string; userType: string } }> {
     try {
-      console.log('🔄 Exchanging sessionKey for tokens...');
 
       const response = await fetch(`${this.AUTH_SERVICE_URL}/auth/exchange-session`, {
         method: 'POST',
@@ -39,7 +38,6 @@ export class SessionExchangeService {
 
       const data: ExchangeSessionResponse = await response.json();
 
-
       if (!response.ok) {
         console.error('❌ Session exchange failed:', data.message);
         return {
@@ -49,18 +47,15 @@ export class SessionExchangeService {
       }
 
       if (data.success && data.user && data.tokens) {
-        // Store tokens in localStorage using same keys as useAuth
         localStorage.setItem('cognito_access_token', data.tokens.accessToken);
         localStorage.setItem('cognito_id_token', data.tokens.idToken);
         localStorage.setItem('user', JSON.stringify({
           sub: data.user.id,
           email: data.user.email,
-          fullName: data.user.email.split('@')[0], // Use email prefix as fullName
+          fullName: data.user.email.split('@')[0],
           'custom:role': data.user.userType,
           email_verified: true,
         }));
-
-        console.log('✅ Session exchanged successfully for user:', data.user.email);
 
         return {
           success: true,
@@ -91,10 +86,8 @@ export class SessionExchangeService {
     const sessionKey = urlParams.get('sessionKey');
     
     if (sessionKey) {
-      // Clean up URL after getting sessionKey
       const newUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, newUrl);
-      console.log('✨ URL cleaned, sessionKey extracted');
     }
 
     return sessionKey;

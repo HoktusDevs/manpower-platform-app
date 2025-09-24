@@ -40,11 +40,7 @@ class ApplicantDataService {
       // Obtener documentos REALES desde localStorage del applicant-frontend
       const storedDocs = localStorage.getItem('user_documents');
       
-      console.log('🔍 BUSCANDO DOCUMENTOS EN localStorage...');
-      console.log('📦 storedDocs:', storedDocs);
-      
       if (!storedDocs) {
-        console.log('❌ No hay documentos en localStorage');
         return {
           success: true,
           documents: [],
@@ -52,9 +48,6 @@ class ApplicantDataService {
       }
 
       const documents = JSON.parse(storedDocs);
-      console.log('📄 DOCUMENTOS ENCONTRADOS:', documents);
-      console.log('📊 Total documentos:', documents.length);
-
       // Convertir formato de localStorage a ApplicantDocument
       const applicantDocuments: ApplicantDocument[] = documents.map((doc: any) => ({
         documentId: doc.documentId,
@@ -71,14 +64,11 @@ class ApplicantDataService {
         ocrResult: doc.ocrResult || null,
       }));
 
-      console.log('✅ DOCUMENTOS PROCESADOS:', applicantDocuments);
-
       return {
         success: true,
         documents: applicantDocuments,
       };
     } catch (error) {
-      console.error('ApplicantDataService: Error getting applicant documents:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -109,7 +99,6 @@ class ApplicantDataService {
         documents: applicationDocuments,
       };
     } catch (error) {
-      console.error('ApplicantDataService: Error getting documents by application:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -140,7 +129,6 @@ class ApplicantDataService {
         documents: userDocuments,
       };
     } catch (error) {
-      console.error('ApplicantDataService: Error getting documents by user:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',
@@ -178,7 +166,6 @@ class ApplicantDataService {
         stats,
       };
     } catch (error) {
-      console.error('ApplicantDataService: Error getting document stats:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error de conexión',

@@ -106,7 +106,6 @@ const getEmptyDetails = (filter: ActivityFilter): string => {
   }
 };
 
-
 const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], granularity: TimeGranularity, filter: ActivityFilter }) => {
   const maxCount = Math.max(...data.map(item => item.count), 1); // Mínimo 1 para evitar división por 0
   const chartHeight = 200;
@@ -337,7 +336,6 @@ export function RecentActivity(): ReactNode {
       setActivityData(data);
       setHasLoadedData(true);
     } catch (error) {
-      console.error('Error loading activity data:', error);
       setActivityData(generateEmptyData(filter, granularity));
     } finally {
       setIsLoading(false);

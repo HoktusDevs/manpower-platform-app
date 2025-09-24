@@ -66,7 +66,6 @@ export const SecurityBoundary: React.FC<SecurityBoundaryProps> = ({ children }) 
 
         setIsSecure(true);
       } catch (error) {
-        console.error('Security validation error:', error);
         setIsSecure(false);
         forceSecureLogout('Security validation failed');
       }
