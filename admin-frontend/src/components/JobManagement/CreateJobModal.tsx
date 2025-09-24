@@ -401,6 +401,12 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
         folderId: folderId
       };
 
+      // Debug: Log what we're sending
+      console.log('🚀 Sending job data:', createJobInput);
+      console.log('📁 Folder ID:', folderId);
+      console.log('🏢 Company Name:', jobData.companyName);
+      console.log('📍 Location:', jobData.location);
+
       if (isEditMode && editingJobId) {
         // Update existing job
         await jobsService.updateJob(editingJobId, createJobInput);
