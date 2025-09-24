@@ -8,6 +8,7 @@ import {
   useDeleteFolders,
 } from '../../../hooks/useFoldersApi';
 import { useFolderJobSync } from '../../../hooks/useFolderJobSync';
+import { jobsService, type CreateJobInput } from '../../../services/jobsService';
 import type {
   FolderRow,
   CreateFolderData,
@@ -39,7 +40,7 @@ export const useFoldersState = (
 
   // React Query hooks
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
-  const { syncJobsAfterFolderDeletion } = useFolderJobSync();
+  const { syncJobsAfterFolderDeletion, syncJobsAfterMultipleFolderDeletion } = useFolderJobSync();
   const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
   const updateFolderMutation = useUpdateFolder();
   const deleteFolderMutation = useDeleteFolder(syncJobsAfterFolderDeletion);
@@ -98,9 +99,53 @@ export const useFoldersState = (
 
       // Console.log for tracking
       if (result.folder) {
+        console.log('📁 Carpeta creada:', result.folder);
+        
+        // Si es carpeta tipo "Cargo", crear job automáticamente
+        if (data.type === 'Cargo' && result.folder.folderId) {
+          console.log('🚀 Creando job automáticamente para carpeta tipo "Cargo"...');
+          await createJobForCargoFolder(result.folder.folderId, data.name);
         }
+      }
     } catch (error) {
       throw error;
+    }
+  };
+
+  /**
+   * Create job automatically for Cargo type folder
+   */
+  const createJobForCargoFolder = async (folderId: string, folderName: string): Promise<void> => {
+    try {
+      console.log('🚀 Creando job para carpeta tipo "Cargo":', folderName);
+      
+      // Crear job básico basado en el nombre de la carpeta
+      const jobInput: CreateJobInput = {
+        title: folderName,
+        description: `Descripción del cargo: ${folderName}`,
+        companyName: 'Empresa por definir',
+        requirements: 'Requisitos por definir',
+        salary: '',
+        location: 'Por definir',
+        employmentType: 'FULL_TIME',
+        experienceLevel: 'ENTRY_LEVEL',
+        benefits: '',
+        schedule: '',
+        expiresAt: undefined,
+        requiredDocuments: [],
+        folderId: folderId
+      };
+
+      const response = await jobsService.createJob(jobInput);
+      
+      if (response.success) {
+        console.log('✅ Job creado automáticamente:', response.jobs?.[0]?.jobId);
+      } else {
+        console.error('❌ Error al crear job automáticamente:', response.message);
+      }
+    } catch (error) {
+      console.error('❌ Error en createJobForCargoFolder:', error);
+      // No lanzar error para no romper la creación de carpeta
     }
   };
 
@@ -182,11 +227,24 @@ export const useFoldersState = (
       });
 
       console.log('Deleting folders in order:', sortedIdsToDelete.map(id => {
-        const folder = foldersMap[id];
+        const folder = folders.find(f => f.id === id);
         return { id, name: folder?.name, depth: getFolderDepth(id) };
       }));
 
       await deleteFoldersMutation.mutateAsync(sortedIdsToDelete);
+      
+      // Sync jobs after multiple folder deletion
+      const foldersToDelete = allIdsToDelete.map(id => {
+        const folder = folders.find(f => f.id === id);
+        return { id, type: folder?.type || 'Unknown' };
+      });
+      
+      const folderIds = foldersToDelete.map(f => f.id);
+      const folderTypes = foldersToDelete.map(f => f.type);
+      
+      console.log('🗑️ Sincronizando jobs después de eliminación múltiple...');
+      await syncJobsAfterMultipleFolderDeletion(folderIds, folderTypes);
+      
     } catch (error) {
       throw error;
     }
@@ -285,7 +343,14 @@ export const useFoldersState = (
    * Force reload all folders from backend
    */
   const refreshFolders = async (): Promise<void> => {
-    await loadFolders();
+    console.log('🔄 refreshFolders: Iniciando recarga de carpetas...');
+    try {
+      // Forzar invalidación de cache y recarga
+      await loadFolders();
+      console.log('✅ refreshFolders: Carpetas recargadas exitosamente');
+    } catch (error) {
+      console.error('❌ refreshFolders: Error al recargar carpetas:', error);
+    }
   };
 
   return {

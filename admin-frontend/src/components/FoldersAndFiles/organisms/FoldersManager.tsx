@@ -526,18 +526,18 @@ export const FoldersManager: React.FC = () => {
       )}
 
         {/* Create Job Modal */}
-        <CreateJobModal
-          isOpen={showCreateJobModal}
-          onClose={() => setShowCreateJobModal(false)}
-          onSuccess={() => {
-            setShowCreateJobModal(false);
-            // Optionally refresh folders or show success message
-          }}
-          preselectedCompany={selectedCompanyForJob}
-          context="folders-management"
-          selectedFolderId={selectedCompanyForJob ? getFolderIdByName(selectedCompanyForJob) : undefined}
-          parentFolderPath={selectedFolderPath.join(' > ')}
-        />
+    <CreateJobModal
+      isOpen={showCreateJobModal}
+      onClose={() => setShowCreateJobModal(false)}
+      onSuccess={() => {
+        setShowCreateJobModal(false);
+        // La carga optimista ya maneja la actualización de la UI
+      }}
+      preselectedCompany={selectedCompanyForJob}
+      context="folders-management"
+      selectedFolderId={selectedCompanyForJob ? getFolderIdByName(selectedCompanyForJob) : undefined}
+      parentFolderPath={selectedFolderPath.join(' > ')}
+    />
     </div>
   );
 };

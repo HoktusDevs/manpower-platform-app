@@ -351,12 +351,24 @@ export const useDeleteFolder = (onJobSync?: (folderId: string, folderType: strin
       return { previousData };
     },
     onSuccess: (data, folderId) => {
+      console.log('🗑️ useDeleteFolder onSuccess: Carpeta eliminada');
+      console.log('🗑️ Folder ID:', folderId);
+      console.log('🗑️ Data:', data);
+      console.log('🗑️ onJobSync callback:', !!onJobSync);
+      console.log('🗑️ data.folder:', data?.folder);
+      
       // The optimistic update already removed the folder, so we just confirm success
       // No need to update cache again since deletion is already reflected
       
       // Trigger job sync if callback provided
-      if (onJobSync && data?.folder) {
-        onJobSync(folderId, data.folder.type);
+      if (onJobSync) {
+        console.log('🗑️ Ejecutando onJobSync callback...');
+        console.log('🗑️ Llamando onJobSync con folderId:', folderId, 'y tipo: Cargo');
+        onJobSync(folderId, 'Cargo');
+        console.log('🗑️ onJobSync callback ejecutado');
+      } else {
+        console.log('⚠️ No se ejecuta onJobSync - callback no disponible');
+        console.log('⚠️ onJobSync es:', onJobSync);
       }
     },
     onError: (error, _variables, context) => {

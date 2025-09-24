@@ -6,6 +6,8 @@ import {
 } from '../../schemas/jobPostingSchema';
 import { CompanySelector } from '../CompanySelector';
 import { jobsService, type JobPosting, type CreateJobInput } from '../../services/jobsService';
+import { FoldersApiService, type CreateFolderInput } from '../../services/foldersApiService';
+import { useCreateFolder } from '../../hooks/useFoldersApi';
 import { DocumentTypeAutocomplete } from '../DocumentTypeAutocomplete';
 
 interface CreateJobModalProps {
@@ -107,6 +109,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   parentFolderPath
 }) => {
   const { showSuccess, showError } = useToast();
+  const createFolderMutation = useCreateFolder();
   
   // Estados del modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -258,18 +261,79 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     try {
       const currentFolderId = selectedFolderId || internalSelectedFolderId;
       
+      console.log('📁 Context:', context);
+      console.log('📁 Current folder ID:', currentFolderId);
+      console.log('📁 Job data:', { companyName: jobData.companyName, title: jobData.title });
+      
       if (context === 'folders-management' && currentFolderId) {
         // Desde Directorios y Archivos: crear subcarpeta dentro de la carpeta seleccionada
         const subfolderName = `${jobData.companyName} - ${jobData.title}`;
-        // Aquí necesitarías llamar al servicio de carpetas para crear subcarpeta
-        // Por ahora retornamos el folderId padre
-        return currentFolderId;
+        
+        console.log('📁 Creando subcarpeta:', subfolderName);
+        
+        const folderInput: CreateFolderInput = {
+          name: subfolderName,
+          type: 'Cargo',
+          parentId: currentFolderId,
+          metadata: {
+            jobTitle: jobData.title,
+            companyName: jobData.companyName,
+            createdFrom: 'folders-management'
+          }
+        };
+        
+        console.log('📁 Folder input:', folderInput);
+        
+        // Usar el hook con carga optimista
+        const response = await createFolderMutation.mutateAsync(folderInput);
+        console.log('📁 Folder response COMPLETA:', JSON.stringify(response, null, 2));
+        console.log('📁 Response success:', response.success);
+        console.log('📁 Response data:', response.data);
+        console.log('📁 Response message:', response.message);
+        
+        if (response.success && response.folder) {
+          // La respuesta tiene la estructura: { success: true, folder: { folderId: "..." } }
+          const folderId = response.folder.folderId;
+          console.log('📁 Extracted folder ID:', folderId);
+          return folderId;
+        } else {
+          console.error('📁 Error en respuesta:', response);
+          throw new Error(response.message || 'Error al crear carpeta');
+        }
       } else {
         // Desde Gestión de Empleos: crear carpeta principal de empresa
-        const folderName = jobData.companyName;
-        // Aquí necesitarías llamar al servicio de carpetas para crear carpeta principal
-        // Por ahora retornamos un ID temporal
-        return `temp-folder-${Date.now()}`;
+        const folderName = `${jobData.companyName} - ${jobData.title}`;
+        
+        console.log('📁 Creando carpeta principal:', folderName);
+        
+        const folderInput: CreateFolderInput = {
+          name: folderName,
+          type: 'Cargo',
+          metadata: {
+            jobTitle: jobData.title,
+            companyName: jobData.companyName,
+            createdFrom: 'jobs-management'
+          }
+        };
+        
+        console.log('📁 Folder input:', folderInput);
+        
+        // Usar el hook con carga optimista
+        const response = await createFolderMutation.mutateAsync(folderInput);
+        console.log('📁 Folder response COMPLETA:', JSON.stringify(response, null, 2));
+        console.log('📁 Response success:', response.success);
+        console.log('📁 Response data:', response.data);
+        console.log('📁 Response message:', response.message);
+        
+        if (response.success && response.folder) {
+          // La respuesta tiene la estructura: { success: true, folder: { folderId: "..." } }
+          const folderId = response.folder.folderId;
+          console.log('📁 Extracted folder ID:', folderId);
+          return folderId;
+        } else {
+          console.error('📁 Error en respuesta:', response);
+          throw new Error(response.message || 'Error al crear carpeta');
+        }
       }
     } catch (error) {
       console.error('Error creating folder for job:', error);
@@ -378,18 +442,29 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     try {
       let folderId = selectedFolderId || internalSelectedFolderId;
 
-      // Si es modo creación y no hay folderId, crear carpeta según contexto
-      if (!isEditMode && !folderId) {
+      // SIEMPRE crear carpeta nueva para el empleo (excepto en modo edición)
+      if (!isEditMode) {
+        console.log('🏗️ Creando carpeta para el empleo...');
         folderId = await createFolderForJob();
+        console.log('✅ Carpeta creada con ID:', folderId);
+      }
+
+      // Mapear location desde fieldValues si existe
+      let finalLocation = jobData.location;
+      if (fieldValues.location && typeof fieldValues.location === 'object') {
+        const locationData = fieldValues.location as { type?: string; address?: string };
+        if (locationData.type && locationData.address) {
+          finalLocation = `${locationData.address} (${locationData.type})`;
+        }
       }
 
       const createJobInput: CreateJobInput = {
-        title: jobData.title,
-        description: jobData.description,
-        companyName: jobData.companyName,
-        requirements: jobData.requirements,
+        title: jobData.title.trim(),
+        description: jobData.description.trim(),
+        companyName: jobData.companyName.trim(),
+        requirements: jobData.requirements.trim(),
         salary: jobData.salary,
-        location: jobData.location,
+        location: finalLocation || 'Por definir',
         employmentType: jobData.employmentType,
         experienceLevel: jobData.experienceLevel,
         benefits: jobData.benefits,

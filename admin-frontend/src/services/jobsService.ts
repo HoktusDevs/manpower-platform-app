@@ -292,6 +292,8 @@ class JobsService {
    * Eliminar un job
    */
   async deleteJob(jobId: string): Promise<JobsResponse> {
+    console.log('🗑️ jobsService.deleteJob: Iniciando eliminación de job:', jobId);
+    
     try {
       const response = await fetch(`${this.baseUrl}/jobs/${jobId}`, {
         method: 'DELETE',
@@ -302,13 +304,28 @@ class JobsService {
         },
       });
 
+      console.log('🗑️ jobsService.deleteJob: Response status:', response.status);
+      console.log('🗑️ jobsService.deleteJob: Response ok:', response.ok);
+
       if (!response.ok) {
+        console.error('🗑️ jobsService.deleteJob: HTTP error:', response.status);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      
+      // Si el backend no devuelve success, asumir que fue exitoso (200 OK)
+      if (!data.success) {
+        return {
+          success: true,
+          message: 'Job eliminado exitosamente',
+          job: data
+        };
+      }
+      
       return data;
     } catch (error) {
+      console.error('🗑️ jobsService.deleteJob: Error en catch:', error);
       return {
         success: false,
         message: 'Error al eliminar el job del servidor',

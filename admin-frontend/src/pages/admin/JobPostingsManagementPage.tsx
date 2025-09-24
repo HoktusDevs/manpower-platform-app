@@ -1233,12 +1233,12 @@ export const JobPostingsManagementPage: React.FC = () => {
       <CreateJobModal
         isOpen={showCreateModal}
         onClose={() => {
-          setShowCreateModal(false);
-          resetModalState();
-        }}
+                    setShowCreateModal(false);
+                    resetModalState();
+                  }}
         onSuccess={() => {
-          setShowCreateModal(false);
-          resetModalState();
+                    setShowCreateModal(false);
+                    resetModalState();
           loadJobPostings();
         }}
         isEditMode={isEditMode}
