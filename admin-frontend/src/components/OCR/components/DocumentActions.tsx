@@ -1,5 +1,19 @@
 import React from 'react';
-import { DocumentFile } from '../types/OCRTypes';
+
+interface DocumentFile {
+  id: string;
+  file: File;
+  previewUrl: string;
+  fileUrl?: string;
+  title: string;
+  ownerName: string;
+  ocrResult?: any;
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
+  documentType?: string;
+  observations?: any[];
+}
 
 interface DocumentActionsProps {
   document: DocumentFile;

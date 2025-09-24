@@ -9,9 +9,7 @@ export { DocumentStatusBadge } from './components/DocumentStatusBadge';
 export { DocumentActions } from './components/DocumentActions';
 export { EmptyState } from './components/EmptyState';
 
-// Utilities
-export { getHoktusStatusDisplay } from './utils/statusUtils';
-export type { StatusDisplay } from './utils/statusUtils';
+// Utilities - moved to DocumentStatusBadge component
 
 // Types
 export type { 
