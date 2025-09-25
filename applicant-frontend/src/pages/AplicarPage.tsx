@@ -112,7 +112,7 @@ export const AplicarPage = () => {
     }, 500); // Esperar 500ms después del último cambio
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]); // Solo depender de searchTerm, no de filteredJobPostings
+  }, [searchTerm, filteredJobPostings]);
 
   const handleJobSelection = (jobId: string) => {
     // No permitir seleccionar jobs ya postulados

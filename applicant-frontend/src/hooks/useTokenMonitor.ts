@@ -155,7 +155,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       // Update time remaining if warning is already shown and not dismissed
       setState(prev => ({ ...prev, timeRemaining }));
     }
-  }, []);
+  }, [performLogout]);
 
   const renewSession = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isRenewing: true }));
