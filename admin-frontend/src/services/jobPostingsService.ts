@@ -456,8 +456,9 @@ class JobPostingsService {
           },
         })
       );
-    } catch (error) {
-      }
+    } catch {
+      // Error al incrementar contador de vistas, continuar sin contar
+    }
   }
 
   private async incrementApplicationCount(jobId: string, idToken?: string): Promise<void> {
@@ -474,8 +475,9 @@ class JobPostingsService {
           },
         })
       );
-    } catch (error) {
-      }
+    } catch {
+      // Error al incrementar contador de aplicaciones, continuar sin contar
+    }
   }
 
   // Search job postings by text

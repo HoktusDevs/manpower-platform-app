@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../core-ui';
 import type { SelectOption } from '../../core-ui';
@@ -329,23 +329,23 @@ export function RecentActivity(): ReactNode {
   const [, setHasLoadedData] = useState(false);
 
   // Función para cargar datos desde la API
-  const loadActivityData = async (filter: ActivityFilter, granularity: TimeGranularity) => {
+  const loadActivityData = useCallback(async (filter: ActivityFilter, granularity: TimeGranularity) => {
     setIsLoading(true);
     try {
       const data = await applicationsService.getActivityData(filter, granularity);
       setActivityData(data);
       setHasLoadedData(true);
-    } catch (error) {
+    } catch {
       setActivityData(generateEmptyData(filter, granularity));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Cargar datos UNA SOLA VEZ al montar el componente
+  // Cargar datos al montar el componente y cuando cambien los filtros
   useEffect(() => {
     loadActivityData(selectedActivityFilter, selectedGranularity);
-  }, []); // Solo al montar, sin dependencias que causen re-renders
+  }, [selectedActivityFilter, selectedGranularity, loadActivityData]);
 
   const handleActivityFilterChange = (newFilter: ActivityFilter): void => {
     setSelectedActivityFilter(newFilter);

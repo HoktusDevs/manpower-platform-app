@@ -15,7 +15,7 @@ export interface ApplicantDocument {
   mimeType: string;
   status: string;
   createdAt: string;
-  ocrResult?: any;
+  ocrResult?: Record<string, unknown>;
 }
 
 export interface ApplicantDataResponse {
@@ -49,7 +49,7 @@ class ApplicantDataService {
 
       const documents = JSON.parse(storedDocs);
       // Convertir formato de localStorage a ApplicantDocument
-      const applicantDocuments: ApplicantDocument[] = documents.map((doc: any) => ({
+      const applicantDocuments: ApplicantDocument[] = documents.map((doc: Record<string, unknown>) => ({
         documentId: doc.documentId,
         fileName: doc.fileName,
         fileUrl: doc.fileUrl,
@@ -139,7 +139,7 @@ class ApplicantDataService {
   /**
    * Obtener estadísticas de documentos
    */
-  async getDocumentStats(): Promise<{ success: boolean; stats?: any; error?: string }> {
+  async getDocumentStats(): Promise<{ success: boolean; stats?: Record<string, unknown>; error?: string }> {
     try {
       const response = await this.getApplicantDocuments();
       

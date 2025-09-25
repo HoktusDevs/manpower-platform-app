@@ -168,7 +168,7 @@ export const logSecurityViolation = (violation: {
 /**
  * SECURITY: Force logout and clear all data
  */
-export const forceSecureLogout = (reason: string): void => {
+export const forceSecureLogout = (): void => {
   // Log the security event
   logSecurityViolation({
     action: 'FORCED_LOGOUT',

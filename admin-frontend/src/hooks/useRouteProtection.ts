@@ -145,6 +145,7 @@ const logSecurityViolation = (violation: {
   action: string;
 }) => {
   // Log to console for immediate visibility
+  console.warn('Security violation detected:', violation.action, 'by user:', violation.userId);
   // TODO: Send to monitoring service (CloudWatch, DataDog, etc.)
   // Example:
   // fetch('/api/security/violations', {

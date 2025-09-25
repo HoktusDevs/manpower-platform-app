@@ -49,18 +49,6 @@ export const RecipientSelector: React.FC<RecipientSelectorProps> = ({
     onRecipientsChange(selectedRecipients.filter(r => r.id !== id));
   };
 
-  const addNewContact = () => {
-    if (recipientSearch.trim()) {
-      const newContact: Recipient = {
-        id: `new-${Date.now()}`,
-        name: recipientSearch.trim(),
-        phone: recipientSearch.includes('+') ? recipientSearch : undefined
-      };
-      onRecipientsChange([...selectedRecipients, newContact]);
-      setRecipientSearch('');
-      setShowRecipientDropdown(false);
-    }
-  };
 
   const handleShowNewContactForm = () => {
     setNewContactName(recipientSearch.trim());

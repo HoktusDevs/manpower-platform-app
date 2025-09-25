@@ -8,7 +8,7 @@ export interface FolderRow {
   createdAt: string;
   parentId?: string | null;
   level?: number; // Hierarchy level (0 = root, 1+ = subfolders)
-  files?: any[]; // Files associated with this folder
+  files?: unknown[]; // Files associated with this folder
 }
 
 export interface CreateFolderData {

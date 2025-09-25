@@ -61,8 +61,10 @@ export const useAWSNative = () => {
           } else {
             awsNativeService.reinitialize();
           }
-        } catch (error) {
-          }
+        } catch {
+          // Silently handle initialization errors - service will remain uninitialized
+          console.warn('Failed to initialize AWS Native service');
+        }
       }
     };
 

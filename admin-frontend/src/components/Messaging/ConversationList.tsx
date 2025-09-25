@@ -24,7 +24,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   selectedConversation,
   onConversationSelect
 }) => {
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = () => {
     return <ChatBubbleLeftRightIcon className="w-4 h-4" />;
   };
 
@@ -46,7 +46,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    {getTypeIcon(conversation.type)}
+                    {getTypeIcon()}
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {conversation.participantName}
                     </p>

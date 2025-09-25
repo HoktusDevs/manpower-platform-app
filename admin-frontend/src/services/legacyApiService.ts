@@ -164,7 +164,7 @@ class LegacyApiService {
       });
 
       return response.ok;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
 import { CreateJobModal } from '../../JobManagement/CreateJobModal';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
@@ -22,7 +21,8 @@ interface FilterOptions {
 }
 import type { 
   FolderAction, 
-  CreateFolderData
+  CreateFolderData,
+  FolderRow
 } from '../types';
 
 /**
@@ -31,7 +31,6 @@ import type {
  * Follows Clean Architecture and acts as a controller
  */
 export const FoldersManager: React.FC = () => {
-  const navigate = useNavigate();
   
   // Filter state
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
@@ -67,7 +66,6 @@ export const FoldersManager: React.FC = () => {
 
   // Download functionality
   const {
-    isDownloading,
     progress,
     downloadAllContent,
     downloadSelectedItems,
@@ -75,7 +73,7 @@ export const FoldersManager: React.FC = () => {
   } = useDownloadZip();
 
   // Calculate folder level in hierarchy
-  const getFolderLevel = (folder: any, allFolders: any[]): number => {
+  const getFolderLevel = (folder: FolderRow, allFolders: FolderRow[]): number => {
     // Check if it's a root folder by path first
     if (folder.path && folder.path.split('/').length === 2) {
       return 0; // Root level based on path
@@ -93,7 +91,7 @@ export const FoldersManager: React.FC = () => {
   };
 
   // Add level information to folders
-  const addLevelInfo = (folders: any[]) => {
+  const addLevelInfo = (folders: FolderRow[]) => {
     return folders.map(folder => ({
       ...folder,
       level: getFolderLevel(folder, folders)
@@ -101,7 +99,7 @@ export const FoldersManager: React.FC = () => {
   };
 
   // Apply filters to the folders
-  const applyFilters = (folders: any[], filters: FilterOptions) => {
+  const applyFilters = (folders: FolderRow[], filters: FilterOptions) => {
     let filtered = [...folders];
 
     // Add level information to all folders
@@ -241,7 +239,7 @@ export const FoldersManager: React.FC = () => {
         closeConfirmModal();
         // Execute server deletion in background (no await)
         deleteFolders(deletedIds)
-          .catch(error => {
+          .catch(() => {
             // Rollback the optimistic deletion
             refreshFolders();
           });
@@ -352,7 +350,7 @@ export const FoldersManager: React.FC = () => {
   const handleDownloadAll = async (): Promise<void> => {
     try {
       await downloadAllContent();
-    } catch (error) {
+    } catch {
       // El error ya se maneja en el hook
     }
   };
@@ -366,7 +364,7 @@ export const FoldersManager: React.FC = () => {
     try {
       const selectedIds = Array.from(selectedRows);
       await downloadSelectedItems(selectedIds, folders);
-    } catch (error) {
+    } catch {
       // El error ya se maneja en el hook
     }
   };

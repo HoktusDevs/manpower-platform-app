@@ -117,7 +117,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                         name="type"
                         value={option.value}
                         checked={filters.type === option.value}
-                        onChange={(e) => setFilters({ ...filters, type: e.target.value as any })}
+                        onChange={(e) => setFilters({ ...filters, type: e.target.value as FilterOptions['type'] })}
                         className="mr-2 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="text-xs text-gray-700">{option.label}</span>
@@ -132,7 +132,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={filters.sortBy}
-                    onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+                    onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as FilterOptions['sortBy'] })}
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="name">Nombre</option>
@@ -141,7 +141,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                   </select>
                   <select
                     value={filters.sortOrder}
-                    onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value as any })}
+                    onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value as FilterOptions['sortOrder'] })}
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="asc">A-Z</option>

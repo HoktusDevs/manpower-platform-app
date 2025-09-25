@@ -17,7 +17,7 @@ export type DocumentInfo = {
   mimeType: string;
   status: 'uploaded' | 'processing' | 'completed' | 'failed';
   uploadedAt: string;
-  ocrResult?: any;
+  ocrResult?: unknown;
 };
 
 export type FolderDocument = {
@@ -46,7 +46,7 @@ class DocumentsService {
   /**
    * Obtener documentos por carpeta
    */
-  async getDocumentsByFolder(folderId: string): Promise<{ success: boolean; documents?: DocumentInfo[]; error?: string }> {
+  async getDocumentsByFolder(): Promise<{ success: boolean; documents?: DocumentInfo[]; error?: string }> {
     try {
       // Simular obtención de documentos desde localStorage del postulante
       // En un sistema real, esto vendría del backend
@@ -70,7 +70,7 @@ class DocumentsService {
   /**
    * Obtener todos los documentos organizados por carpeta
    */
-  async getAllDocumentsByFolders(folders: any[]): Promise<DocumentsResponse> {
+  async getAllDocumentsByFolders(folders: unknown[]): Promise<DocumentsResponse> {
     try {
       const allDocuments = await this.getStoredDocuments();
       const folderDocuments: FolderDocument[] = [];
@@ -121,7 +121,7 @@ class DocumentsService {
       }
 
       // Convertir formato de ApplicantDocument a DocumentInfo
-      return response.documents.map((doc: any) => ({
+      return response.documents.map((doc: unknown) => ({
         documentId: doc.documentId,
         fileName: doc.fileName,
         fileUrl: doc.fileUrl,
@@ -135,7 +135,7 @@ class DocumentsService {
         uploadedAt: doc.createdAt || new Date().toISOString(),
         ocrResult: doc.ocrResult || null,
       }));
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -206,7 +206,7 @@ class DocumentsService {
   /**
    * Obtener estadísticas de documentos
    */
-  async getDocumentStats(): Promise<{ success: boolean; stats?: any; error?: string }> {
+  async getDocumentStats(): Promise<{ success: boolean; stats?: unknown; error?: string }> {
     try {
       const allDocuments = await this.getStoredDocuments();
       

@@ -4,8 +4,8 @@ export interface OCRResult {
   confidence: number;
   processingTime: number;
   language: string;
-  metadata: any;
-  fields?: any;
+  metadata: Record<string, unknown>;
+  fields?: Record<string, unknown>;
 }
 
 export interface DocumentFile {
@@ -20,7 +20,7 @@ export interface DocumentFile {
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
-  observations?: any[];
+  observations?: Record<string, unknown>[];
 }
 
 export interface OCRResultsTableProps {

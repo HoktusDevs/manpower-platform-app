@@ -23,12 +23,10 @@ export const useDownloadZip = (): UseDownloadZipReturn => {
   }, []);
 
   const downloadAllContent = useCallback(async (): Promise<void> => {
+    setIsDownloading(true);
+    setProgress(null);
     try {
-      setIsDownloading(true);
-      setProgress(null);
       await downloadZipService.downloadAllContent(handleProgress);
-    } catch (error) {
-      throw error;
     } finally {
       setIsDownloading(false);
     }
@@ -38,12 +36,10 @@ export const useDownloadZip = (): UseDownloadZipReturn => {
     selectedIds: string[], 
     allFolders: Folder[]
   ): Promise<void> => {
+    setIsDownloading(true);
+    setProgress(null);
     try {
-      setIsDownloading(true);
-      setProgress(null);
       await downloadZipService.downloadSelectedItems(selectedIds, allFolders, handleProgress);
-    } catch (error) {
-      throw error;
     } finally {
       setIsDownloading(false);
     }

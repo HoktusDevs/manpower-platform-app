@@ -63,8 +63,9 @@ function AppContent() {
             setIsAuthChecked(true);
             return;
           }
-        } catch (error) {
-          }
+        } catch {
+          // Invalid JSON, continue with logout
+        }
       }
 
       localStorage.clear();

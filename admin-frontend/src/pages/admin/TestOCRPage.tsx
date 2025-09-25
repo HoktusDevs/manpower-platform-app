@@ -12,23 +12,23 @@ interface ProcessDocumentsRequest {
   }>;
 }
 
-interface WebSocketNotification {
-  documentId: string;
-  status: string;
-  processingStatus: string;
-  finalDecision?: string;
-  documentType?: string;
-  ocrResult?: any;
-  extractedData?: any;
-  observations?: any[];
-  message: string;
-  ownerUserName: string;
-  fileName?: string;
-  processingTime?: number;
-  timestamp: string;
-  error?: string;
-  lambdaError?: boolean;
-}
+// interface _WebSocketNotification {
+//   documentId: string;
+//   status: string;
+//   processingStatus: string;
+//   finalDecision?: string;
+//   documentType?: string;
+//   ocrResult?: Record<string, unknown>;
+//   extractedData?: Record<string, unknown>;
+//   observations?: Record<string, unknown>[];
+//   message: string;
+//   ownerUserName: string;
+//   fileName?: string;
+//   processingTime?: number;
+//   timestamp: string;
+//   error?: string;
+//   lambdaError?: boolean;
+// }
 import { OCRResultsTable } from '../../components/OCR/OCRResultsTable';
 import { DocumentPreviewModal } from '../../components/OCR/DocumentPreviewModal';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
@@ -40,12 +40,12 @@ interface DocumentFile {
   fileUrl?: string; // ✅ URL real del archivo desde la base de datos
   title: string;
   ownerName: string; // ✅ NOMBRE POR CADA ARCHIVO
-  ocrResult?: any;
+  ocrResult?: Record<string, unknown>;
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
-  observations?: any[];
+  observations?: Record<string, unknown>[];
 }
 
 export const TestOCRPage = () => {
@@ -59,7 +59,7 @@ export const TestOCRPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // WebSocket para recibir actualizaciones en tiempo real del nuevo microservicio
-  const { isConnected, connectionStatus, notifications, lastNotification } = useDocumentProcessingWebSocket();
+  const { connectionStatus, lastNotification } = useDocumentProcessingWebSocket();
 
   // Manejar notificaciones del WebSocket
   useEffect(() => {
@@ -113,7 +113,7 @@ export const TestOCRPage = () => {
       const result = await documentProcessingService.getDocuments();
 
       if (result.success && result.data) {
-        const formattedDocs: DocumentFile[] = result.data.map((doc: any) => {
+        const formattedDocs: DocumentFile[] = result.data.map((doc: Record<string, unknown>) => {
           const formatted = {
             id: doc.id,
             file: new File([], doc.fileName, { type: doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }),
@@ -148,7 +148,8 @@ export const TestOCRPage = () => {
 
         setHistoricalDocuments(formattedDocs);
       }
-    } catch (error) {
+    } catch {
+        console.warn('Failed to load historical documents');
       }
   }, []);
 
@@ -374,7 +375,7 @@ export const TestOCRPage = () => {
       // Actualizar la lista de documentos
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       setHistoricalDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      } catch (error) {
+      } catch {
       setError('Error al eliminar el documento. Por favor, inténtalo de nuevo.');
     }
   };
@@ -414,7 +415,7 @@ export const TestOCRPage = () => {
       } else {
         alert('Error al actualizar la decisión del documento');
       }
-    } catch (error) {
+    } catch {
       alert('Error al actualizar la decisión del documento');
     }
   };

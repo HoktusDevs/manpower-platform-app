@@ -17,6 +17,8 @@ export const foldersAlova = createAlova({
   statesHook: ReactHook,
   requestAdapter: fetchAdapter(),
   timeout: 30000,
+  cache: false,
+  retry: 0,
 
   beforeRequest: (method) => {
     // Get access token from localStorage
@@ -44,7 +46,8 @@ export const foldersAlova = createAlova({
     onError: (error: Error) => {
       // Log errors in development
       if (import.meta.env.VITE_ENABLE_DEBUG === 'true') {
-        }
+        console.error('Alova error:', error);
+      }
       throw error;
     }
   }

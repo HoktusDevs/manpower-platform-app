@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
-interface OCRDocumentUpdate {
+export interface OCRDocumentUpdate {
   documentId: string;
   status: string;
-  ocrResult?: any;
+  ocrResult?: Record<string, unknown>;
   error?: string;
   timestamp: string;
 }
 
-export const useOCRPolling = (onDocumentUpdate: (update: OCRDocumentUpdate) => void) => {
+export const useOCRPolling = () => {
   const [isConnected, setIsConnected] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);

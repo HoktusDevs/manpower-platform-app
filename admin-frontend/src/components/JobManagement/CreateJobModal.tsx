@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../core-ui/useToast';
 import { 
   validateJobPostingBasic, 
@@ -6,7 +6,7 @@ import {
 } from '../../schemas/jobPostingSchema';
 import { CompanySelector } from '../CompanySelector';
 import { jobsService, type JobPosting, type CreateJobInput } from '../../services/jobsService';
-import { FoldersApiService, type CreateFolderInput } from '../../services/foldersApiService';
+import { type CreateFolderInput } from '../../services/foldersApiService';
 import { useCreateFolder } from '../../hooks/useFoldersApi';
 import { DocumentTypeAutocomplete } from '../DocumentTypeAutocomplete';
 
@@ -146,12 +146,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     }
   }, [isOpen, preselectedCompany]);
 
-  // Cargar datos del empleo para edición
-  useEffect(() => {
-    if (isOpen && isEditMode && editingJobId) {
-      loadJobForEdit(editingJobId);
-    }
-  }, [isOpen, isEditMode, editingJobId]);
 
   // Validación de campos
   const validateAndShowErrors = () => {
@@ -343,7 +337,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   };
 
   // Cargar datos del empleo para edición
-  const loadJobForEdit = async (jobId: string) => {
+  const loadJobForEdit = useCallback(async (jobId: string) => {
     try {
       const response = await jobsService.getJob(jobId);
       
@@ -422,7 +416,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       console.error('Error loading job for edit:', error);
       showError('Error al cargar empleo', 'No se pudo cargar el empleo para edición');
     }
-  };
+  }, [showError]);
+
+  // Cargar datos del empleo para edición
+  useEffect(() => {
+    if (isOpen && isEditMode && editingJobId) {
+      loadJobForEdit(editingJobId);
+    }
+  }, [isOpen, isEditMode, editingJobId, loadJobForEdit]);
 
   // Handle job creation and update
   const handleCreateJob = async () => {

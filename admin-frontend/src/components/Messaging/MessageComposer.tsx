@@ -30,7 +30,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   const [selectedRecipients, setSelectedRecipients] = useState<Recipient[]>([]);
   const [templateName, setTemplateName] = useState('send_documents_missing_3378594');
   const [isLoading, setIsLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<unknown>(null);
 
   const handleSendTemplateMessage = async () => {
     if (selectedRecipients.length === 0) {
@@ -152,7 +152,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           <div className="p-6 border-t border-gray-200">
             <h3 className="text-sm font-medium text-gray-800 mb-2">Respuesta de la API:</h3>
             <pre className="text-xs bg-gray-50 p-3 rounded border overflow-auto max-h-40">
-              {JSON.stringify(response, null, 2)}
+              {typeof response === 'object' && response !== null ? JSON.stringify(response, null, 2) : String(response)}
             </pre>
           </div>
         )}

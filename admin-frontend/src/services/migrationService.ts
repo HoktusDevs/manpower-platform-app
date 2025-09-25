@@ -290,19 +290,19 @@ class MigrationService {
     
     // Check error rate threshold
     if (comparison.aws_native.errorRate > this.config.rollback.errorThreshold) {
-      this.triggerRollback('error_rate', comparison.aws_native.errorRate);
+      this.triggerRollback();
     }
 
     // Check latency threshold
     if (comparison.aws_native.averageLatency > this.config.rollback.latencyThreshold) {
-      this.triggerRollback('latency', comparison.aws_native.averageLatency);
+      this.triggerRollback();
     }
   }
 
   /**
    * Trigger automatic rollback
    */
-  private triggerRollback(reason: 'error_rate' | 'latency', value: number): void {
+  private triggerRollback(): void {
     // Set all features to legacy system
     Object.keys(this.config.features).forEach(feature => {
       const featureKey = feature as keyof MigrationConfig['features'];
@@ -316,7 +316,7 @@ class MigrationService {
     this.saveConfigToStorage();
     
     // Notify monitoring systems (in production)
-    this.notifyRollback(reason, value);
+    this.notifyRollback();
   }
 
   /**
@@ -345,15 +345,17 @@ class MigrationService {
         const storedConfig = JSON.parse(stored);
         this.config = { ...this.config, ...storedConfig };
       }
-    } catch (error) {
-      }
+    } catch {
+      // Configuración no válida, usar valores por defecto
+    }
   }
 
   private saveConfigToStorage(): void {
     try {
       localStorage.setItem('migration_config', JSON.stringify(this.config));
-    } catch (error) {
-      }
+    } catch {
+      // Error al guardar configuración, continuar sin persistencia
+    }
   }
 
   private saveMetricsToStorage(): void {
@@ -361,8 +363,9 @@ class MigrationService {
       // Keep only last 100 metrics in localStorage to avoid storage limits
       const metricsToStore = this.metrics.slice(-100);
       localStorage.setItem('performance_metrics', JSON.stringify(metricsToStore));
-    } catch (error) {
-      }
+    } catch {
+      // Error al guardar métricas, continuar sin persistencia
+    }
   }
 
   private startPerformanceMonitoring(): void {
@@ -372,8 +375,9 @@ class MigrationService {
       if (stored) {
         this.metrics = JSON.parse(stored);
       }
-    } catch (error) {
-      }
+    } catch {
+      // Métricas no válidas, empezar con array vacío
+    }
 
     // Periodic cleanup of old metrics
     setInterval(() => {
@@ -382,13 +386,13 @@ class MigrationService {
     }, 60 * 60 * 1000); // Clean every hour
   }
 
-  private notifyRollback(reason: string, value: number): void {
+  private notifyRollback(): void {
     // In production, send alerts to monitoring systems
     // Example: Send to monitoring service
     // fetch('/api/monitoring/rollback', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ reason, value, timestamp: Date.now() })
+    //   body: JSON.stringify({ timestamp: Date.now() })
     // });
   }
 }

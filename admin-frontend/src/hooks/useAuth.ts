@@ -53,13 +53,17 @@ export const useAuth = (): UseAuthReturn => {
               const user = JSON.parse(savedUser);
               setUser(user);
               setIdToken(idToken);
-              } catch (error) {
+              } catch {
+                // Handle JSON parse error - clear corrupted data
+                localStorage.removeItem('user');
               }
           }
         }
 
         setIsInitialized(true);
-      } catch (error) {
+      } catch {
+        // Auth initialization failed - set as initialized anyway
+        console.warn('Auth initialization failed');
         setIsInitialized(true);
       }
     };
@@ -224,8 +228,10 @@ export const useAuth = (): UseAuthReturn => {
             setIdToken(loginResult.data.idToken || null);
             return true;
           }
-        } catch (loginError) {
-          }
+        } catch {
+          // Auto-login after registration failed - user will need to login manually
+          console.warn('Auto-login after registration failed');
+        }
         
         // Fallback: Set user without full authentication (will need to login)
         if (result.data?.user) {

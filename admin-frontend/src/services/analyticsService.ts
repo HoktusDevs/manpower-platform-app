@@ -152,6 +152,7 @@ class AnalyticsService {
    */
   private async sendToAWSNative(events: AnalyticsEvent[]): Promise<void> {
     // Simulate AWS Kinesis/CloudWatch ingestion
+    console.debug('Sending events to AWS Native:', events.length);
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
     
     // In production, this would send to:
@@ -166,6 +167,7 @@ class AnalyticsService {
    */
   private async sendToLegacyAPI(events: AnalyticsEvent[]): Promise<void> {
     // Simulate legacy analytics API call
+    console.debug('Sending events to Legacy API:', events.length);
     await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
     
     // const token = cognitoAuthService.getToken();
@@ -210,8 +212,9 @@ class AnalyticsService {
 
       // Clear queue on success
       this.queue = [];
-      } catch (error) {
+      } catch {
       // Keep events in queue for next retry
+      console.warn('Failed to flush analytics events, keeping in queue for retry');
     }
   }
 
@@ -269,7 +272,9 @@ class AnalyticsService {
     localStorage.setItem('analytics_consent', consent.toString());
     
     if (consent) {
-      } else {
+      // Consent granted - analytics can proceed normally
+      console.log('Analytics consent granted');
+    } else {
       this.queue = []; // Clear queue if consent is revoked
     }
   }

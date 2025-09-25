@@ -28,14 +28,14 @@ export const useApplications = () => {
       let applicationsArray = [];
       if (Array.isArray(response)) {
         applicationsArray = response;
-      } else if (response && (response as any).data && Array.isArray((response as any).data.applications)) {
-        applicationsArray = (response as any).data.applications;
-      } else if (response && Array.isArray((response as any).applications)) {
-        applicationsArray = (response as any).applications;
+      } else if (response && (response as Record<string, unknown>).data && Array.isArray(((response as Record<string, unknown>).data as Record<string, unknown>).applications)) {
+        applicationsArray = ((response as Record<string, unknown>).data as Record<string, unknown>).applications as Application[];
+      } else if (response && Array.isArray((response as Record<string, unknown>).applications)) {
+        applicationsArray = (response as Record<string, unknown>).applications as Application[];
       }
       
       setApplications(applicationsArray);
-      } catch (err) {
+      } catch {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch applications';
       setError(errorMessage);
       // Si es error de autenticación, mostrar mensaje específico
@@ -57,7 +57,7 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getMyApplications();
       setApplications(data);
-      } catch (err) {
+      } catch {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch my applications';
       setError(errorMessage);
       } finally {
@@ -72,7 +72,9 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getApplicationStats();
       setStats(data);
-      } catch (err) {
+      } catch {
+        // Silently handle stats fetch errors - not critical for main functionality
+        console.warn('Failed to fetch application stats');
       }
   };
 

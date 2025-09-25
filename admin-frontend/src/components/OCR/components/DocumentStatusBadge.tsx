@@ -7,12 +7,12 @@ interface DocumentFile {
   fileUrl?: string;
   title: string;
   ownerName: string;
-  ocrResult?: any;
+  ocrResult?: { text: string; [key: string]: unknown };
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
-  observations?: any[];
+  observations?: unknown[];
 }
 
 interface StatusDisplay {

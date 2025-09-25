@@ -13,9 +13,9 @@ export interface WebSocketNotification {
   processingStatus: string;
   finalDecision?: string;
   documentType?: string;
-  ocrResult?: any;
-  extractedData?: any;
-  observations?: any[];
+  ocrResult?: Record<string, unknown>;
+  extractedData?: Record<string, unknown>;
+  observations?: Record<string, unknown>[];
   message: string;
   ownerUserName: string;
   fileName?: string;
@@ -29,7 +29,7 @@ export interface UseDocumentProcessingWebSocketReturn {
   isConnected: boolean;
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   notifications: WebSocketNotification[];
-  sendMessage: (message: any) => void;
+  sendMessage: (message: Record<string, unknown>) => void;
   clearNotifications: () => void;
   lastNotification: WebSocketNotification | null;
 }
@@ -93,8 +93,10 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
             setNotifications(prev => [...prev, notification]);
             setLastNotification(notification);
           }
-        } catch (error) {
-          }
+        } catch {
+          // Handle WebSocket message parsing error
+          console.warn('Failed to parse WebSocket message');
+        }
       };
 
       wsRef.current.onclose = (event) => {
@@ -113,12 +115,13 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
         }
       };
 
-      wsRef.current.onerror = (error) => {
+      wsRef.current.onerror = () => {
         setConnectionStatus('error');
       };
 
-    } catch (error) {
+    } catch {
       setConnectionStatus('error');
+      console.warn('Failed to establish WebSocket connection');
     }
   }, []);
 
@@ -137,11 +140,12 @@ export const useDocumentProcessingWebSocket = (): UseDocumentProcessingWebSocket
     setConnectionStatus('disconnected');
   }, []);
 
-  const sendMessage = useCallback((message: any) => {
+  const sendMessage = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     } else {
-      }
+      console.warn('WebSocket is not connected, cannot send message');
+    }
   }, []);
 
   const clearNotifications = useCallback(() => {

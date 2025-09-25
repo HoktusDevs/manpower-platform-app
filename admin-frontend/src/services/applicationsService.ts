@@ -56,31 +56,27 @@ class ApplicationsService {
       headers?: Record<string, string>;
     }
   ): Promise<T> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        method: options.method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        body: options.body ? JSON.stringify(options.body) : null,
-        signal: controller.signal,
-      });
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: options.method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      body: options.body ? JSON.stringify(options.body) : null,
+      signal: controller.signal,
+    });
 
-      clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
+
+    return await response.json();
   }
 
   async getAllApplications(limit?: number, nextToken?: string): Promise<ApplicationsResponse> {
@@ -128,7 +124,7 @@ class ApplicationsService {
         pendingApplications,
         activeApplications,
       };
-    } catch (error) {
+    } catch {
       return {
         totalApplicants: 0,
         approvedApplications: 0,
@@ -177,7 +173,7 @@ class ApplicationsService {
         details: this.getActivityDetails(filter, group.count),
         period: group.periodLabel,
       }));
-    } catch (error) {
+    } catch {
       return this.generateEmptyData(filter, granularity);
     }
   }

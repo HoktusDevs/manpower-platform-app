@@ -1,9 +1,8 @@
-import type { ReactNode } from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MetricCard, Grid } from '../../core-ui';
 import { applicationsService, type DashboardStats } from '../../services/applicationsService';
 
-export function DashboardMetrics(): ReactNode {
+export function DashboardMetrics() {
   const [stats, setStats] = useState<DashboardStats>({
     totalApplicants: 0,
     approvedApplications: 0,
@@ -13,27 +12,27 @@ export function DashboardMetrics(): ReactNode {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const dashboardStats = await applicationsService.getDashboardStats();
-        setStats(dashboardStats);
-      } catch (err) {
-        setError('Error al cargar las estadísticas');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStats();
+  const loadStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const dashboardStats = await applicationsService.getDashboardStats();
+      setStats(dashboardStats);
+    } catch {
+      setError('Error al cargar las estadísticas');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const formatValue = (value: number): string => {
     if (isLoading) return 'Cargando...';
     if (error) return 'Error';
-    return value.toString();
+    return value.toLocaleString();
   };
 
   return (
@@ -48,28 +47,24 @@ export function DashboardMetrics(): ReactNode {
         title="Total Postulantes"
         value={formatValue(stats.totalApplicants)}
         colorScheme="blue"
-        isLoading={isLoading}
       />
 
       <MetricCard
         title="Postulaciones Aprobadas"
         value={formatValue(stats.approvedApplications)}
         colorScheme="green"
-        isLoading={isLoading}
       />
 
       <MetricCard
         title="Pendientes"
         value={formatValue(stats.pendingApplications)}
         colorScheme="yellow"
-        isLoading={isLoading}
       />
 
       <MetricCard
         title="Postulaciones Activas"
         value={formatValue(stats.activeApplications)}
         colorScheme="purple"
-        isLoading={isLoading}
       />
     </Grid>
   );

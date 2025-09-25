@@ -7,12 +7,12 @@ interface DocumentFile {
   fileUrl?: string;
   title: string;
   ownerName: string;
-  ocrResult?: any;
+  ocrResult?: { text: string; processingTime?: number; [key: string]: unknown };
   status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
-  observations?: any[];
+  observations?: unknown[];
 }
 import { DocumentStatusBadge } from './DocumentStatusBadge';
 import { DocumentActions } from './DocumentActions';

@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
-import { FOLDER_OPERATION_MESSAGES } from '../types';
+import { useState, useMemo } from 'react';
 import {
   useGetAllFolders,
   useCreateFolder,
@@ -20,7 +19,7 @@ import type {
  * Follows Single Responsibility Principle - only handles folder data
  */
 // Helper function to convert backend Folder to frontend FolderRow
-const folderToFolderRow = (folder: { folderId: string; name: string; type: string; createdAt: string; parentId?: string | null; files?: any[] }): FolderRow => ({
+const folderToFolderRow = (folder: { folderId: string; name: string; type: string; createdAt: string; parentId?: string | null; files?: unknown[] }): FolderRow => ({
   id: folder.folderId,
   name: folder.name,
   type: folder.type,
@@ -51,18 +50,6 @@ export const useFoldersState = (
     return backendFolders.map(folderToFolderRow);
   }, [backendFolders]);
 
-  // Listen for global folder refresh events
-  useEffect(() => {
-    const handleFoldersRefresh = () => {
-      loadFolders();
-    };
-
-    window.addEventListener('foldersRefresh', handleFoldersRefresh);
-    
-    return () => {
-      window.removeEventListener('foldersRefresh', handleFoldersRefresh);
-    };
-  }, [loadFolders]);
 
   // Memoized filtered folders for performance
   const filteredFolders = useMemo(() => {
@@ -107,8 +94,8 @@ export const useFoldersState = (
           await createJobForCargoFolder(result.folder.folderId, data.name);
         }
       }
-    } catch (error) {
-      throw error;
+    } catch {
+      throw new Error('Failed to create folder');
     }
   };
 
@@ -143,8 +130,8 @@ export const useFoldersState = (
       } else {
         console.error('❌ Error al crear job automáticamente:', response.message);
       }
-    } catch (error) {
-      console.error('❌ Error en createJobForCargoFolder:', error);
+    } catch {
+      console.error('❌ Error en createJobForCargoFolder');
       // No lanzar error para no romper la creación de carpeta
     }
   };
@@ -160,8 +147,8 @@ export const useFoldersState = (
       await deleteFolderMutation.mutateAsync(folderId);
       
       // Console.log for tracking
-      } catch (error) {
-      throw error;
+      } catch {
+      throw new Error('Failed to create folder');
     }
   };
 
@@ -245,8 +232,8 @@ export const useFoldersState = (
       console.log('🗑️ Sincronizando jobs después de eliminación múltiple...');
       await syncJobsAfterMultipleFolderDeletion(folderIds, folderTypes);
       
-    } catch (error) {
-      throw error;
+    } catch {
+      throw new Error('Failed to create folder');
     }
   };
 
@@ -267,8 +254,8 @@ export const useFoldersState = (
 
       // Console.log for tracking
       console.log('Folder updated successfully:', { folderId, input, timestamp: new Date().toISOString() });
-    } catch (error) {
-      throw error;
+    } catch {
+      throw new Error('Failed to create folder');
     }
   };
 
@@ -348,8 +335,8 @@ export const useFoldersState = (
       // Forzar invalidación de cache y recarga
       await loadFolders();
       console.log('✅ refreshFolders: Carpetas recargadas exitosamente');
-    } catch (error) {
-      console.error('❌ refreshFolders: Error al recargar carpetas:', error);
+    } catch {
+      console.error('❌ refreshFolders: Error al recargar carpetas');
     }
   };
 

@@ -193,13 +193,13 @@ export const TestWhatsappPage = () => {
           }
 
           setExcelData(contacts);
-          } catch (parseError) {
+          } catch {
           alert('Error al procesar el contenido del archivo Excel. Asegúrate de que sea un archivo Excel válido.');
         }
       };
 
       reader.readAsArrayBuffer(file);
-    } catch (error) {
+    } catch {
       alert('Error al procesar el archivo Excel');
     }
   };

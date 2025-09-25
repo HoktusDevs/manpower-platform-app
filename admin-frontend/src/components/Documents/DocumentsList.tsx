@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DocumentCard } from './DocumentCard';
 import { documentsService, type DocumentInfo, type FolderDocument } from '../../services/documentsService';
 
 interface DocumentsListProps {
-  folders: any[];
+  folders: unknown[];
   onDocumentView: (document: DocumentInfo) => void;
 }
 
@@ -15,11 +15,7 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDocuments();
-  }, [folders]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -31,12 +27,16 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
       } else {
         setError(response.error || 'Error cargando documentos');
       }
-    } catch (error) {
+    } catch {
       setError('Error de conexión');
     } finally {
       setLoading(false);
     }
-  };
+  }, [folders]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
 
   const handleDownload = async (documentId: string) => {
     try {
@@ -46,9 +46,11 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
         // Abrir en nueva pestaña para descarga
         window.open(response.downloadUrl, '_blank');
       } else {
-        }
-    } catch (error) {
+        console.warn('No se pudo descargar el documento');
       }
+    } catch {
+      console.error('Error al descargar documento');
+    }
   };
 
   const handleView = (documentId: string) => {

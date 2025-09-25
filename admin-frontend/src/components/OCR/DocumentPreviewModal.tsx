@@ -6,8 +6,8 @@ interface OCRResult {
   confidence: number;
   processingTime: number;
   language: string;
-  metadata: any;
-  fields?: any;
+  metadata: unknown;
+  fields?: Record<string, unknown>;
 }
 
 interface DocumentFile {
@@ -22,7 +22,7 @@ interface DocumentFile {
   hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
   hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
   documentType?: string;
-  observations?: any[];
+  observations?: unknown[];
 }
 
 interface DocumentPreviewModalProps {
@@ -316,14 +316,20 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   <h4 className="text-md font-medium text-gray-900 mb-3">Observaciones</h4>
                   <div className="space-y-3">
                     {document.observations
-                      .filter(obs => !obs.message?.includes('Documento no cumple con los criterios de calidad'))
-                      .map((obs, index) => (
-                        <div key={index} className="mb-2">
-                          <p className="text-sm text-gray-700">
-                            {obs.razon_interna || obs.razon || obs.message}
-                          </p>
-                        </div>
-                      ))}
+                      .filter(obs => {
+                        const observation = obs as { message?: string };
+                        return !observation.message?.includes('Documento no cumple con los criterios de calidad');
+                      })
+                      .map((obs, index) => {
+                        const observation = obs as { razon_interna?: string; razon?: string; message?: string };
+                        return (
+                          <div key={index} className="mb-2">
+                            <p className="text-sm text-gray-700">
+                              {observation.razon_interna || observation.razon || observation.message}
+                            </p>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}

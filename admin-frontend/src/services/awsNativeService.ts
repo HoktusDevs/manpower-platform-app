@@ -108,7 +108,7 @@ class AWSNativeService {
       }));
 
       return result.Items as Application[] || [];
-    } catch (error) {
+    } catch {
       throw new Error('Failed to fetch applications');
     }
   }
@@ -156,7 +156,7 @@ class AWSNativeService {
       }));
 
       return application;
-    } catch (error) {
+    } catch {
       throw new Error('Failed to create application');
     }
   }
@@ -211,7 +211,7 @@ class AWSNativeService {
       }));
 
       return result.Attributes as Application;
-    } catch (error) {
+    } catch {
       throw new Error('Failed to update application');
     }
   }
@@ -244,7 +244,7 @@ class AWSNativeService {
       }));
 
       return result.Items as Application[] || [];
-    } catch (error) {
+    } catch {
       throw new Error('Failed to fetch applications');
     }
   }
@@ -286,7 +286,7 @@ class AWSNativeService {
       }));
 
       return result.Attributes as Application;
-    } catch (error) {
+    } catch {
       throw new Error('Failed to update application status');
     }
   }

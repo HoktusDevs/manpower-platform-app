@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { 
   FolderRow, 
   UseSelectionStateReturn
@@ -14,16 +14,16 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
   /**
    * Get all descendant IDs for a folder
    */
-  const getAllDescendants = (folderId: string): string[] => {
+  const getAllDescendants = useCallback((folderId: string): string[] => {
     const children = allFolders.filter(f => f.parentId === folderId);
     let descendants = children.map(c => c.id);
     
     children.forEach(child => {
       descendants = [...descendants, ...getAllDescendants(child.id)];
     });
-    
+
     return descendants;
-  };
+  }, [allFolders]);
 
   // Count of visible folders that are selected (not including hidden descendants)
   // const visibleSelectedCount = useMemo(() => {
@@ -48,7 +48,7 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
     }
     
     return true;
-  }, [filteredFolders, selectedRows, allFolders]);
+  }, [filteredFolders, selectedRows, getAllDescendants]);
 
   /**
    * Toggle selection for a single row (with cascade)

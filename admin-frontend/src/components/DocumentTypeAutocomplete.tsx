@@ -41,7 +41,7 @@ export const DocumentTypeAutocomplete: React.FC<DocumentTypeAutocompleteProps> =
         const suggestionNames = results.map(doc => doc.name);
         setSuggestions(suggestionNames);
         setShowSuggestions(suggestionNames.length > 0);
-      } catch (error) {
+      } catch {
         setSuggestions([]);
         setShowSuggestions(false);
       } finally {
@@ -81,7 +81,7 @@ export const DocumentTypeAutocomplete: React.FC<DocumentTypeAutocompleteProps> =
   };
 
   // Handle input blur
-  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleInputBlur = () => {
     // Delay hiding suggestions to allow clicking on them
     setTimeout(() => {
       if (!suggestionsRef.current?.contains(document.activeElement)) {

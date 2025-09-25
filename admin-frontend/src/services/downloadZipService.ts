@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { documentsService } from './documentsService';
 import { FoldersApiService } from './foldersApiService';
-import type { Folder, Document } from '../types';
+import type { Folder } from '../types';
 import type { DownloadItem, DownloadProgress } from '../types/download';
 
 class DownloadZipService {
@@ -123,54 +123,50 @@ class DownloadZipService {
       status: 'creating-zip'
     });
 
-    try {
-      // Procesar cada elemento
-      for (const item of items) {
-        onProgress?.({
-          current: processedItems,
-          total: totalItems,
-          currentItem: `Procesando ${item.name}...`,
-          status: 'downloading'
-        });
+    // Procesar cada elemento
+    for (const item of items) {
+      onProgress?.({
+        current: processedItems,
+        total: totalItems,
+        currentItem: `Procesando ${item.name}...`,
+        status: 'downloading'
+      });
 
-        if (item.type === 'folder') {
-          await this.addFolderToZip(zip, item, '');
-        } else {
-          await this.addFileToZip(zip, item, '');
-        }
-
-        processedItems++;
+      if (item.type === 'folder') {
+        await this.addFolderToZip(zip, item, '');
+      } else {
+        await this.addFileToZip(zip, item, '');
       }
 
-      // Generar y descargar el ZIP
-      onProgress?.({
-        current: totalItems,
-        total: totalItems,
-        currentItem: 'Generando archivo ZIP...',
-        status: 'creating-zip'
-      });
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      
-      // Crear enlace de descarga
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      onProgress?.({
-        current: totalItems,
-        total: totalItems,
-        currentItem: 'Descarga completada',
-        status: 'completed'
-      });
-    } catch (error) {
-      throw error;
+      processedItems++;
     }
+
+    // Generar y descargar el ZIP
+    onProgress?.({
+      current: totalItems,
+      total: totalItems,
+      currentItem: 'Generando archivo ZIP...',
+      status: 'creating-zip'
+    });
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    
+    // Crear enlace de descarga
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    onProgress?.({
+      current: totalItems,
+      total: totalItems,
+      currentItem: 'Descarga completada',
+      status: 'completed'
+    });
   }
 
   /**
@@ -217,8 +213,9 @@ class DownloadZipService {
       
       // Agregar archivo al ZIP
       zip.file(filePath, fileBlob);
-    } catch (error) {
-      }
+    } catch {
+      // Error al agregar archivo al ZIP, continuar con el siguiente
+    }
   }
 
   /**
@@ -242,7 +239,7 @@ class DownloadZipService {
       return {
         downloadUrl: data.downloadUrl
       };
-    } catch (error) {
+    } catch {
       return {};
     }
   }

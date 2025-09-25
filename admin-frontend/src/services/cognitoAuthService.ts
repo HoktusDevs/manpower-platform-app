@@ -212,7 +212,7 @@ class CognitoAuthService {
                 refreshToken: session.getRefreshToken().getToken(),
               },
             });
-          } catch (error) {
+          } catch {
             resolve({
               success: false,
               message: 'Error parsing user information',
@@ -254,8 +254,9 @@ class CognitoAuthService {
     if (this.currentUser) {
       try {
         this.currentUser.signOut();
-      } catch (error) {
-        }
+      } catch {
+        console.warn('Failed to sign out user');
+      }
       this.currentUser = null;
     }
   }
@@ -308,7 +309,7 @@ class CognitoAuthService {
       }
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -354,7 +355,7 @@ class CognitoAuthService {
       }
 
       return false;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -376,7 +377,7 @@ class CognitoAuthService {
         })
       ];
 
-      this.currentUser.updateAttributes(attributeList, (err, result) => {
+      this.currentUser.updateAttributes(attributeList, (err) => {
         if (err) {
           reject(err);
           return;
@@ -432,7 +433,8 @@ class CognitoAuthService {
           const idPayload = JSON.parse(atob(idToken.split('.')[1]));
           hasRoleClaim = Boolean(idPayload['custom:role']);
         } catch {
-          }
+          console.warn('Failed to parse ID token');
+        }
       }
       
       // If missing role claim, force logout immediately (but not during session renewal)
@@ -442,7 +444,8 @@ class CognitoAuthService {
         window.location.href = '/login?reason=missing_role';
         return null;
       } else if (!hasRoleClaim && isSessionRenewal) {
-        }
+        console.warn('Missing role claim during session renewal');
+      }
       
       // If token is expired, try to refresh
       if (payload.exp <= now + 300) {
@@ -450,7 +453,7 @@ class CognitoAuthService {
       }
 
       return accessToken;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -489,9 +492,10 @@ class CognitoAuthService {
       cognitoUser.getSession((err: Error | null, session: CognitoUserSession) => {
         if (err) {
           // If session is invalid, the refresh token might be expired
-          if (err.message.includes('Refresh Token has expired') || 
+          if (err.message.includes('Refresh Token has expired') ||
               err.message.includes('NotAuthorizedException')) {
-            }
+            console.warn('Refresh token has expired');
+          }
           
           resolve(null);
           return;

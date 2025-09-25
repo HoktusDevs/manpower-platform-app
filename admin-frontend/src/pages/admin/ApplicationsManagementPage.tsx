@@ -47,7 +47,7 @@ export const ApplicationsManagementPage: React.FC = () => {
   // Cargar datos iniciales
   useEffect(() => {
     fetchAllApplications();
-  }, []);
+  }, [fetchAllApplications]);
 
   // Filter applications by search term
   const filteredApplications = (applications || []).filter(app => 
@@ -201,13 +201,14 @@ export const ApplicationsManagementPage: React.FC = () => {
       ),
       onClick: async (applications) => {
         try {
-          await Promise.all(applications.map(app => 
+          await Promise.all(applications.map(app =>
             updateApplicationStatus(app.applicationId, 'APPROVED')
           ));
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
-        } catch (error) {
-          }
+        } catch {
+          console.warn('Failed to approve selected applications');
+        }
       }
     },
     {
@@ -221,13 +222,14 @@ export const ApplicationsManagementPage: React.FC = () => {
       ),
       onClick: async (applications) => {
         try {
-          await Promise.all(applications.map(app => 
+          await Promise.all(applications.map(app =>
             updateApplicationStatus(app.applicationId, 'IN_REVIEW')
           ));
           await fetchAllApplications(); // Refresh list
           setSelectedItems(new Set()); // Clear selection
-        } catch (error) {
-          }
+        } catch {
+          console.warn('Failed to mark selected applications for review');
+        }
       }
     },
     {
@@ -242,13 +244,14 @@ export const ApplicationsManagementPage: React.FC = () => {
       onClick: async (applications) => {
         if (window.confirm(`¿Estás seguro de que deseas rechazar ${applications.length} aplicación(es)?`)) {
           try {
-            await Promise.all(applications.map(app => 
+            await Promise.all(applications.map(app =>
               updateApplicationStatus(app.applicationId, 'REJECTED')
             ));
             await fetchAllApplications(); // Refresh list
             setSelectedItems(new Set()); // Clear selection
-          } catch (error) {
-            }
+          } catch {
+            console.warn('Failed to reject selected applications');
+          }
         }
       }
     },
@@ -268,8 +271,9 @@ export const ApplicationsManagementPage: React.FC = () => {
             await deleteApplications(applicationIds);
             await fetchAllApplications(); // Refresh list
             setSelectedItems(new Set()); // Clear selection
-          } catch (error) {
-            }
+          } catch {
+            console.warn('Failed to delete selected applications');
+          }
         }
       }
     }

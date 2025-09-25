@@ -64,7 +64,8 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       }).join(''));
 
       return JSON.parse(jsonPayload);
-    } catch (error) {
+    } catch {
+      // Token parsing failed - return null to indicate invalid token
       return null;
     }
   };
@@ -146,7 +147,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
       // Update time remaining if warning is already shown and not dismissed
       setState(prev => ({ ...prev, timeRemaining }));
     }
-  }, []);
+  }, [performLogout]);
 
   const renewSession = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isRenewing: true }));
@@ -182,7 +183,7 @@ export const useTokenMonitor = (): UseTokenMonitorReturn => {
         } else {
         throw new Error('Token refresh returned null - authentication expired');
       }
-    } catch (error) {
+    } catch {
       // Stop all monitoring immediately
       isLoggedOutRef.current = true;
       if (intervalRef.current) {

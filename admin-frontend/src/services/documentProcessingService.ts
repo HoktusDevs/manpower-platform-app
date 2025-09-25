@@ -31,9 +31,9 @@ export interface WebSocketNotification {
   processingStatus: string;
   finalDecision?: string;
   documentType?: string;
-  ocrResult?: any;
-  extractedData?: any;
-  observations?: any[];
+  ocrResult?: Record<string, unknown>;
+  extractedData?: Record<string, unknown>;
+  observations?: Record<string, unknown>[];
   message: string;
   ownerUserName: string;
   fileName?: string;
@@ -56,49 +56,40 @@ class DocumentProcessingService {
    * Process documents using the new document processing microservice
    */
   async processDocuments(request: ProcessDocumentsRequest): Promise<ProcessDocumentsResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.processDocuments}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+    const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.processDocuments}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data;
   }
 
   /**
    * Check health of the document processing service
    */
-  async checkHealth(): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.health}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  async checkHealth(): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.health}`);
 
-      return await response.json();
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.json();
   }
 
   /**
    * Send WebSocket notification manually
    */
-  async sendWebSocketNotification(notification: Partial<WebSocketNotification>): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.websocketNotify}`, {
+  async sendWebSocketNotification(notification: Partial<WebSocketNotification>): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.baseUrl}${API_CONFIG.documentProcessing.endpoints.websocketNotify}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,34 +102,26 @@ class DocumentProcessingService {
       }
 
       return await response.json();
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
    * Get documents from the database
    */
-  async getDocuments(): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/documents`);
+  async getDocuments(): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.baseUrl}/api/v1/documents`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       return await response.json();
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
    * Delete a document from the database
    */
-  async deleteDocument(documentId: string): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/documents/delete/${documentId}`, {
+  async deleteDocument(documentId: string): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.baseUrl}/api/v1/documents/delete/${documentId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,17 +134,13 @@ class DocumentProcessingService {
       }
 
       return await response.json();
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
    * Update document decision (APPROVED, REJECTED, MANUAL_REVIEW)
    */
-  async updateDocumentDecision(documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING'): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/documents/update-decision/${documentId}`, {
+  async updateDocumentDecision(documentId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING'): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.baseUrl}/api/v1/documents/update-decision/${documentId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -175,9 +154,6 @@ class DocumentProcessingService {
       }
 
       return await response.json();
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**

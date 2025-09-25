@@ -263,8 +263,9 @@ const FormsManager: React.FC = () => {
       try {
         const jobs = await jobPostingsService.listJobPostings({});
         setJobPostings(jobs);
-      } catch (error) {
-        }
+      } catch {
+        // Silently handle job postings loading errors
+      }
     };
     
     loadJobPostings();
@@ -284,8 +285,9 @@ const FormsManager: React.FC = () => {
       await createForm(selectedJobId, title, description, fields);
       setShowFormBuilder(false);
       setSelectedJobId('');
-    } catch (error) {
-      }
+    } catch {
+      // Silently handle form creation errors
+    }
   };
 
   const handleUpdateForm = async (title: string, description: string, fields: FormField[]) => {
@@ -295,8 +297,9 @@ const FormsManager: React.FC = () => {
       await updateForm(editingForm.formId, { title, description, fields });
       setShowFormBuilder(false);
       setEditingForm(undefined);
-    } catch (error) {
-      }
+    } catch {
+      // Silently handle form creation errors
+    }
   };
 
   const handleDeleteForm = async (formId: string) => {
@@ -306,8 +309,9 @@ const FormsManager: React.FC = () => {
     
     try {
       await deleteForm(formId);
-    } catch (error) {
-      }
+    } catch {
+      // Silently handle form creation errors
+    }
   };
 
   const handleEditForm = (form: JobApplicationForm) => {
@@ -318,8 +322,9 @@ const FormsManager: React.FC = () => {
   const handlePublishForm = async (formId: string) => {
     try {
       await updateForm(formId, { status: 'active' });
-    } catch (error) {
-      }
+    } catch {
+      // Silently handle form creation errors
+    }
   };
 
   if (!user || user.role !== 'admin') {

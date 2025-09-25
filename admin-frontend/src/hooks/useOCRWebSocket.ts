@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getWebSocketConfig, isWebSocketSupported, getWebSocketStatus } from '../config/websocket';
 
 interface OCRDocumentUpdate {
   documentId: string;
   status: string;
-  ocrResult?: any;
+  ocrResult?: Record<string, unknown>;
   error?: string;
   timestamp: string;
 }
@@ -30,7 +30,7 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
     }
   };
 
-  const startPingInterval = () => {
+  const startPingInterval = useCallback(() => {
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
     }
@@ -40,9 +40,9 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
         wsRef.current.send(JSON.stringify({ type: 'ping' }));
       }
     }, config.pingInterval);
-  };
+  }, [config]);
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (!isWebSocketSupported()) {
       setConnectionError('WebSocket no soportado en este navegador');
       return;
@@ -80,8 +80,10 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
           if (data.type === 'document_update' && data.documentId) {
             onDocumentUpdate(data);
           }
-        } catch (error) {
-          }
+        } catch {
+          // Handle WebSocket message parsing error
+          console.warn('Failed to parse WebSocket message');
+        }
       };
 
       wsRef.current.onclose = (event) => {
@@ -101,16 +103,17 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
         }
       };
 
-      wsRef.current.onerror = (error) => {
+      wsRef.current.onerror = () => {
         setConnectionError('Error de conexi�n WebSocket');
       };
 
-    } catch (error) {
+    } catch {
       setConnectionError('Error al crear conexi�n WebSocket');
+      console.warn('Failed to create WebSocket connection');
     }
-  };
+  }, [config, onDocumentUpdate, startPingInterval]);
 
-  const disconnect = () => {
+  const disconnect = useCallback(() => {
     cleanup();
     reconnectAttemptsRef.current = config.maxReconnectAttempts; // Prevenir reconexi�n autom�tica
 
@@ -121,7 +124,7 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
 
     setIsConnected(false);
     setConnectionError(null);
-  };
+  }, [config]);
 
   const reconnect = () => {
     disconnect();
@@ -135,7 +138,7 @@ export const useOCRWebSocket = (onDocumentUpdate: (update: OCRDocumentUpdate) =>
     return () => {
       disconnect();
     };
-  }, []);
+  }, [connect, disconnect]);
 
   return {
     isConnected,
