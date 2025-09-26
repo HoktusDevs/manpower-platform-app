@@ -17,6 +17,7 @@ export interface File {
   uploadedAt: string;
   updatedAt: string;
   isActive: boolean;
+  status?: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
 }
 
 export class FileModel {
@@ -38,6 +39,7 @@ export class FileModel {
   public uploadedAt: string;
   public updatedAt: string;
   public isActive: boolean;
+  public status: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
 
   constructor(data: Partial<File>) {
     this.documentId = data.documentId || '';
@@ -58,6 +60,7 @@ export class FileModel {
     this.uploadedAt = data.uploadedAt || new Date().toISOString();
     this.updatedAt = data.updatedAt || new Date().toISOString();
     this.isActive = data.isActive !== undefined ? data.isActive : true;
+    this.status = data.status || 'pending'; // Default status is pending
   }
 
   // Generate S3 key for file storage
@@ -161,7 +164,8 @@ export class FileModel {
       tags: this.tags,
       uploadedAt: this.uploadedAt,
       updatedAt: this.updatedAt,
-      isActive: this.isActive
+      isActive: this.isActive,
+      status: this.status
     };
   }
 

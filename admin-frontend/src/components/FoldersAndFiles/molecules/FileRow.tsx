@@ -69,7 +69,25 @@ export const FileRow: React.FC<FileRowProps> = ({
           
           {/* File Information */}
           <div className="ml-3">
-            <p className="text-sm font-medium text-gray-900">{file.originalName}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-gray-900">{file.originalName}</p>
+              {/* Status Badge */}
+              {file.status && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  file.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  file.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                  file.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  file.status === 'failed' || file.status === 'error' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {file.status === 'pending' ? 'Pendiente' :
+                   file.status === 'processing' ? 'Procesando...' :
+                   file.status === 'completed' ? 'Completado' :
+                   file.status === 'failed' ? 'Fallido' :
+                   file.status === 'error' ? 'Error' : 'Desconocido'}
+                </span>
+              )}
+            </div>
             <div className="text-sm text-gray-500 space-y-0.5">
               <div className="flex items-center gap-4">
                 <span className="text-gray-400">•</span>

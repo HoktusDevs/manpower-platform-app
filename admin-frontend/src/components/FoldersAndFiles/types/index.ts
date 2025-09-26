@@ -20,6 +20,7 @@ export interface File {
   userId: string;
   createdAt?: string;
   isActive?: boolean;
+  status?: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
 }
 
 export interface CreateFolderData {
