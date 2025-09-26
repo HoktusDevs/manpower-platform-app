@@ -5,7 +5,7 @@ import { Container } from '../../core-ui';
 // Tipos genéricos para la tabla universal
 export interface TableColumn<T = Record<string, unknown>> {
   key: string;
-  label: string;
+  header: string;
   sortable?: boolean;
   width?: string;
   render?: (item: T, value: string | number | boolean | null | undefined) => ReactNode;
@@ -13,8 +13,8 @@ export interface TableColumn<T = Record<string, unknown>> {
 
 export interface TableAction<T = Record<string, unknown>> {
   key: string;
-  label: string;
-  icon?: ReactNode;
+  label: string | ((item: T) => string);
+  icon?: ReactNode | ((item: T) => ReactNode);
   variant?: 'primary' | 'secondary' | 'danger';
   onClick: (item: T) => void;
   show?: (item: T) => boolean;
@@ -312,7 +312,7 @@ export const UniversalTableManager = <T,>({
                       }`}
                       style={column.width ? { width: column.width } : undefined}
                     >
-                      {column.label}
+                      {column.header}
                     </th>
                   ))}
                   {rowActions.length > 0 && (
@@ -367,9 +367,9 @@ export const UniversalTableManager = <T,>({
                                   key={action.key}
                                   onClick={() => action.onClick(item)}
                                   className="inline-flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                                  title={action.label}
+                                  title={typeof action.label === 'function' ? action.label(item) : action.label}
                                 >
-                                  {action.icon}
+                                  {typeof action.icon === 'function' ? action.icon(item) : action.icon}
                                 </button>
                               ))}
                           </div>

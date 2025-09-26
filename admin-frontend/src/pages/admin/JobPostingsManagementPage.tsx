@@ -1,136 +1,28 @@
 import React, { useState } from 'react';
 import { useToast } from '../../core-ui/useToast';
 import { ConfirmModal } from '../../core-ui/ConfirmModal';
-import { 
-  validateJobPostingBasic, 
-  formatZodErrors
-} from '../../schemas/jobPostingSchema';
 import { FoldersProvider } from '../../components/FoldersAndFiles';
-import { useFolderJobSync } from '../../hooks/useFolderJobSync';
 import { UniversalTableManager } from '../../components/UniversalTable/UniversalTableManager';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable/UniversalTableManager';
-import { type JobPosting, type CreateJobInput, useJobsList, useCreateJob, useUpdateJob, useDeleteJob } from '../../services/jobsService';
-import { CreateJobModal } from '../../components/JobManagement/CreateJobModal';
-
-// Tipos locales para compatibilidad con la UI
-interface CreateJobPostingInput {
-  title: string;
-  description: string;
-  companyName: string;
-  requirements: string;
-  salary?: string;
-  location: string;
-  employmentType: JobPosting['employmentType'];
-  experienceLevel: JobPosting['experienceLevel'];
-  benefits?: string;
-  schedule?: string;
-  expiresAt?: string;
-  fieldValues?: Record<string, unknown>;
-  status?: JobPosting['status'];
-  requiredDocuments?: string[];
-}
-
-const getEmploymentTypeText = (type: JobPosting['employmentType']) => {
-  switch (type) {
-    case 'FULL_TIME': return 'Tiempo Completo';
-    case 'PART_TIME': return 'Medio Tiempo';
-    case 'CONTRACT': return 'Contrato';
-    case 'FREELANCE': return 'Freelance';
-    case 'INTERNSHIP': return 'Práctica';
-    case 'TEMPORARY': return 'Temporal';
-    default: return type;
-  }
-};
-
-const getExperienceLevelText = (level: JobPosting['experienceLevel']) => {
-  switch (level) {
-    case 'ENTRY_LEVEL': return 'Junior';
-    case 'MID_LEVEL': return 'Semi-Senior';
-    case 'SENIOR_LEVEL': return 'Senior';
-    case 'EXECUTIVE': return 'Ejecutivo';
-    case 'INTERNSHIP': return 'Práctica';
-    default: return level;
-  }
-};
-
-// const statusOptions: JobPosting['status'][] = ['DRAFT', 'PUBLISHED', 'PAUSED', 'EXPIRED', 'CLOSED'];
-
-// Job posting field types that can be configured
-interface JobFieldSpec {
-  id: string;
-  label: string;
-  description: string;
-  type: 'text' | 'textarea' | 'select' | 'range' | 'location' | 'schedule';
-  required?: boolean;
-  options?: string[];
-}
-
-const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
-  {
-    id: 'location',
-    label: 'Ubicación Detallada',
-    description: 'Especifica el tipo de ubicación y dirección exacta',
-    type: 'location',
-    required: true
-  },
-  {
-    id: 'employment_type',
-    label: 'Tipo de Empleo',
-    description: 'Modalidad de contratación',
-    type: 'select',
-    required: true,
-    options: ['Tiempo Completo', 'Medio Tiempo', 'Contrato', 'Freelance', 'Práctica', 'Temporal']
-  },
-  {
-    id: 'experience',
-    label: 'Nivel de Experiencia',
-    description: 'Nivel de experiencia requerido para el puesto',
-    type: 'select',
-    required: true,
-    options: ['Junior', 'Semi-Senior', 'Senior', 'Ejecutivo', 'Práctica']
-  },
-  {
-    id: 'salary',
-    label: 'Rango Salarial',
-    description: 'Especifica el rango de salario para esta posición',
-    type: 'range',
-    required: false
-  },
-  {
-    id: 'schedule',
-    label: 'Horario de Trabajo',
-    description: 'Horario de trabajo y días laborables',
-    type: 'schedule',
-    required: false
-  },
-  {
-    id: 'benefits',
-    label: 'Beneficios Adicionales',
-    description: 'Beneficios extra que ofrece la empresa',
-    type: 'textarea',
-    required: false
-  }
-];
+import { type JobPosting } from '../../services/jobsService';
+import { useGetAllJobs, useDeleteJobs, useToggleJobStatus } from '../../hooks/useUnifiedJobs';
+import { useDeleteJobWithFolder } from '../../services/unifiedJobFolderService';
+import { UnifiedCreateJobModal } from '../../components/JobManagement/UnifiedCreateJobModal';
 
 export const JobPostingsManagementPage: React.FC = () => {
   const { showSuccess, showError } = useToast();
-  
-  // React Query hooks para jobs
-  const { data: jobPostings = [], isLoading: loading } = useJobsList();
-  const createJobMutation = useCreateJob();
-  const updateJobMutation = useUpdateJob();
-  const deleteJobMutation = useDeleteJob();
 
-  // Hook for syncing folders with job operations
-  const { syncFoldersAfterJobOperation, deleteFoldersForJob } = useFolderJobSync();
-  
+  // React Query hooks para jobs unificados
+  const { data: jobPostings = [], isLoading: loading } = useGetAllJobs();
+  const deleteJobsMutation = useDeleteJobs();
+  const deleteJobWithFolderMutation = useDeleteJobWithFolder();
+  const toggleJobStatusMutation = useToggleJobStatus();
 
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Selection and bulk actions states
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
-  const [, setIsBulkDeleting] = useState(false);
-  
+
   // Confirmation modal states
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -147,142 +39,21 @@ export const JobPostingsManagementPage: React.FC = () => {
     variant: 'danger',
     isLoading: false
   });
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [jobData, setJobData] = useState({
-    title: '',
-    description: '',
-    companyName: '',
-    requirements: '',
-    // Los siguientes campos ahora se manejan via fieldValues
-    salary: '',
-    location: '',
-    employmentType: 'FULL_TIME' as JobPosting['employmentType'],
-    experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
-    benefits: '',
-    schedule: '',
-    expiresAt: '',
-    status: 'PUBLISHED' as JobPosting['status']
-  });
-  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
-  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
-  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
-  const [, setIsCreating] = useState(false);
-  const [showFieldConfigModal, setShowFieldConfigModal] = useState(false);
-  const [, setRequiredDocuments] = useState<string[]>([]);
-
-
 
   // Filter job postings by search term
-  const filteredJobPostings = jobPostings.filter(job => 
+  const filteredJobPostings = jobPostings.filter(job =>
     job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     job.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group job postings by status for summary (currently unused but may be needed later)
-  // const statusSummary = jobPostings.reduce((acc, job) => {
-  //   acc[job.status] = (acc[job.status] || 0) + 1;
-  //   return acc;
-  // }, {} as Record<JobPosting['status'], number>);
-
-  // Field validation errors state
-
-  // Zod-based validation functions
-  const validateBasicFields = () => {
-    const basicData = {
-      title: jobData.title,
-      companyName: jobData.companyName,
-      description: jobData.description,
-      requirements: jobData.requirements,
-    };
-    
-    const result = validateJobPostingBasic(basicData);
-    return result.success ? {} : formatZodErrors(result.error);
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const validateForm = (): Record<string, string> => {
-    // Start with basic field validation
-    const basicErrors = validateBasicFields();
-    
-    // Add custom validation for dynamic fields
-    const customErrors: Record<string, string> = {};
-    
-    // Validate additional field values
-    selectedFields.forEach(fieldId => {
-      const fieldSpec = AVAILABLE_JOB_FIELDS.find(f => f.id === fieldId);
-      if (!fieldSpec) return;
-
-      const fieldValue = fieldValues[fieldId];
-      
-      if (fieldSpec.required && (!fieldValue || 
-        (typeof fieldValue === 'string' && !fieldValue.trim()) ||
-        (typeof fieldValue === 'object' && Object.values(fieldValue).every(v => !v)))) {
-        customErrors[`field_${fieldId}`] = `${fieldSpec.label} es requerido`;
-      }
-
-      // Specific validation for salary range
-      if (fieldId === 'salary' && fieldValue && typeof fieldValue === 'object') {
-        const salaryObj = fieldValue as { min?: string; max?: string };
-        if (salaryObj.min && salaryObj.max) {
-          const minVal = parseFloat(salaryObj.min);
-          const maxVal = parseFloat(salaryObj.max);
-          if (minVal >= maxVal) {
-            customErrors[`field_${fieldId}`] = 'El salario mínimo debe ser menor al máximo';
-          }
-        }
-      }
-
-      // Specific validation for location
-      if (fieldId === 'location' && fieldValue && typeof fieldValue === 'object') {
-        const locationObj = fieldValue as { type?: string; address?: string };
-        if (locationObj.type && locationObj.type !== 'remote' && !locationObj.address?.trim()) {
-          customErrors[`field_${fieldId}`] = 'La dirección es requerida para ubicaciones no remotas';
-        }
-      }
-    });
-
-    return { ...basicErrors, ...customErrors };
-  };
-
-
-
   // Reset modal state
   const resetModalState = () => {
-    setJobData({
-      title: '',
-      description: '',
-      companyName: '',
-      requirements: '',
-      salary: '',
-      location: '',
-      employmentType: 'FULL_TIME' as JobPosting['employmentType'],
-      experienceLevel: 'ENTRY_LEVEL' as JobPosting['experienceLevel'],
-      benefits: '',
-      schedule: '',
-      expiresAt: '',
-      status: 'PUBLISHED' as JobPosting['status']
-    });
-    setSelectedFolderId(undefined);
-    setSelectedFields(new Set());
-    setFieldValues({});
-    setActiveTab('basic');
-    setIsCreating(false);
-    setFieldErrors({});
-    setShowFieldConfigModal(false);
-    setHasAttemptedSubmit(false);
-    setRequiredDocuments([]);
-    setDocumentInput('');
-    
-    // Reset edit mode states
-    setIsEditMode(false);
-    setEditingJobId(null);
+    // Modal state reset handled by UnifiedCreateJobModal
   };
-
 
   // Helper function to show confirmation modal
   const showConfirmModal = (
@@ -306,167 +77,39 @@ export const JobPostingsManagementPage: React.FC = () => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Helper function to set modal loading state
+  // Set modal loading state
   const setModalLoading = (loading: boolean) => {
     setConfirmModal(prev => ({ ...prev, isLoading: loading }));
   };
 
-  // Helper function to load job data for editing
-  const loadJobForEdit = (job: JobPosting) => {
-    setIsEditMode(true);
-    setEditingJobId(job.jobId);
-    setJobData({
-      title: job.title,
-      description: job.description,
-      companyName: job.companyName,
-      location: job.location,
-      salary: job.salary || '',
-      experienceLevel: job.experienceLevel,
-      employmentType: job.employmentType,
-      requirements: job.requirements || '',
-      benefits: job.benefits || '',
-      schedule: job.schedule || '',
-      expiresAt: job.expiresAt || '',
-      status: job.status
-    });
-    
-    // If the job has a folderId, set it
-    if (job.folderId) {
-      setSelectedFolderId(job.folderId);
-    }
-    
-    // Map backend data to fieldValues for additional fields
-    const mappedFieldValues: Record<string, unknown> = {};
-    
-    // Map location data if it exists using the new parser
-    if (job.location && job.location !== 'Por definir') {
-      mappedFieldValues.location = parseLocationFromAPI(job.location);
-    }
-    
-    // Map employment type using helper function
-    mappedFieldValues.employment_type = mapEmploymentTypeFromBackend(job.employmentType);
-    
-    // Map experience level using helper function
-    mappedFieldValues.experience = mapExperienceLevelFromBackend(job.experienceLevel);
-    
-    // Map salary if it exists
-    if (job.salary) {
-      mappedFieldValues.salary = {
-        min: '',
-        max: job.salary
-      };
-    }
-    
-    // Map schedule if it exists
-    if (job.schedule) {
-      mappedFieldValues.schedule = {
-        start: '',
-        end: '',
-        days: [],
-        description: job.schedule
-      };
-    }
-    
-    // Map benefits if it exists
-    if (job.benefits) {
-      mappedFieldValues.benefits = job.benefits;
-    }
-    
-    // Map requiredDocuments if they exist
-    if (job.requiredDocuments && Array.isArray(job.requiredDocuments)) {
-      setRequiredDocuments(job.requiredDocuments);
-    } else {
-      setRequiredDocuments([]);
-    }
-    
-    // Set the mapped field values
-    setFieldValues(mappedFieldValues);
-    
-    // Set selected fields based on what data exists
-    const fieldsWithData = new Set<string>();
-    
-    // Always include required fields
-    fieldsWithData.add('location');
-    fieldsWithData.add('employment_type');
-    fieldsWithData.add('experience');
-    
-    // Include optional fields if they have data
-    if (job.salary) fieldsWithData.add('salary');
-    if (job.schedule) fieldsWithData.add('schedule');
-    if (job.benefits) fieldsWithData.add('benefits');
-    
-    setSelectedFields(fieldsWithData);
-    
-    // Reset other states
-    setActiveTab('basic');
-    setFieldErrors({});
-    setHasAttemptedSubmit(false);
-    
-    // Show the modal
-    setShowCreateModal(true);
-  };
-
   const handleBulkDelete = () => {
     if (selectedJobs.size === 0) return;
-    
+
     showConfirmModal(
       'Eliminar ofertas seleccionadas',
-      `¿Estás seguro de que quieres eliminar ${selectedJobs.size} oferta${selectedJobs.size !== 1 ? 's' : ''} de trabajo? Esta acción no se puede deshacer.`,
+      `¿Estás seguro de que quieres eliminar ${selectedJobs.size} oferta${selectedJobs.size !== 1 ? 's' : ''} de trabajo? Esta acción no se puede deshacer y también eliminará las carpetas asociadas.`,
       async () => {
         setModalLoading(true);
-        setIsBulkDeleting(true);
-        
-        let successCount = 0;
-        let errorCount = 0;
-        const jobIds = Array.from(selectedJobs);
 
-        for (const jobId of jobIds) {
-          try {
-            const success = await deleteJobPosting(jobId);
-            if (success) {
-              successCount++;
-            } else {
-              errorCount++;
-            }
-          } catch {
-            errorCount++;
-          }
-        }
+        try {
+          const jobIds = Array.from(selectedJobs);
+          await deleteJobsMutation.mutateAsync(jobIds);
 
-        // Show results
-        if (successCount > 0) {
           showSuccess(
-            `${successCount} ofertas eliminadas`,
-            errorCount > 0 ? `${errorCount} ofertas no pudieron eliminarse` : undefined
+            `${selectedJobs.size} ofertas eliminadas`,
+            'Las ofertas y sus carpetas asociadas se eliminaron correctamente'
           );
-        }
-        
-        if (errorCount > 0 && successCount === 0) {
-          showError('Error al eliminar ofertas', 'No se pudieron eliminar las ofertas seleccionadas');
-        }
 
-        // Refresh the list
-        await loadJobPostings();
-
-        // Delete associated folders for each deleted job
-        if (successCount > 0) {
-          for (const jobId of Array.from(selectedJobs)) {
-            const jobToDelete = jobPostings.find(job => job.jobId === jobId);
-            if (jobToDelete) {
-              await deleteFoldersForJob(jobToDelete);
-            }
-          }
-          
-          // Sync folders to maintain consistency (non-blocking)
-          await syncFoldersAfterJobOperation();
-          
+          setSelectedJobs(new Set());
+        } catch (error) {
+          showError(
+            'Error al eliminar ofertas',
+            error instanceof Error ? error.message : 'No se pudieron eliminar todas las ofertas'
+          );
+        } finally {
+          setModalLoading(false);
+          closeConfirmModal();
         }
-
-        // Clear selection and close modal
-        setSelectedJobs(new Set());
-        setIsBulkDeleting(false);
-        setModalLoading(false);
-        closeConfirmModal();
       },
       'danger'
     );
@@ -475,42 +118,38 @@ export const JobPostingsManagementPage: React.FC = () => {
   const handleEditJob = (jobId: string) => {
     const job = jobPostings.find(j => j.jobId === jobId);
     if (job) {
-      loadJobForEdit(job);
+      // Job editing will be handled by UnifiedCreateJobModal in the future
+      console.log('Edit job:', job);
+      setShowCreateModal(true);
     } else {
       showError('Error', 'No se encontró la oferta de trabajo');
     }
   };
 
   const handleDeleteJob = (jobId: string) => {
+    const job = jobPostings.find(j => j.jobId === jobId);
+
     showConfirmModal(
       'Eliminar oferta de trabajo',
-      '¿Estás seguro de que quieres eliminar esta oferta de trabajo? Esta acción no se puede deshacer.',
+      '¿Estás seguro de que quieres eliminar esta oferta de trabajo? Esta acción también eliminará la carpeta asociada y no se puede deshacer.',
       async () => {
         setModalLoading(true);
 
         try {
-          const success = await deleteJobPosting(jobId);
-          
-          if (success) {
-            showSuccess('Oferta eliminada', 'La oferta de trabajo se eliminó correctamente');
+          await deleteJobWithFolderMutation.mutateAsync({
+            jobId,
+            folderId: job?.folderId
+          });
 
-            // Refresh the list
-            await loadJobPostings();
-
-            // Sync folders to maintain consistency (non-blocking)
-            await syncFoldersAfterJobOperation();
-            
-            // Force refresh of folders if we're in the folders context
-            try {
-              window.dispatchEvent(new CustomEvent('foldersRefresh'));
-            } catch {
-              // Silently handle event dispatch errors
-            }
-          } else {
-            showError('Error al eliminar', 'No se pudo eliminar la oferta de trabajo');
-          }
-        } catch {
-          showError('Error al eliminar', 'Ocurrió un error al eliminar la oferta de trabajo');
+          showSuccess(
+            'Oferta eliminada',
+            'La oferta de trabajo y su carpeta se eliminaron correctamente'
+          );
+        } catch (error) {
+          showError(
+            'Error al eliminar',
+            error instanceof Error ? error.message : 'No se pudo eliminar la oferta de trabajo'
+          );
         } finally {
           setModalLoading(false);
           closeConfirmModal();
@@ -522,410 +161,151 @@ export const JobPostingsManagementPage: React.FC = () => {
 
   const handleToggleJobStatus = async (jobId: string, newStatus: 'PUBLISHED' | 'PAUSED') => {
     try {
-      const success = await updateJobPosting(jobId, { status: newStatus });
-      
-      if (success) {
-        const statusText = newStatus === 'PUBLISHED' ? 'activada' : 'desactivada';
-        showSuccess('Estado actualizado', `La oferta de trabajo se ha ${statusText} correctamente`);
-        
-        // Refresh the list
-        await loadJobPostings();
-      } else {
-        showError('Error al actualizar', 'No se pudo actualizar el estado de la oferta de trabajo');
-      }
-    } catch {
-      showError('Error al actualizar', 'Ocurrió un error al actualizar el estado de la oferta de trabajo');
+      await toggleJobStatusMutation.mutateAsync({ jobId, newStatus });
+
+      const statusText = newStatus === 'PUBLISHED' ? 'activada' : 'desactivada';
+      showSuccess('Estado actualizado', `La oferta de trabajo se ha ${statusText} correctamente`);
+    } catch (error) {
+      showError(
+        'Error al actualizar',
+        error instanceof Error ? error.message : 'No se pudo actualizar el estado de la oferta de trabajo'
+      );
     }
   };
 
-  // Helper function to format location consistently
-  const formatLocationForAPI = (locationData: unknown): string => {
-    if (typeof locationData === 'string') {
-      return locationData;
-    }
-    
-    if (locationData && typeof locationData === 'object') {
-      const { type, address } = locationData;
-      const locationParts = [];
-      
-      if (address) locationParts.push(address);
-      if (type) {
-        const typeMap = {
-          'remote': '100% Remoto',
-          'office': 'Presencial', 
-          'hybrid': 'Híbrido'
-        };
-        locationParts.push(`(${typeMap[type as keyof typeof typeMap] || type})`);
-      }
-      
-      return locationParts.length > 0 ? locationParts.join(' ') : 'Por definir';
-    }
-    
-    return 'Por definir';
-  };
-
-  // Helper function to parse location from API
-  const parseLocationFromAPI = (locationString: string): { type: string; address: string } => {
-    if (!locationString || locationString === 'Por definir') {
-      return { type: 'office', address: 'Por definir' };
-    }
-    
-    // Parse location string to extract type and address
-    const typeMatch = locationString.match(/\(([^)]+)\)/);
-    if (typeMatch) {
-      const typeText = typeMatch[1].toLowerCase();
-      let locationType = 'office';
-      
-      if (typeText.includes('remoto') || typeText.includes('remote')) {
-        locationType = 'remote';
-      } else if (typeText.includes('híbrido') || typeText.includes('hybrid')) {
-        locationType = 'hybrid';
-      }
-      
-      const address = locationString.replace(/\s*\([^)]+\)/, '').trim();
-      return { type: locationType, address };
-    }
-    
-    return { type: 'office', address: locationString };
-  };
-
-  // Helper function to map employment type from frontend to backend
-  const mapEmploymentTypeToBackend = (frontendType: string): string => {
-    const typeMap: Record<string, string> = {
-      'Tiempo Completo': 'FULL_TIME',
-      'Medio Tiempo': 'PART_TIME',
-      'Contrato': 'CONTRACT',
-      'Freelance': 'FREELANCE',
-      'Práctica': 'INTERNSHIP',
-      'Temporal': 'TEMPORARY'
-    };
-    return typeMap[frontendType] || 'FULL_TIME';
-  };
-
-  // Helper function to map employment type from backend to frontend
-  const mapEmploymentTypeFromBackend = (backendType: string): string => {
-    const typeMap: Record<string, string> = {
-      'FULL_TIME': 'Tiempo Completo',
-      'PART_TIME': 'Medio Tiempo',
-      'CONTRACT': 'Contrato',
-      'FREELANCE': 'Freelance',
-      'INTERNSHIP': 'Práctica',
-      'TEMPORARY': 'Temporal'
-    };
-    return typeMap[backendType] || 'Tiempo Completo';
-  };
-
-  // Helper function to map experience level from frontend to backend
-  const mapExperienceLevelToBackend = (frontendLevel: string): string => {
-    const levelMap: Record<string, string> = {
-      'Junior': 'ENTRY_LEVEL',
-      'Semi-Senior': 'MID_LEVEL',
-      'Senior': 'SENIOR_LEVEL',
-      'Ejecutivo': 'EXECUTIVE',
-      'Práctica': 'INTERNSHIP'
-    };
-    return levelMap[frontendLevel] || 'ENTRY_LEVEL';
-  };
-
-  // Helper function to map experience level from backend to frontend
-  const mapExperienceLevelFromBackend = (backendLevel: string): string => {
-    const levelMap: Record<string, string> = {
-      'ENTRY_LEVEL': 'Junior',
-      'MID_LEVEL': 'Semi-Senior',
-      'SENIOR_LEVEL': 'Senior',
-      'EXECUTIVE': 'Ejecutivo',
-      'INTERNSHIP': 'Práctica'
-    };
-    return levelMap[backendLevel] || 'Junior';
-  };
-
-  // Map fieldValues to API format
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _mapFieldValuesToAPI = () => {
-    const mappedData: Partial<CreateJobPostingInput> = {};
-    
-    // Handle salary range
-    if (fieldValues.salary && typeof fieldValues.salary === 'object') {
-      const salaryObj = fieldValues.salary as { min?: string; max?: string };
-      if (salaryObj.min || salaryObj.max) {
-        const salaryParts = [];
-        if (salaryObj.min) salaryParts.push(`$${salaryObj.min}`);
-        if (salaryObj.max) salaryParts.push(`$${salaryObj.max}`);
-        mappedData.salary = salaryParts.join(' - ');
-      }
-    }
-    
-    // Handle location with improved structure
-    if (fieldValues.location) {
-      mappedData.location = formatLocationForAPI(fieldValues.location);
-    }
-    
-    // Handle requirements from fieldValues
-    if (fieldValues.requirements && typeof fieldValues.requirements === 'string') {
-      mappedData.requirements = fieldValues.requirements.trim();
-    }
-    
-    // Handle benefits from fieldValues
-    if (fieldValues.benefits && typeof fieldValues.benefits === 'string') {
-      mappedData.benefits = fieldValues.benefits.trim();
-    }
-    
-    // Handle schedule from fieldValues
-    if (fieldValues.schedule && typeof fieldValues.schedule === 'object') {
-      const scheduleObj = fieldValues.schedule as { 
-        start?: string; 
-        end?: string; 
-        days?: number[]; 
-        description?: string 
-      };
-      const scheduleParts = [];
-      
-      if (scheduleObj.start && scheduleObj.end) {
-        scheduleParts.push(`${scheduleObj.start} - ${scheduleObj.end}`);
-      }
-      
-      if (scheduleObj.days && scheduleObj.days.length > 0) {
-        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-        const selectedDays = scheduleObj.days.map(day => dayNames[day]).join(', ');
-        scheduleParts.push(`Días: ${selectedDays}`);
-      }
-      
-      if (scheduleObj.description) {
-        scheduleParts.push(scheduleObj.description);
-      }
-      
-      if (scheduleParts.length > 0) {
-        mappedData.schedule = scheduleParts.join(' | ');
-      }
-    }
-    
-    // Handle experience level from fieldValues using helper function
-    if (fieldValues.experience && typeof fieldValues.experience === 'string') {
-      mappedData.experienceLevel = mapExperienceLevelToBackend(fieldValues.experience) as JobPosting['experienceLevel'];
-    }
-    
-    // Handle employment type from fieldValues using helper function
-    if (fieldValues.employment_type && typeof fieldValues.employment_type === 'string') {
-      mappedData.employmentType = mapEmploymentTypeToBackend(fieldValues.employment_type) as JobPosting['employmentType'];
-    }
-
-    return mappedData;
-  };
-
-  // Get user-friendly error message
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _getUserFriendlyErrorMessage = (error: unknown): string => {
-    if (typeof error === 'string') {
-      // Common API error patterns
-      if (error.includes('Network Error') || error.includes('fetch')) {
-        return 'Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.';
-      }
-      if (error.includes('Unauthorized') || error.includes('401')) {
-        return 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
-      }
-      if (error.includes('Forbidden') || error.includes('403')) {
-        return 'No tienes permisos para crear ofertas de trabajo.';
-      }
-      if (error.includes('Validation') || error.includes('Invalid')) {
-        return 'Algunos campos contienen información inválida. Revisa los datos ingresados.';
-      }
-      if (error.includes('Duplicate') || error.includes('already exists')) {
-        return 'Ya existe una oferta de trabajo con información similar.';
-      }
-      if (error.includes('Timeout') || error.includes('timeout')) {
-        return 'La operación tardó demasiado tiempo. Inténtalo de nuevo.';
-      }
-      return error;
-    }
-    
-    if (error instanceof Error) {
-      return getUserFriendlyErrorMessage(error.message);
-    }
-    
-    return 'Ocurrió un error inesperado. Inténtalo de nuevo más tarde.';
-  };
-
-  // Validate required additional fields
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _validateRequiredAdditionalFields = () => {
-    const requiredFields = AVAILABLE_JOB_FIELDS.filter(field => field.required);
-    const selectedRequiredFields = requiredFields.filter(field => selectedFields.has(field.id));
-    
-    // Check if all required fields are selected and have values
-    for (const field of selectedRequiredFields) {
-      if (!fieldValues[field.id]) {
-        showError('Campos requeridos', `El campo "${field.label}" es requerido y debe tener un valor.`);
-        return false;
-      }
-    }
-    
-    return true;
-  };
-
-
-  // Función para crear job posting usando React Query
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _createJobPosting = async (input: CreateJobPostingInput): Promise<boolean> => {
-    try {
-      // Obtener folderId real - usar la primera carpeta disponible
-      let folderId = selectedFolderId;
-      if (!folderId) {
-        folderId = '188c08ba-a66c-4cfe-8fc4-8fd4f7c6678f';
-      }
-      
-      // Convertir input local a formato del servicio
-      const createJobInput: CreateJobInput = {
-        title: input.title,
-        description: input.description,
-        companyName: input.companyName,
-        location: input.location || 'Por definir',
-        salary: input.salary,
-        employmentType: input.employmentType,
-        experienceLevel: input.experienceLevel,
-        requirements: input.requirements,
-        benefits: input.benefits,
-        schedule: input.schedule,
-        expiresAt: input.expiresAt,
-        folderId: folderId,
-        requiredDocuments: input.requiredDocuments || []
-      };
-
-      await createJobMutation.mutateAsync(createJobInput);
-      showSuccess('Empleo creado exitosamente');
-      return true;
-    } catch {
-      showError('Error al crear empleo');
-      return false;
-    }
-  };
-
-  // Función para actualizar job posting usando React Query
-  const updateJobPosting = async (jobId: string, input: Partial<CreateJobPostingInput>): Promise<boolean> => {
-    try {
-      await updateJobMutation.mutateAsync({ id: jobId, patch: input });
-      showSuccess('Empleo actualizado exitosamente');
-      return true;
-    } catch {
-      showError('Error al actualizar empleo');
-      return false;
-    }
-  };
-
-  // Función para eliminar job posting usando React Query
-  const deleteJobPosting = async (jobId: string): Promise<boolean> => {
-    try {
-      await deleteJobMutation.mutateAsync(jobId);
-      showSuccess('Empleo eliminado exitosamente');
-      return true;
-    } catch {
-      showError('Error al eliminar empleo');
-      return false;
-    }
-  };
-
-  // Define columns for UniversalTableManager
+  // Define table columns
   const columns: TableColumn<JobPosting>[] = [
     {
       key: 'title',
-      label: 'Título / Empresa',
-      width: '300px',
+      header: 'Título',
       render: (job) => (
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-gray-900" title={job.title}>
-            {job.title}{job.clientId ? ' (sincronizando…)' : ''}
-          </div>
-          <div className="text-sm text-gray-500" title={job.companyName}>
-            {job.companyName}
-          </div>
+        <div className="font-medium text-gray-900 truncate max-w-xs">
+          {job.title}
         </div>
-      )
+      ),
+    },
+    {
+      key: 'companyName',
+      header: 'Empresa',
+      render: (job) => (
+        <div className="text-sm text-gray-600">
+          {job.companyName}
+        </div>
+      ),
     },
     {
       key: 'location',
-      label: 'Tipo',
-      width: '200px',
+      header: 'Ubicación',
       render: (job) => (
-        <div className="min-w-0">
-          <div className="text-sm text-gray-900" title={getEmploymentTypeText(job.employmentType)}>
-            {getEmploymentTypeText(job.employmentType)}
-          </div>
+        <div className="text-sm text-gray-600 truncate max-w-xs">
+          {job.location || 'Sin especificar'}
         </div>
-      )
+      ),
+    },
+    {
+      key: 'employmentType',
+      header: 'Tipo',
+      render: (job) => {
+        const typeMap: Record<string, string> = {
+          'FULL_TIME': 'Tiempo Completo',
+          'PART_TIME': 'Medio Tiempo',
+          'CONTRACT': 'Contrato',
+          'FREELANCE': 'Freelance',
+          'INTERNSHIP': 'Práctica',
+          'TEMPORARY': 'Temporal'
+        };
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            {typeMap[job.employmentType] || job.employmentType}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'experienceLevel',
+      header: 'Experiencia',
+      render: (job) => {
+        const levelMap: Record<string, string> = {
+          'ENTRY_LEVEL': 'Junior',
+          'MID_LEVEL': 'Semi-Senior',
+          'SENIOR_LEVEL': 'Senior',
+          'EXECUTIVE': 'Ejecutivo',
+          'INTERNSHIP': 'Práctica'
+        };
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            {levelMap[job.experienceLevel] || job.experienceLevel}
+          </span>
+        );
+      },
     },
     {
       key: 'status',
-      label: 'Estado',
-      width: '120px',
+      header: 'Estado',
       render: (job) => (
-        <div className="flex space-x-1">
-          <button
-            onClick={() => handleToggleJobStatus(job.jobId, job.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED')}
-            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md transition-colors duration-200 ${
-              job.status === 'PUBLISHED'
-                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
-          >
-            {job.status === 'PUBLISHED' ? 'Desactivar' : 'Activar'}
-          </button>
+        <div className="flex items-center">
+          {job.status === 'PUBLISHED' ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+              Publicado
+            </span>
+          ) : job.status === 'PAUSED' ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1.5"></span>
+              Pausado
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
+              {job.status}
+            </span>
+          )}
         </div>
-      )
+      ),
     },
     {
-      key: 'details',
-      label: 'Detalles',
-      width: '192px',
+      key: 'createdAt',
+      header: 'Creado',
       render: (job) => (
-        <div className="min-w-0">
-          <div className="text-sm text-gray-500">
-            Experiencia: {getExperienceLevelText(job.experienceLevel)}
-          </div>
-          {job.salary && (
-            <div className="text-sm text-gray-500" title={job.salary}>
-              Salario: {job.salary}
-            </div>
-          )}
-          {job.benefits && (
-            <div className="text-sm text-gray-500" title={job.benefits}>
-              Beneficios: {job.benefits.length > 30 ? `${job.benefits.substring(0, 30)}...` : job.benefits}
-            </div>
-          )}
-          {job.schedule && (
-            <div className="text-sm text-gray-500" title={job.schedule}>
-              Horario: {job.schedule.length > 30 ? `${job.schedule.substring(0, 30)}...` : job.schedule}
-            </div>
-          )}
-          {job.expiresAt && (
-            <div className="text-sm text-gray-500">
-              Expira: {new Date(job.expiresAt).toLocaleDateString()}
-            </div>
-          )}
-          <div className="text-xs text-gray-400 mt-1">
-            Creado: {new Date(job.createdAt).toLocaleDateString()}
-          </div>
+        <div className="text-sm text-gray-500">
+          {new Date(job.createdAt).toLocaleDateString('es-ES')}
         </div>
-      )
+      ),
     }
   ];
 
-  // Define row actions for UniversalTableManager
+  // Define row actions
   const rowActions: TableAction<JobPosting>[] = [
     {
       key: 'edit',
-      label: 'Editar/Ver',
+      label: 'Editar',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
       onClick: (job) => handleEditJob(job.jobId)
     },
     {
+      key: 'toggle',
+      label: (job) => job.status === 'PUBLISHED' ? 'Pausar' : 'Publicar',
+      icon: (job) => job.status === 'PUBLISHED' ? (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      onClick: (job) => handleToggleJobStatus(job.jobId, job.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED')
+    },
+    {
       key: 'delete',
       label: 'Eliminar',
+      variant: 'danger',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       ),
@@ -933,12 +313,11 @@ export const JobPostingsManagementPage: React.FC = () => {
     }
   ];
 
-  // Define bulk actions for UniversalTableManager
+  // Define bulk actions
   const bulkActions: BulkAction<JobPosting>[] = [
     {
       key: 'create',
-      label: 'Crear empleo',
-      variant: 'primary',
+      label: 'Crear Nueva Oferta',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -987,253 +366,31 @@ export const JobPostingsManagementPage: React.FC = () => {
           }}
         />
 
-      {/* Create Job Posting Modal */}
-      <CreateJobModal
-        isOpen={showCreateModal}
-        onClose={() => {
-                    setShowCreateModal(false);
-                    resetModalState();
-                  }}
-        onSuccess={() => {
-                    setShowCreateModal(false);
-                    resetModalState();
-        }}
-        isEditMode={isEditMode}
-        editingJobId={editingJobId}
-      />
+        {/* Unified Create/Edit Job Modal */}
+        <UnifiedCreateJobModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            resetModalState();
+          }}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            resetModalState();
+          }}
+          context="jobs-management"
+        />
 
-      {/* Field Configuration Modal */}
-      {showFieldConfigModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Configurar Campos Adicionales
-                </h3>
-                <button
-                  onClick={() => setShowFieldConfigModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6">
-              <p className="text-sm text-gray-600 mb-6">
-                Especifica los detalles para los {selectedFields.size} campos seleccionados:
-              </p>
-              
-              <div className="space-y-6">
-                {Array.from(selectedFields).map((fieldId, index) => {
-                  const fieldSpec = AVAILABLE_JOB_FIELDS.find(f => f.id === fieldId);
-                  if (!fieldSpec) return null;
-
-                  return (
-                    <div key={fieldId} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center mb-3">
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded-full mr-3">
-                          {index + 1}
-                        </span>
-                        <h4 className="font-medium text-gray-900">
-                          {fieldSpec.label}
-                          {fieldSpec.required && <span className="text-red-500 ml-1">*</span>}
-                        </h4>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-4">{fieldSpec.description}</p>
-                      
-                      {renderFieldSpecification(fieldSpec, fieldValues[fieldId], (value) => {
-                        setFieldValues(prev => ({ ...prev, [fieldId]: value }));
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowFieldConfigModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => setShowFieldConfigModal(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Guardar Configuración
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={closeConfirmModal}
-        onConfirm={confirmModal.onConfirm}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        variant={confirmModal.variant}
-        isLoading={confirmModal.isLoading}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-      />
+        {/* Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          variant={confirmModal.variant}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={closeConfirmModal}
+          isLoading={confirmModal.isLoading}
+        />
       </div>
     </FoldersProvider>
   );
-};
-
-// Helper function to render field specifications dynamically
-const renderFieldSpecification = (fieldSpec: JobFieldSpec, value: unknown, onChange: (value: unknown) => void) => {
-  switch (fieldSpec.type) {
-    case 'text':
-      return (
-        <input
-          type="text"
-          value={(value as string) || ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          placeholder={`Especifica ${fieldSpec.label.toLowerCase()}`}
-        />
-      );
-
-    case 'textarea':
-      return (
-        <textarea
-          value={(value as string) || ''}
-          onChange={(e) => onChange(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          placeholder={`Especifica ${fieldSpec.label.toLowerCase()}`}
-        />
-      );
-
-    case 'select':
-      return (
-        <select
-          value={(value as string) || ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Selecciona una opción</option>
-          {fieldSpec.options?.map(option => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      );
-
-    case 'range':
-      return (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Salario Mínimo</label>
-            <input
-              type="number"
-              value={(value as { min?: string; max?: string })?.min || ''}
-              onChange={(e) => onChange({ ...(value as object), min: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: 50000"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Salario Máximo</label>
-            <input
-              type="number"
-              value={(value as { min?: string; max?: string })?.max || ''}
-              onChange={(e) => onChange({ ...(value as object), max: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: 80000"
-            />
-          </div>
-        </div>
-      );
-
-    case 'location':
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Tipo de Ubicación</label>
-            <select
-              value={(value as { type?: string; address?: string })?.type || ''}
-              onChange={(e) => onChange({ ...(value as object), type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Selecciona tipo</option>
-              <option value="remote">100% Remoto</option>
-              <option value="office">Presencial</option>
-              <option value="hybrid">Híbrido</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Dirección / Ciudad</label>
-            <input
-              type="text"
-              value={(value as { type?: string; address?: string })?.address || ''}
-              onChange={(e) => onChange({ ...(value as object), address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: Ciudad de México, CDMX"
-            />
-          </div>
-        </div>
-      );
-
-    case 'schedule':
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Horario</label>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="time"
-                value={(value as { start?: string; end?: string; days?: number[] })?.start || ''}
-                onChange={(e) => onChange({ ...(value as object), start: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <input
-                type="time"
-                value={(value as { start?: string; end?: string; days?: number[] })?.end || ''}
-                onChange={(e) => onChange({ ...(value as object), end: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Días Laborables</label>
-            <div className="flex flex-wrap gap-2">
-              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, index) => (
-                <label key={day} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={(value as { start?: string; end?: string; days?: number[] })?.days?.includes(index) || false}
-                    onChange={(e) => {
-                      const days = (value as { start?: string; end?: string; days?: number[] })?.days || [];
-                      const newDays = e.target.checked 
-                        ? [...days, index]
-                        : days.filter((d: number) => d !== index);
-                      onChange({ ...(value as object), days: newDays });
-                    }}
-                    className="mr-1 h-3 w-3 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                  />
-                  <span className="text-sm">{day}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-
-    default:
-      return <div className="text-gray-500 text-sm">Tipo de campo no soportado</div>;
-  }
 };

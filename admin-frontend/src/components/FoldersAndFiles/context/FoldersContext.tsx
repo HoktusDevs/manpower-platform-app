@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { useFoldersState } from '../hooks/useFoldersState';
+import { useUnifiedFoldersState } from '../hooks/useUnifiedFoldersState';
 import type { UseFoldersStateReturn } from '../types';
 
 interface FoldersProviderProps {
@@ -20,7 +20,7 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
   onCreateSuccess,
   onCreateError
 }) => {
-  const foldersState = useFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
+  const foldersState = useUnifiedFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
   
   return (
     <FoldersContext.Provider value={foldersState}>
