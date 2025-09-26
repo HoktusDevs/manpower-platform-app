@@ -46,85 +46,93 @@ export const FolderRow: React.FC<FolderRowProps> = ({
 
   return (
     <li className={rowClassName} onDoubleClick={handleDoubleClick}>
-      <div className="flex items-center justify-between">
-        {/* Fixed Checkbox Column */}
-        <div className="w-6 flex-shrink-0">
-          <Checkbox
-            checked={isSelected}
-            onChange={handleSelect}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-        </div>
-
-        {/* Content Area (indentable) */}
-        <div className="flex items-center flex-1 ml-4" style={{ marginLeft: `${16 + (indentLevel * 20)}px` }}>
-          {/* Expand/Collapse Arrow */}
-          <div className="w-4 mr-2">
-            {(subfolderCount > 0 || documentCount > 0) ? (
-              <button
-                onClick={handleToggleExpanded}
-                className="p-0.5 rounded hover:bg-gray-200 transition-colors"
-                aria-label={isExpanded ? 'Contraer' : 'Expandir'}
-              >
-                <svg 
-                  className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+      <div className="flex items-center">
+        {/* Carpeta Column - takes more space */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center">
+            {/* Checkbox */}
+            <div className="w-6 flex-shrink-0 mr-2">
+              <Checkbox
+                checked={isSelected}
+                onChange={handleSelect}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+            </div>
+            
+            {/* Expand/Collapse Arrow */}
+            <div className="w-4 mr-2">
+              {(subfolderCount > 0 || documentCount > 0) ? (
+                <button
+                  onClick={handleToggleExpanded}
+                  className="p-0.5 rounded hover:bg-gray-200 transition-colors"
+                  aria-label={isExpanded ? 'Contraer' : 'Expandir'}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ) : (
-              <div className="w-4 h-4"></div>
-            )}
-          </div>
-          
-          {/* Folder Icon */}
-          <FolderIcon />
-          
-          {/* Folder Information */}
-          <div className="ml-3">
-            {/* Level Indicator */}
-            {folder.level !== undefined && folder.level > 0 && (
-              <div className="flex items-center mb-1">
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  Nivel {folder.level}
-                </span>
-              </div>
-            )}
-            <p className="text-sm font-medium text-gray-900">{folder.name}</p>
-            <div className="text-sm text-gray-500 space-y-0.5">
-              <div className="flex items-center gap-4">
-                <span>
-                  {subfolderCount === 0 ? 'Sin subcarpetas' : `${subfolderCount} subcarpeta${subfolderCount > 1 ? 's' : ''}`}
-                </span>
-                <span className="text-gray-400">•</span>
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg 
+                    className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  {documentCount === 0 ? 'Sin documentos' : `${documentCount} documento${documentCount > 1 ? 's' : ''}`}
-                </span>
+                </button>
+              ) : (
+                <div className="w-4 h-4"></div>
+              )}
+            </div>
+            
+            {/* Folder Icon */}
+            <FolderIcon />
+            
+            {/* Folder Information */}
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">{folder.name}</p>
+              <div className="text-sm text-gray-500">
+                {documentCount > 0 && `${documentCount} doc${documentCount > 1 ? 's' : ''}.`}
               </div>
             </div>
           </div>
         </div>
         
-        {/* Actions Column */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          {/* Type Badge */}
+        {/* Tipo Column */}
+        <div className="w-24 text-center">
           <TypeBadge type={folder.type} />
-          
-          {/* Row Actions */}
-          <div className="relative">
-            <RowActionsButton onClick={handleToggleActionsMenu} />
-            
-            <RowActionsMenu
-              show={showActionsMenu}
-              folderId={folder.id}
-              onAction={onAction}
-            />
+        </div>
+        
+        {/* Status Columns - fixed width */}
+        <div className="w-20 text-center">
+          <span className="text-sm text-gray-600">0</span>
+        </div>
+        
+        <div className="w-20 text-center">
+          <span className="text-sm text-gray-600">0</span>
+        </div>
+        
+        <div className="w-20 text-center">
+          <span className="text-sm text-gray-600">{documentCount}</span>
+        </div>
+        
+        <div className="w-20 text-center">
+          <span className="text-sm text-gray-600">0</span>
+        </div>
+        
+        <div className="w-20 text-center">
+          <span className="text-sm text-gray-600">0</span>
+        </div>
+        
+        {/* Acciones Column */}
+        <div className="w-24 text-center">
+          <div className="flex items-center justify-center">
+            {/* Row Actions */}
+            <div className="relative">
+              <RowActionsButton onClick={handleToggleActionsMenu} />
+              
+              <RowActionsMenu
+                show={showActionsMenu}
+                folderId={folder.id}
+                onAction={onAction}
+              />
+            </div>
           </div>
         </div>
       </div>

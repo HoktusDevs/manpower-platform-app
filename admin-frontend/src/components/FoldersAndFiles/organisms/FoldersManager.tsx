@@ -256,9 +256,9 @@ export const FoldersManager: React.FC = () => {
       message,
       variant: 'danger',
       onConfirm: async () => {
-        deleteSelected(); // Clear selection state
         const selectedFiles = getSelectedFiles();
         const selectedFolders = getSelectedFolders();
+        deleteSelected(); // Clear selection state after getting the selections
         
         // Close modal immediately after optimistic deletion
         closeConfirmModal();
