@@ -1,6 +1,6 @@
 import { Checkbox, RowActionsButton } from '../atoms';
-import { RowActionsMenu } from './RowActionsMenu';
-import type { File } from '../../types';
+import { FileActionsMenu } from './FileActionsMenu';
+import type { File, FileAction } from '../types';
 
 interface FileRowProps {
   file: File;
@@ -9,7 +9,7 @@ interface FileRowProps {
   isLastRow?: boolean;
   indentLevel?: number;
   onSelect: (fileId: string) => void;
-  onAction: (fileId: string, action: string) => void;
+  onAction: (fileId: string, action: FileAction) => void;
   onToggleActionsMenu: (fileId: string | null) => void;
 }
 
@@ -45,8 +45,8 @@ export const FileRow: React.FC<FileRowProps> = ({
 
   return (
     <li className={rowClassName} onDoubleClick={handleDoubleClick}>
-      <div className="flex items-center">
-        {/* Carpeta Column - takes more space */}
+      <div className="flex items-center w-full">
+        {/* Carpeta Column - limited width */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center">
             {/* Checkbox - always aligned to the left */}
@@ -74,74 +74,108 @@ export const FileRow: React.FC<FileRowProps> = ({
             </svg>
             
             {/* File Information */}
-            <div className="ml-3">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-900">{file.originalName}</p>
-                {/* File Type Badge */}
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  {file.fileType?.split('/')[1]?.toUpperCase() || 'FILE'}
-                </span>
+            <div className="ml-3 flex-1 flex items-center max-w-[500px]">
+              {/* File Name - Fixed width container */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate" title={file.originalName}>{file.originalName}</p>
+              </div>
+
+              {/* Badges - Fixed position */}
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Status Badge */}
                 {file.status && (
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    file.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    file.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                    file.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    file.status === 'failed' || file.status === 'error' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
+                  <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium h-6 min-w-[80px] ${
+                    (() => {
+                      const hoktusDecision = (file as any).hoktusDecision;
+                      const hoktusProcessingStatus = (file as any).hoktusProcessingStatus;
+                      
+                      // Si está procesando
+                      if (file.status === 'processing') {
+                        return 'bg-blue-100 text-blue-800';
+                      }
+                      
+                      // Si hay error o falló
+                      if (file.status === 'error' || file.status === 'failed' || hoktusProcessingStatus === 'FAILED') {
+                        return 'bg-red-100 text-red-800';
+                      }
+                      
+                      // Si está completado, usar hoktusDecision
+                      if (file.status === 'completed' && hoktusProcessingStatus === 'COMPLETED') {
+                        if (hoktusDecision === 'APPROVED') {
+                          return 'bg-green-100 text-green-800';
+                        } else if (hoktusDecision === 'REJECTED') {
+                          return 'bg-red-100 text-red-800';
+                        } else if (hoktusDecision === 'MANUAL_REVIEW') {
+                          return 'bg-yellow-100 text-yellow-800';
+                        } else if (hoktusDecision === 'PENDING') {
+                          return 'bg-gray-100 text-gray-800';
+                        }
+                      }
+                      
+                      // Si está en validación
+                      if (hoktusProcessingStatus === 'VALIDATION') {
+                        return 'bg-yellow-100 text-yellow-800';
+                      }
+                      
+                      // Por defecto, pendiente
+                      return 'bg-gray-100 text-gray-800';
+                    })()
                   }`}>
-                    {file.status === 'pending' ? 'Pendiente' :
-                     file.status === 'processing' ? 'Procesando...' :
-                     file.status === 'completed' ? 'Completado' :
-                     file.status === 'failed' ? 'Fallido' :
-                     file.status === 'error' ? 'Error' : 'Desconocido'}
+                    {(() => {
+                      const hoktusDecision = (file as any).hoktusDecision;
+                      const hoktusProcessingStatus = (file as any).hoktusProcessingStatus;
+                      
+                      // Si está procesando
+                      if (file.status === 'processing') {
+                        return 'Procesando...';
+                      }
+                      
+                      // Si hay error o falló
+                      if (file.status === 'error' || file.status === 'failed' || hoktusProcessingStatus === 'FAILED') {
+                        return 'Rechazado';
+                      }
+                      
+                      // Si está completado, usar hoktusDecision
+                      if (file.status === 'completed' && hoktusProcessingStatus === 'COMPLETED') {
+                        if (hoktusDecision === 'APPROVED') {
+                          return 'Aprobado';
+                        } else if (hoktusDecision === 'REJECTED') {
+                          return 'Rechazado';
+                        } else if (hoktusDecision === 'MANUAL_REVIEW') {
+                          return 'Revisión Manual';
+                        } else if (hoktusDecision === 'PENDING') {
+                          return 'Pendiente';
+                        }
+                      }
+                      
+                      // Si está en validación
+                      if (hoktusProcessingStatus === 'VALIDATION') {
+                        return 'Revisión Manual';
+                      }
+                      
+                      // Por defecto, pendiente
+                      return 'Pendiente';
+                    })()}
                   </span>
                 )}
                 {/* Expiration Badge (placeholder) */}
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 whitespace-nowrap">
+                <span className="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 whitespace-nowrap h-6 min-w-[80px]">
                   Expira: 5d
                 </span>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Tipo Column */}
-        <div className="w-24 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
-        {/* Status Columns - fixed width */}
-        <div className="w-20 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
-        <div className="w-20 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
-        <div className="w-20 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
-        <div className="w-20 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
-        <div className="w-20 text-center">
-          <span className="text-sm text-gray-400">-</span>
-        </div>
-        
         {/* Acciones Column */}
-        <div className="w-24 text-center">
-          <div className="flex items-center justify-center">
+        <div className="w-24 text-right">
+          <div className="flex items-center justify-end">
             {/* Row Actions */}
             <div className="relative">
               <RowActionsButton onClick={handleToggleActionsMenu} />
               
-              <RowActionsMenu
+              <FileActionsMenu
                 show={showActionsMenu}
-                folderId={file.documentId}
+                fileId={file.documentId}
                 onAction={onAction}
               />
             </div>
