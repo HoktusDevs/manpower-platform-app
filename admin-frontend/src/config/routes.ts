@@ -2,6 +2,7 @@ import { AdminDashboard } from '../pages/admin/AdminDashboard';
 import { MigrationDashboard } from '../pages/admin/MigrationDashboard';
 import { FoldersAndFilesPage } from '../pages/admin/FoldersAndFilesPage';
 import { TestWhatsappPage } from '../pages/admin/TestWhatsappPage';
+import { TestOCRPage } from '../pages/admin/TestOCRPage';
 import { MessagingPage } from '../pages/admin/MessagingPage';
 import { SettingsPage } from '../pages/admin/SettingsPage';
 
@@ -41,6 +42,13 @@ export const adminRoutes: RouteConfig[] = [
     requireAuth: true,
     requiredRole: 'admin',
     title: 'Test WhatsApp'
+  },
+  {
+    path: 'test-ocr',
+    element: TestOCRPage,
+    requireAuth: true,
+    requiredRole: 'admin',
+    title: 'Test OCR'
   },
   {
     path: 'messaging',
