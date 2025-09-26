@@ -121,3 +121,27 @@ export const useDeleteFiles = () => {
     },
   });
 };
+
+/**
+ * Hook to update file manual decision
+ */
+export const useUpdateFileDecision = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ fileId, hoktusDecision }: { fileId: string; hoktusDecision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING' }) => {
+      const response = await FilesService.updateFileDecision(fileId, hoktusDecision);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update file decision');
+      }
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch files queries
+      queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEYS.all });
+      
+      // Also invalidate folders queries to update file counts
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+    },
+  });
+};

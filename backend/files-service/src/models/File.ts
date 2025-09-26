@@ -18,6 +18,7 @@ export interface File {
   updatedAt: string;
   isActive: boolean;
   status?: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
 }
 
 export class FileModel {
@@ -40,6 +41,7 @@ export class FileModel {
   public updatedAt: string;
   public isActive: boolean;
   public status: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
+  public hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
 
   constructor(data: Partial<File>) {
     this.documentId = data.documentId || '';
@@ -61,6 +63,7 @@ export class FileModel {
     this.updatedAt = data.updatedAt || new Date().toISOString();
     this.isActive = data.isActive !== undefined ? data.isActive : true;
     this.status = data.status || 'pending'; // Default status is pending
+    this.hoktusDecision = data.hoktusDecision;
   }
 
   // Generate S3 key for file storage
@@ -165,7 +168,8 @@ export class FileModel {
       uploadedAt: this.uploadedAt,
       updatedAt: this.updatedAt,
       isActive: this.isActive,
-      status: this.status
+      status: this.status,
+      hoktusDecision: this.hoktusDecision
     };
   }
 

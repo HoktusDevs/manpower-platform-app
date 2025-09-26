@@ -255,6 +255,7 @@ export class FileService {
       if (input.description !== undefined) updates.description = input.description;
       if (input.tags !== undefined) updates.tags = input.tags;
       if (input.isPublic !== undefined) updates.isPublic = input.isPublic;
+      if (input.hoktusDecision !== undefined) updates.hoktusDecision = input.hoktusDecision;
 
       const updatedFile = await this.dynamoService.updateFile(input.fileId, userId, updates);
 
@@ -401,6 +402,26 @@ export class FileService {
       return {
         success: false,
         message: 'Failed to query files',
+      };
+    }
+  }
+
+  async updateFileStatus(fileId: string, status: string, processingResult?: any): Promise<FileResponse> {
+    try {
+      console.log(`Updating file ${fileId} status to ${status}`);
+      
+      const result = await this.dynamoService.updateFileStatus(fileId, status, processingResult);
+
+      return {
+        success: true,
+        message: 'File status updated successfully',
+        file: result,
+      };
+    } catch (error) {
+      console.error('Error updating file status:', error);
+      return {
+        success: false,
+        message: 'Failed to update file status',
       };
     }
   }

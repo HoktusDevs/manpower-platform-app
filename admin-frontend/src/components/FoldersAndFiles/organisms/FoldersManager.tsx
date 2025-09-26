@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
+import { DocumentPreviewModal } from '../../OCR/DocumentPreviewModal';
 import { UnifiedCreateJobModal } from '../../JobManagement/UnifiedCreateJobModal';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
-import { WebSocketStatus } from '../../WebSocketStatus/WebSocketStatus';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
 import { FoldersAccordion } from './FoldersAccordion';
@@ -13,7 +13,7 @@ import {
 } from '../hooks';
 import { useDownloadZip } from '../../../hooks/useDownloadZip';
 import { useFoldersContext } from '../context/FoldersContext';
-import { useDeleteFiles } from '../../../hooks/useFilesApi';
+import { useDeleteFiles, useUpdateFileDecision } from '../../../hooks/useFilesApi';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 // FilterOptions interface defined locally
 interface FilterOptions {
@@ -23,6 +23,7 @@ interface FilterOptions {
 }
 import type { 
   FolderAction, 
+  FileAction,
   CreateFolderData,
   FolderRow
 } from '../types';
@@ -44,6 +45,10 @@ export const FoldersManager: React.FC = () => {
   // Job creation modal state
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
 
+  // File preview modal state
+  const [showFilePreviewModal, setShowFilePreviewModal] = useState(false);
+  const [previewFile, setPreviewFile] = useState<any>(null);
+
   // Custom hooks for state management
   const {
     folders,
@@ -62,7 +67,6 @@ export const FoldersManager: React.FC = () => {
     getBreadcrumbPath,
     setSearchTerm,
     refreshFolders,
-    webSocket,
   } = useFoldersContext();
 
   // Download functionality
@@ -342,6 +346,99 @@ export const FoldersManager: React.FC = () => {
     setRowActionsMenu(null);
   };
 
+  const handleFileAction = (fileId: string, action: FileAction): void => {
+    switch (action) {
+      case 'view': {
+        // Find the file and open preview modal
+        const allFiles = folders.flatMap(folder => folder.files || []);
+        const file = allFiles.find(f => f.documentId === fileId);
+        if (file) {
+          // Convert File to DocumentFile format for the modal
+          const documentFile = {
+            id: file.documentId,
+            file: {
+              name: file.originalName,
+              type: file.fileType || 'application/pdf'
+            },
+            previewUrl: (file as any).fileUrl || '',
+            fileUrl: (file as any).fileUrl,
+            title: file.originalName,
+            ownerName: 'Usuario Admin', // Default owner name
+            status: file.status || 'completed',
+            hoktusDecision: (file as any).hoktusDecision || 'PENDING',
+            hoktusProcessingStatus: (file as any).hoktusProcessingStatus || 'COMPLETED',
+            documentType: (file as any).documentType || 'PDF',
+            observations: (file as any).processingResult?.observations || [],
+            ocrResult: (file as any).processingResult ? {
+              success: true,
+              text: (file as any).processingResult.contentAnalysis?.text || '',
+              confidence: (file as any).processingResult.contentAnalysis?.confidence_score || 0.95,
+              processingTime: (file as any).processingResult.processingTime || 0,
+              language: 'es',
+              metadata: {},
+              fields: (file as any).processingResult.data_structure || {}
+            } : undefined
+          };
+          
+          setPreviewFile(documentFile);
+          setShowFilePreviewModal(true);
+        }
+        break;
+      }
+      case 'download': {
+        // TODO: Implement file download functionality
+        console.log('Download file:', fileId);
+        break;
+      }
+      case 'delete': {
+        // Find the file to get its name for confirmation
+        const allFiles = folders.flatMap(folder => folder.files || []);
+        const file = allFiles.find(f => f.documentId === fileId);
+        if (!file) return;
+        
+        openConfirmModal({
+          title: 'Confirmar eliminación',
+          message: `¿Estás seguro de eliminar el archivo "${file.originalName}"?`,
+          variant: 'danger',
+          onConfirm: async () => {
+            try {
+              await deleteFilesMutation.mutateAsync([fileId]);
+              // Remove from selection if selected
+              if (selectedRows.has(fileId)) {
+                selectFile(fileId);
+              }
+              closeConfirmModal();
+            } catch (error) {
+              console.error('Error deleting file:', error);
+            }
+          }
+        });
+        break;
+      }
+    }
+    
+    setRowActionsMenu(null);
+  };
+
+  // File manual decision handler
+  const updateFileDecisionMutation = useUpdateFileDecision();
+  
+  const handleManualDecision = (fileId: string, decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING'): void => {
+    updateFileDecisionMutation.mutate(
+      { fileId, hoktusDecision: decision },
+      {
+        onSuccess: () => {
+          console.log(`✅ File ${fileId} decision updated to ${decision}`);
+          // Refresh folders to update the UI
+          refreshFolders();
+        },
+        onError: (error) => {
+          console.error('❌ Error updating file decision:', error);
+        }
+      }
+    );
+  };
+
   const handleCreateSubmit = (data: CreateFolderData): void => {
     if (modalMode === 'edit' && editingFolderId) {
       // Update existing folder
@@ -388,14 +485,14 @@ export const FoldersManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-white shadow rounded-lg p-6 w-full max-w-full">
       {/* WebSocket Status */}
-      <div className="mb-4 flex justify-end">
+      {/* <div className="mb-4 flex justify-end">
         <WebSocketStatus
           isConnected={webSocket.isConnected}
           connectionStatus={webSocket.connectionStatus}
         />
-      </div>
+      </div> */}
 
       {/* Toolbar */}
           <ToolbarSection
@@ -488,7 +585,9 @@ export const FoldersManager: React.FC = () => {
             onSelectFile={selectFile}
             onSelectAll={handleSelectAll}
             onRowAction={handleRowAction}
+            onFileAction={handleFileAction}
             onToggleRowActionsMenu={setRowActionsMenu}
+            onToggleFileActionsMenu={setRowActionsMenu}
             rowActionsMenuRef={rowActionsMenuRef.ref}
             onNavigateToFolder={navigateToFolder}
             getSubfolders={getSubfolders}
@@ -559,6 +658,17 @@ export const FoldersManager: React.FC = () => {
         // La carga optimista ya maneja la actualización de la UI
       }}
       context="folders-management"
+    />
+
+    {/* File Preview Modal */}
+    <DocumentPreviewModal
+      document={previewFile}
+      isOpen={showFilePreviewModal}
+      onClose={() => {
+        setShowFilePreviewModal(false);
+        setPreviewFile(null);
+      }}
+      onManualDecision={handleManualDecision}
     />
     </div>
   );

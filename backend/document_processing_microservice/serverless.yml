@@ -10,6 +10,7 @@ provider:
   timeout: 900  # 15 minutos máximo
   memorySize: 1024
   apiGateway:
+    restApiId: ${env:API_GATEWAY_REST_API_ID, ''}
     websocketApi:
       routeSelectionExpression: $request.body.action
       name: ${self:service}-${self:provider.stage}-websocket
@@ -63,6 +64,9 @@ provider:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}/index/*"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/document-processing-results-${self:provider.stage}/stream/*"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/manpower-documents-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/manpower-documents-${self:provider.stage}/index/*"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/manpower-documents-${self:provider.stage}/stream/*"
     - Effect: Allow
       Action:
         - execute-api:ManageConnections
@@ -155,6 +159,21 @@ functions:
           cors: true
     timeout: 30
     memorySize: 256
+
+  # Folder file processor endpoint
+  folder-file-processor:
+    handler: src.handlers.folder_file_processor.handler
+    events:
+      - http:
+          path: /api/v1/folders/process-file
+          method: post
+          cors: true
+      - http:
+          path: /api/v1/folders/file-status/{fileId}
+          method: get
+          cors: true
+    timeout: 30
+    memorySize: 512
 
   # DynamoDB Stream Trigger - Se ejecuta automáticamente cuando cambia la tabla
   document-processing-stream-trigger:

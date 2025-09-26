@@ -20,7 +20,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         <Sidebar onNavigate={navigate} />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {children || <Outlet />}
           </div>
         </main>

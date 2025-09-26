@@ -198,4 +198,86 @@ export class DynamoService {
 
     return deletedFiles;
   }
+
+  async updateFile(fileId: string, userId: string, updates: Partial<File>): Promise<File | null> {
+    try {
+      const updateExpressions: string[] = [];
+      const expressionAttributeNames: { [key: string]: string } = {};
+      const expressionAttributeValues: { [key: string]: any } = {};
+
+      // Add each field to update
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          const attributeName = `#${key}`;
+          const attributeValue = `:${key}`;
+          
+          updateExpressions.push(`${attributeName} = ${attributeValue}`);
+          expressionAttributeNames[attributeName] = key;
+          expressionAttributeValues[attributeValue] = value;
+        }
+      });
+
+      // Add updated timestamp
+      updateExpressions.push('updatedAt = :updatedAt');
+      expressionAttributeValues[':updatedAt'] = new Date().toISOString();
+
+      const command = new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          documentId: fileId,
+          userId: userId,
+        },
+        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ReturnValues: 'ALL_NEW',
+      });
+
+      const result = await this.client.send(command);
+      return result.Attributes as File || null;
+    } catch (error) {
+      console.error('Error updating file:', error);
+      throw error;
+    }
+  }
+
+  async updateFileStatus(fileId: string, status: string, processingResult?: any): Promise<File | null> {
+    try {
+      const updateExpressions: string[] = [];
+      const expressionAttributeNames: { [key: string]: string } = {};
+      const expressionAttributeValues: { [key: string]: any } = {};
+
+      // Add status update
+      updateExpressions.push('#status = :status');
+      expressionAttributeNames['#status'] = 'status';
+      expressionAttributeValues[':status'] = status;
+
+      // Add processing result if provided
+      if (processingResult) {
+        updateExpressions.push('processingResult = :processingResult');
+        expressionAttributeValues[':processingResult'] = processingResult;
+      }
+
+      // Add updated timestamp
+      updateExpressions.push('updatedAt = :updatedAt');
+      expressionAttributeValues[':updatedAt'] = new Date().toISOString();
+
+      const command = new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          documentId: fileId,
+        },
+        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ReturnValues: 'ALL_NEW',
+      });
+
+      const result = await this.client.send(command);
+      return result.Attributes as File || null;
+    } catch (error) {
+      console.error('Error updating file status:', error);
+      throw error;
+    }
+  }
 }

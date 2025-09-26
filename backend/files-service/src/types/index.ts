@@ -16,6 +16,7 @@ export interface UpdateFileInput {
   description?: string;
   tags?: string[];
   isPublic?: boolean;
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
 }
 
 export interface FileResponse {

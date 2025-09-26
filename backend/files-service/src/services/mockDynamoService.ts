@@ -168,4 +168,22 @@ export class MockDynamoService {
     // For mock, we just return the file
     return this.getFile(fileId, userId);
   }
+
+  async updateFileStatus(fileId: string, status: string, processingResult?: any): Promise<File | null> {
+    console.log('MockDynamoService: updateFileStatus called');
+    // Find file by documentId
+    for (const [key, fileData] of this.files) {
+      if (fileData.documentId === fileId) {
+        const updated = {
+          ...fileData,
+          status,
+          processingResult,
+          updatedAt: new Date().toISOString()
+        };
+        this.files.set(key, updated);
+        return updated;
+      }
+    }
+    return null;
+  }
 }

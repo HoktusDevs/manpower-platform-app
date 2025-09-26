@@ -3,6 +3,7 @@ import { TableHeader, FolderRow, FileRow, EmptyState } from '../molecules';
 import type { 
   FolderRow as FolderRowType, 
   FolderAction, 
+  FileAction,
   SelectionEventHandlers 
 } from '../types';
 
@@ -16,7 +17,9 @@ interface FoldersTableProps {
   onSelectFile?: (fileId: string) => void;
   onSelectAll: SelectionEventHandlers['onSelectAll'];
   onRowAction: (folderId: string, action: FolderAction) => void;
+  onFileAction?: (fileId: string, action: FileAction) => void;
   onToggleRowActionsMenu: (folderId: string | null) => void;
+  onToggleFileActionsMenu?: (fileId: string | null) => void;
   rowActionsMenuRef: React.RefObject<HTMLDivElement | null>;
   onNavigateToFolder: (folderId: string) => void;
   getSubfolders: (parentId: string) => FolderRowType[];
@@ -37,7 +40,9 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
   onSelectFile,
   onSelectAll,
   onRowAction,
+  onFileAction,
   onToggleRowActionsMenu,
+  onToggleFileActionsMenu,
   rowActionsMenuRef,
   onNavigateToFolder,
   getSubfolders
@@ -104,12 +109,12 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
             <FileRow
               file={file}
               isSelected={selectedRows.has(file.documentId)}
-              showActionsMenu={false} // TODO: Implement file actions menu
+              showActionsMenu={showRowActionsMenu === file.documentId}
               isLastRow={isLastFile}
               indentLevel={level + 1}
               onSelect={onSelectFile || (() => {})}
-              onAction={(fileId, action) => console.log('File action:', fileId, action)}
-              onToggleActionsMenu={(fileId) => console.log('Toggle file actions:', fileId)}
+              onAction={onFileAction || (() => {})}
+              onToggleActionsMenu={onToggleFileActionsMenu || (() => {})}
             />
           </div>
         );

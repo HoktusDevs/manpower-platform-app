@@ -267,7 +267,7 @@ export const TestOCRPage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          folderId: 'ocr-temp-folder', // Carpeta temporal para OCR
+          folderId: 'cb1d9596-1e18-439e-adae-c6921b1dbf4e', // Carpeta para Documentos
           originalName: document.file.name,
           fileType: document.file.type,
           fileSize: document.file.size

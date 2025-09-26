@@ -1,5 +1,6 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { FileService } from '../services/fileService';
+import { DocumentProcessingService } from '../services/documentProcessingService';
 import { UploadFileInput, UpdateFileInput, BulkUploadInput } from '../types';
 import { extractUserFromEvent } from '../../shared/mockAuth';
 
@@ -155,10 +156,42 @@ export const confirmUpload: APIGatewayProxyHandler = async (event) => {
       });
     }
 
+    // Confirm upload in files service
     const result = await fileService.confirmUpload(fileId, userId);
 
     if (!result.success) {
       return createResponse(404, result);
+    }
+
+    // Get file details for document processing
+    const fileDetails = await fileService.getFile(fileId, userId);
+    
+    if (fileDetails.success && fileDetails.file) {
+      console.log(`Sending file ${fileId} to document processing microservice`);
+      
+      // Send file to document processing microservice
+      try {
+        const processingResult = await DocumentProcessingService.processFile({
+          fileId: fileId,
+          fileName: fileDetails.file.originalName,
+          fileUrl: fileDetails.file.fileUrl || '',
+          fileSize: fileDetails.file.fileSize || 0,
+          folderId: fileDetails.file.folderId,
+          userId: userId
+        });
+        
+        console.log(`File ${fileId} processing result:`, processingResult);
+        
+        // Update file status based on processing result
+        if (processingResult.status === 'completed' || processingResult.status === 'failed') {
+          await fileService.updateFileStatus(fileId, processingResult.status, processingResult);
+        }
+        
+      } catch (processingError) {
+        console.error(`Error processing file ${fileId}:`, processingError);
+        // Don't fail the upload confirmation if processing fails
+        // The file will remain in 'pending' status
+      }
     }
 
     return createResponse(200, result);

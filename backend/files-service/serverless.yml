@@ -15,6 +15,7 @@ provider:
     WEBSOCKET_ENDPOINT: ${env:WEBSOCKET_ENDPOINT, ''}
     WEBSOCKET_SERVICE_URL: ${env:WEBSOCKET_SERVICE_URL, 'https://ni9nq1nd38.execute-api.us-east-1.amazonaws.com/dev'}
     INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
+    DOCUMENT_PROCESSING_URL: ${env:DOCUMENT_PROCESSING_URL, 'https://sr4qzksrak.execute-api.us-east-1.amazonaws.com/dev'}
   iamRoleStatements:
     # DynamoDB permissions
     - Effect: Allow

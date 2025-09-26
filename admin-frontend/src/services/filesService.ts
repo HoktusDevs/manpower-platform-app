@@ -140,4 +140,14 @@ export class FilesService {
       body: JSON.stringify({ fileIds }),
     });
   }
+
+  /**
+   * Update file manual decision
+   */
+  static async updateFileDecision(fileId: string, hoktusDecision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING'): Promise<FilesResponse> {
+    return fetchWithAuth<FilesResponse>(`${FILES_BASE_URL}/${fileId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ hoktusDecision }),
+    });
+  }
 }

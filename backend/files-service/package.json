@@ -25,6 +25,7 @@
     "@aws-sdk/lib-dynamodb": "^3.890.0",
     "@aws-sdk/s3-request-presigner": "^3.890.0",
     "@types/multer": "^2.0.0",
+    "axios": "^1.12.2",
     "multer": "^2.0.2",
     "uuid": "^9.0.1"
   }

@@ -21,6 +21,23 @@ export interface File {
   createdAt?: string;
   isActive?: boolean;
   status?: 'pending' | 'processing' | 'completed' | 'failed' | 'error';
+  fileUrl?: string;
+  hoktusDecision?: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING';
+  hoktusProcessingStatus?: 'COMPLETED' | 'FAILED' | 'VALIDATION' | 'PROCESSING';
+  documentType?: string;
+  processingResult?: {
+    contentAnalysis?: {
+      text?: string;
+      confidence_score?: number;
+    };
+    processingTime?: number;
+    data_structure?: Record<string, unknown>;
+    observations?: Array<{
+      message?: string;
+      type?: string;
+      severity?: string;
+    }>;
+  };
 }
 
 export interface CreateFolderData {
@@ -53,6 +70,9 @@ export interface CreateModalFormData {
 
 // Action types for folder operations
 export type FolderAction = 'edit' | 'delete' | 'create-subfolder' | 'create-job';
+
+// Action types for file operations
+export type FileAction = 'view' | 'download' | 'delete';
 
 // Event handler types
 export interface FolderEventHandlers {
