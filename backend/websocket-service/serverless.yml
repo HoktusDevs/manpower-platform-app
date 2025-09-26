@@ -1,0 +1,133 @@
+service: websocket-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    CONNECTIONS_TABLE: manpower-websocket-connections-${self:provider.stage}
+    FOLDERS_TABLE: manpower-folders-${self:provider.stage}
+    WEBSOCKET_ENDPOINT: ${self:custom.websocketEndpoint}
+  iamRoleStatements:
+    # DynamoDB permissions for connection management
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
+        - dynamodb:BatchWriteItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-websocket-connections-${self:provider.stage}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-websocket-connections-${self:provider.stage}/index/*
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
+    # WebSocket API permissions
+    - Effect: Allow
+      Action:
+        - execute-api:ManageConnections
+      Resource:
+        - arn:aws:execute-api:${self:provider.region}:*:*
+
+functions:
+  # WebSocket Connection Management
+  connectHandler:
+    handler: src/handlers/websocket.connectHandler
+    events:
+      - websocket:
+          route: $connect
+
+  disconnectHandler:
+    handler: src/handlers/websocket.disconnectHandler
+    events:
+      - websocket:
+          route: $disconnect
+
+  defaultHandler:
+    handler: src/handlers/websocket.defaultHandler
+    events:
+      - websocket:
+          route: $default
+
+  # Message Broadcasting
+  broadcastHandler:
+    handler: src/handlers/broadcast.broadcastToConnections
+    environment:
+      WEBSOCKET_ENDPOINT: !Sub 'https://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+    events:
+      - http:
+          path: /broadcast
+          method: post
+          cors: true
+
+  # Health Check for Broadcast Service
+  healthCheck:
+    handler: src/handlers/broadcast.healthCheck
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    # WebSocket Connections Table
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: manpower-websocket-connections-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: connectedAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: connectedAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # Auto-cleanup stale connections after 2 hours
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+  Outputs:
+    WebSocketURL:
+      Description: WebSocket API Gateway URL
+      Value: !Sub 'wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+      Export:
+        Name: WebSocketURL-${self:provider.stage}
+
+    WebSocketApiId:
+      Description: WebSocket API Gateway ID
+      Value:
+        Ref: WebsocketsApi
+      Export:
+        Name: WebSocketApiId-${self:provider.stage}
+
+    ConnectionsTableName:
+      Description: WebSocket Connections Table Name
+      Value:
+        Ref: ConnectionsTable
+      Export:
+        Name: ConnectionsTableName-${self:provider.stage}
+
+custom:
+  websocketEndpoint: !Sub 'https://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+
+plugins:
+  - serverless-plugin-typescript

@@ -1,0 +1,34 @@
+{
+  "name": "websocket-service",
+  "version": "1.0.0",
+  "description": "WebSocket service for real-time updates",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy:dev": "sls deploy --stage dev",
+    "deploy:prod": "sls deploy --stage prod",
+    "remove:dev": "sls remove --stage dev",
+    "remove:prod": "sls remove --stage prod"
+  },
+  "keywords": [
+    "websocket",
+    "real-time",
+    "serverless",
+    "aws"
+  ],
+  "author": "Manpower Platform",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.896.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/node": "^20.0.0",
+    "serverless": "^3.0.0",
+    "serverless-plugin-typescript": "^2.1.4",
+    "typescript": "^5.0.0"
+  }
+}

@@ -19,7 +19,7 @@ const createResponse = (statusCode: number, body: any): APIGatewayProxyResult =>
 
 export const getAllFiles: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const limit = event.queryStringParameters?.limit ? parseInt(event.queryStringParameters.limit) : undefined;
     const nextToken = event.queryStringParameters?.nextToken;
 
@@ -37,7 +37,7 @@ export const getAllFiles: APIGatewayProxyHandler = async (event) => {
 
 export const getFile: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const fileId = event.pathParameters?.fileId;
 
     if (!fileId) {
@@ -65,7 +65,7 @@ export const getFile: APIGatewayProxyHandler = async (event) => {
 
 export const getFilesByFolder: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const folderId = event.pathParameters?.folderId;
     const limit = event.queryStringParameters?.limit ? parseInt(event.queryStringParameters.limit) : undefined;
 
@@ -91,10 +91,10 @@ export const getFilesByFolder: APIGatewayProxyHandler = async (event) => {
 export const getUploadUrl: APIGatewayProxyHandler = async (event) => {
   try {
     console.log('getUploadUrl called with event:', JSON.stringify(event, null, 2));
-    
-    // Usar userId fijo para OCR sin autenticación
-    const userId = 'ocr-user-123';
-    console.log('Using fixed userId for OCR:', userId);
+
+    // Use hardcoded userId for quick testing - no JWT authentication
+    const userId = 'test-user-123';
+    console.log('Using test userId:', userId);
 
     if (!event.body) {
       console.log('No request body provided');
@@ -137,7 +137,7 @@ export const getUploadUrl: APIGatewayProxyHandler = async (event) => {
 
 export const confirmUpload: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
 
     if (!event.body) {
       return createResponse(400, {
@@ -173,7 +173,7 @@ export const confirmUpload: APIGatewayProxyHandler = async (event) => {
 
 export const getBulkUploadUrls: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
 
     if (!event.body) {
       return createResponse(400, {
@@ -205,7 +205,7 @@ export const getBulkUploadUrls: APIGatewayProxyHandler = async (event) => {
 
 export const updateFile: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const fileId = event.pathParameters?.fileId;
 
     if (!fileId) {
@@ -246,7 +246,7 @@ export const updateFile: APIGatewayProxyHandler = async (event) => {
 
 export const deleteFile: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const fileId = event.pathParameters?.fileId;
 
     if (!fileId) {
@@ -274,7 +274,7 @@ export const deleteFile: APIGatewayProxyHandler = async (event) => {
 
 export const deleteFiles: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
 
     if (!event.body) {
       return createResponse(400, {
@@ -306,7 +306,7 @@ export const deleteFiles: APIGatewayProxyHandler = async (event) => {
 
 export const getDownloadUrl: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    const userId = 'test-user-123';
     const fileId = event.pathParameters?.fileId;
 
     if (!fileId) {

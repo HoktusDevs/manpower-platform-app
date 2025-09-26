@@ -4,6 +4,7 @@ import type {
   FolderAction, 
   SelectionEventHandlers 
 } from '../types';
+import { useState } from 'react';
 
 interface FoldersGridProps {
   folders: FolderRow[];
@@ -33,6 +34,21 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
   onNavigateToFolder,
   getSubfolders
 }) => {
+  // State to track expanded folders
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  const handleToggleExpanded = (folderId: string): void => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
   // Empty state
   if (folders.length === 0) {
     return (
@@ -43,29 +59,57 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
     );
   }
 
-  // Simple folder rendering - no hierarchy needed for Windows-style navigation
-
   return (
     <div className="bg-white overflow-visible p-4">
       {/* Grid Container */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {folders.map((folder) => (
-          <div 
-            key={folder.id}
-            ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
-          >
-            <FolderGridItem
-              folder={folder}
-              isSelected={selectedRows.has(folder.id)}
-              showActionsMenu={showRowActionsMenu === folder.id}
-              subfolderCount={getSubfolders(folder.id).length}
-              onSelect={onSelectRow}
-              onAction={onRowAction}
-              onToggleActionsMenu={onToggleRowActionsMenu}
-              onNavigateToFolder={onNavigateToFolder}
-            />
-          </div>
-        ))}
+        {folders.map((folder) => {
+          const isExpanded = expandedFolders.has(folder.id);
+          const hasFiles = folder.files && folder.files.length > 0;
+          
+          return (
+            <div key={folder.id} className="space-y-2">
+              {/* Folder Card */}
+              <div 
+                ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
+              >
+                <FolderGridItem
+                  folder={folder}
+                  isSelected={selectedRows.has(folder.id)}
+                  showActionsMenu={showRowActionsMenu === folder.id}
+                  subfolderCount={getSubfolders(folder.id).length}
+                  documentCount={folder.files?.length || 0}
+                  isExpanded={isExpanded}
+                  onSelect={onSelectRow}
+                  onAction={onRowAction}
+                  onToggleActionsMenu={onToggleRowActionsMenu}
+                  onToggleExpanded={handleToggleExpanded}
+                  onNavigateToFolder={onNavigateToFolder}
+                />
+              </div>
+
+              {/* Expanded Files */}
+              {isExpanded && hasFiles && (
+                <div className="ml-4 space-y-1">
+                  {folder.files?.map((file) => (
+                    <div 
+                      key={file.documentId}
+                      className="flex items-center gap-2 p-2 bg-gray-50 rounded border text-xs"
+                    >
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="truncate text-gray-700">{file.originalName}</span>
+                      <span className="text-gray-400 text-xs">
+                        {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

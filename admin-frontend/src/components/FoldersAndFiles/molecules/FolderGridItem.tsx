@@ -8,9 +8,11 @@ interface FolderGridItemProps {
   showActionsMenu: boolean;
   subfolderCount: number;
   documentCount?: number;
+  isExpanded?: boolean;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
+  onToggleExpanded?: (folderId: string) => void;
   onNavigateToFolder?: (folderId: string) => void;
 }
 
@@ -25,9 +27,11 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   showActionsMenu,
   subfolderCount,
   documentCount = 0,
+  isExpanded = false,
   onSelect,
   onAction,
   onToggleActionsMenu,
+  onToggleExpanded,
   onNavigateToFolder
 }) => {
   const handleSelect = (): void => {
@@ -41,6 +45,13 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   const handleDoubleClick = (): void => {
     if (onNavigateToFolder) {
       onNavigateToFolder(folder.id);
+    }
+  };
+
+  const handleToggleExpanded = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    if (onToggleExpanded) {
+      onToggleExpanded(folder.id);
     }
   };
 
@@ -101,6 +112,24 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
             {documentCount === 0 ? 'Sin documentos' : `${documentCount} documento${documentCount > 1 ? 's' : ''}`}
           </div>
         </div>
+
+        {/* Expand/Collapse Button for Files */}
+        {documentCount > 0 && (
+          <button
+            onClick={handleToggleExpanded}
+            className="mt-2 p-1 rounded hover:bg-gray-200 transition-colors"
+            aria-label={isExpanded ? 'Contraer archivos' : 'Expandir archivos'}
+          >
+            <svg 
+              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

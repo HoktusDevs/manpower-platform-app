@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TableHeader, FolderRow, EmptyState } from '../molecules';
+import { TableHeader, FolderRow, FileRow, EmptyState } from '../molecules';
 import type { 
   FolderRow as FolderRowType, 
   FolderAction, 
@@ -73,6 +73,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
           showActionsMenu={showRowActionsMenu === folder.id}
           isExpanded={isExpanded}
           subfolderCount={subfolders.length}
+          documentCount={folder.files?.length || 0}
           indentLevel={level}
           onSelect={onSelectRow}
           onAction={onRowAction}
@@ -87,6 +88,29 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
     if (isExpanded && subfolders.length > 0) {
       subfolders.forEach(subfolder => {
         elements.push(...renderFolderWithSubfolders(subfolder, level + 1));
+      });
+    }
+
+    // Expanded files
+    if (isExpanded && folder.files && folder.files.length > 0) {
+      folder.files.forEach((file, index) => {
+        const isLastFile = index === folder.files.length - 1;
+        elements.push(
+          <div 
+            key={`file-${file.documentId}`}
+          >
+            <FileRow
+              file={file}
+              isSelected={false} // TODO: Implement file selection
+              showActionsMenu={false} // TODO: Implement file actions menu
+              isLastRow={isLastFile}
+              indentLevel={level + 1}
+              onSelect={(fileId) => console.log('File selected:', fileId)}
+              onAction={(fileId, action) => console.log('File action:', fileId, action)}
+              onToggleActionsMenu={(fileId) => console.log('Toggle file actions:', fileId)}
+            />
+          </div>
+        );
       });
     }
     

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
 import { UnifiedCreateJobModal } from '../../JobManagement/UnifiedCreateJobModal';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
+import { WebSocketStatus } from '../../WebSocketStatus/WebSocketStatus';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
 import { FoldersAccordion } from './FoldersAccordion';
@@ -60,6 +61,7 @@ export const FoldersManager: React.FC = () => {
     getBreadcrumbPath,
     setSearchTerm,
     refreshFolders,
+    webSocket,
   } = useFoldersContext();
 
   // Download functionality
@@ -72,7 +74,8 @@ export const FoldersManager: React.FC = () => {
 
   // Calculate folder level in hierarchy
   const getFolderLevel = (folder: FolderRow, allFolders: FolderRow[]): number => {
-    if (!folder.parentId) return 0; // Root level
+    // Root level: no parentId, null parentId, or "ROOT" parentId
+    if (!folder.parentId || folder.parentId === "ROOT") return 0;
 
     const parent = allFolders.find(f => f.id === folder.parentId);
     if (!parent) {
@@ -332,6 +335,14 @@ export const FoldersManager: React.FC = () => {
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
+      {/* WebSocket Status */}
+      <div className="mb-4 flex justify-end">
+        <WebSocketStatus
+          isConnected={webSocket.isConnected}
+          connectionStatus={webSocket.connectionStatus}
+        />
+      </div>
+
       {/* Toolbar */}
           <ToolbarSection
             searchTerm={searchTerm}

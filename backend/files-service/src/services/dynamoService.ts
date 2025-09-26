@@ -94,18 +94,15 @@ export class DynamoService {
   }
 
   async getFilesByUser(userId: string, limit?: number, nextToken?: string): Promise<{ files: File[], nextToken?: string }> {
-    const command = new QueryCommand({
+    const command = new ScanCommand({
       TableName: this.tableName,
-      IndexName: 'UserIndex',
-      KeyConditionExpression: 'userId = :userId',
+      FilterExpression: 'userId = :userId AND isActive = :isActive',
       ExpressionAttributeValues: {
         ':userId': userId,
         ':isActive': true,
       },
-      FilterExpression: 'isActive = :isActive',
       Limit: limit,
       ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
-      ScanIndexForward: false,
     });
 
     const result = await this.client.send(command);
@@ -117,18 +114,15 @@ export class DynamoService {
   }
 
   async getFilesByFolder(folderId: string, userId: string, limit?: number): Promise<File[]> {
-    const command = new QueryCommand({
+    const command = new ScanCommand({
       TableName: this.tableName,
-      IndexName: 'FolderIndex',
-      KeyConditionExpression: 'folderId = :folderId',
+      FilterExpression: 'folderId = :folderId AND userId = :userId AND isActive = :isActive',
       ExpressionAttributeValues: {
         ':folderId': folderId,
         ':userId': userId,
         ':isActive': true,
       },
-      FilterExpression: 'userId = :userId AND isActive = :isActive',
       Limit: limit,
-      ScanIndexForward: false,
     });
 
     const result = await this.client.send(command);

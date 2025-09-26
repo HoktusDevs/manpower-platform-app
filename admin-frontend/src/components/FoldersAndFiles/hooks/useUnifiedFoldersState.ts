@@ -6,6 +6,7 @@ import {
   useDeleteFolder,
   useDeleteFolders,
 } from '../../../hooks/useUnifiedFolders';
+import { useGetAllFiles } from '../../../hooks/useFilesApi';
 import { useCreateStandaloneFolder } from '../../../services/unifiedJobFolderService';
 import type {
   FolderRow,
@@ -34,16 +35,42 @@ export const useUnifiedFoldersState = (
 
   // React Query hooks using unified system
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
+  const { data: allFiles = [] } = useGetAllFiles();
   const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
   const createStandaloneFolderMutation = useCreateStandaloneFolder();
   const updateFolderMutation = useUpdateFolder();
   const deleteFolderMutation = useDeleteFolder();
   const deleteFoldersMutation = useDeleteFolders(onDeleteSuccess, onDeleteError);
 
-  // Convert backend folders to frontend format
+  // Convert backend folders to frontend format with files
   const folders = useMemo(() => {
-    return backendFolders.map(folderToFolderRow);
-  }, [backendFolders]);
+    console.log('🔄 useUnifiedFoldersState: Processing folders and files...');
+    console.log('📁 Backend folders count:', backendFolders.length);
+    console.log('📄 All files count:', allFiles.length);
+    console.log('📄 All files:', allFiles);
+    
+    // Group files by folderId
+    const filesByFolder = allFiles.reduce((acc, file) => {
+      if (!acc[file.folderId]) {
+        acc[file.folderId] = [];
+      }
+      acc[file.folderId].push(file);
+      return acc;
+    }, {} as Record<string, typeof allFiles>);
+
+    console.log('📁 Files by folder:', filesByFolder);
+
+    const result = backendFolders.map(folder => {
+      const folderRow = folderToFolderRow(folder);
+      // Add files to the folder
+      folderRow.files = filesByFolder[folder.folderId] || [];
+      console.log(`📁 Folder ${folder.name} (${folder.folderId}): ${folderRow.files.length} files`);
+      return folderRow;
+    });
+    
+    console.log('✅ Processed folders:', result);
+    return result;
+  }, [backendFolders, allFiles]);
 
   // Memoized filtered folders for performance
   const filteredFolders = useMemo(() => {
@@ -59,8 +86,12 @@ export const useUnifiedFoldersState = (
     // If currentFolderId is null, show only root folders (parentId is null)
     // If currentFolderId is set, show folders with that parentId
     if (currentFolderId === null) {
-      // Show only root-level folders (those without a parent)
-      return folders.filter(folder => folder.parentId === null || folder.parentId === undefined);
+      // Show only root-level folders (those without a parent or with ROOT as parent)
+      return folders.filter(folder =>
+        folder.parentId === null ||
+        folder.parentId === undefined ||
+        folder.parentId === "ROOT"
+      );
     }
     return folders.filter(folder => folder.parentId === currentFolderId);
   }, [folders, searchTerm, currentFolderId]);

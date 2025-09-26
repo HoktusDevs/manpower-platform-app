@@ -60,7 +60,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
         <div className="flex items-center flex-1 ml-4" style={{ marginLeft: `${16 + (indentLevel * 20)}px` }}>
           {/* Expand/Collapse Arrow */}
           <div className="w-4 mr-2">
-            {subfolderCount > 0 ? (
+            {(subfolderCount > 0 || documentCount > 0) ? (
               <button
                 onClick={handleToggleExpanded}
                 className="p-0.5 rounded hover:bg-gray-200 transition-colors"

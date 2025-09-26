@@ -12,6 +12,9 @@ provider:
     S3_REGION: ${self:provider.region}
     MAX_FILE_SIZE: 52428800  # 50MB
     UPLOAD_EXPIRATION: 900   # 15 minutes
+    WEBSOCKET_ENDPOINT: ${env:WEBSOCKET_ENDPOINT, ''}
+    WEBSOCKET_SERVICE_URL: ${env:WEBSOCKET_SERVICE_URL, 'https://ni9nq1nd38.execute-api.us-east-1.amazonaws.com/dev'}
+    INTERNAL_API_KEY: ${env:INTERNAL_API_KEY, 'default-internal-key'}
   iamRoleStatements:
     # DynamoDB permissions
     - Effect: Allow
@@ -37,6 +40,21 @@ provider:
       Resource:
         - arn:aws:s3:::${self:provider.environment.S3_BUCKET}
         - arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+    # WebSocket permissions
+    - Effect: Allow
+      Action:
+        - execute-api:ManageConnections
+      Resource:
+        - arn:aws:execute-api:${self:provider.region}:*:*
+    # DynamoDB Stream permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeStream
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:ListStreams
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DOCUMENTS_TABLE}/stream/*
 
 functions:
   # Health Check
@@ -181,6 +199,18 @@ functions:
           path: /public/files/{fileId}
           method: get
           cors: true
+
+  # DynamoDB Stream Handler - Real-time file changes
+  filesStreamHandler:
+    handler: src/handlers/streamHandler.handleFilesStream
+    description: Processes DynamoDB stream events for real-time file updates
+    events:
+      - stream:
+          type: dynamodb
+          arn: arn:aws:dynamodb:us-east-1:041238861016:table/manpower-documents-dev/stream/2025-09-26T18:09:39.517
+          batchSize: 10
+          startingPosition: LATEST
+          enabled: true
 
 # resources:
 #   Resources:

@@ -18,6 +18,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.896.0",
     "@aws-sdk/client-dynamodb": "^3.890.0",
     "@aws-sdk/lib-dynamodb": "^3.890.0",
     "serverless-offline": "^13.8.2",

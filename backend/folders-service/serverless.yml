@@ -13,6 +13,8 @@ provider:
     DYNAMODB_ENDPOINT: ${env:DYNAMODB_ENDPOINT, ''}
     JOBS_SERVICE_URL: ${env:JOBS_SERVICE_URL, 'https://pa3itplx4f.execute-api.us-east-1.amazonaws.com/dev'}
     FILES_SERVICE_URL: ${env:FILES_SERVICE_URL, 'https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev'}
+    WEBSOCKET_ENDPOINT: ${env:WEBSOCKET_ENDPOINT, ''}
+    WEBSOCKET_SERVICE_URL: ${env:WEBSOCKET_SERVICE_URL, 'https://ni9nq1nd38.execute-api.us-east-1.amazonaws.com/dev'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -26,9 +28,19 @@ provider:
         - dynamodb:BatchWriteItem
         - dynamodb:CreateTable
         - dynamodb:DescribeTable
+        - dynamodb:DescribeStream
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:ListStreams
       Resource:
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
         - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}/index/*
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}/stream/*
+    - Effect: Allow
+      Action:
+        - execute-api:ManageConnections
+      Resource:
+        - arn:aws:execute-api:${self:provider.region}:*:*
 
 functions:
   # Health Check
@@ -153,6 +165,18 @@ functions:
           #   authorizerId:
           #     Ref: CognitoAuthorizer
 
+  # DynamoDB Stream Handler - Real-time folder changes
+  foldersStreamHandler:
+    handler: src/handlers/streamHandler.handleFoldersStream
+    description: Processes DynamoDB stream events for real-time folder updates
+    events:
+      - stream:
+          type: dynamodb
+          arn: arn:aws:dynamodb:us-east-1:041238861016:table/manpower-folders-dev/stream/2025-09-26T16:43:21.355
+          batchSize: 10
+          startingPosition: LATEST
+          enabled: true
+
 resources:
   Resources:
     # # Cognito Authorizer (references auth-service User Pool)
@@ -167,7 +191,8 @@ resources:
     #       Ref: RestApi
     #     IdentitySource: method.request.header.Authorization
 
-    # # DynamoDB Table (already exists in shared infrastructure)
+    # DynamoDB Table with Stream enabled for real-time updates
+    # Using existing table - commented out to avoid conflicts
     # FoldersTable:
     #   Type: AWS::DynamoDB::Table
     #   Properties:
@@ -187,6 +212,9 @@ resources:
     #         KeyType: HASH
     #       - AttributeName: userId
     #         KeyType: RANGE
+    #     # Enable DynamoDB Streams for real-time updates
+    #     StreamSpecification:
+    #       StreamViewType: NEW_AND_OLD_IMAGES
     #     GlobalSecondaryIndexes:
     #       - IndexName: UserIndex
     #         KeySchema:
@@ -206,26 +234,42 @@ resources:
     #           ProjectionType: ALL
 
   # Outputs:
-  #   FoldersServiceUrl:
-  #     Description: Folders Service API Gateway URL
-  #     Value:
-  #       Fn::Join:
-  #         - ""
-  #         - - "https://"
-  #           - Ref: RestApi
-  #           - ".execute-api."
-  #           - ${self:provider.region}
-  #           - ".amazonaws.com/"
-  #           - ${self:provider.stage}
-  #     Export:
-  #       Name: FoldersServiceUrl-${self:provider.stage}
+    # FoldersServiceUrl:
+    #   Description: Folders Service API Gateway URL
+    #   Value:
+    #     Fn::Join:
+    #       - ""
+    #       - - "https://"
+    #         - Ref: RestApi
+    #         - ".execute-api."
+    #         - ${self:provider.region}
+    #         - ".amazonaws.com/"
+    #         - ${self:provider.stage}
+    #   Export:
+    #     Name: FoldersServiceUrl-${self:provider.stage}
 
-  #   FoldersServiceApiId:
-  #     Description: Folders Service API Gateway ID
-  #     Value:
-  #       Ref: RestApi
-  #     Export:
-  #       Name: FoldersServiceApiId-${self:provider.stage}
+    # FoldersServiceApiId:
+    #   Description: Folders Service API Gateway ID
+    #   Value:
+    #     Ref: RestApi
+    #   Export:
+    #     Name: FoldersServiceApiId-${self:provider.stage}
+
+
+  # Outputs:
+    # FoldersTableStreamArn:
+    #   Description: DynamoDB Stream ARN for real-time updates
+    #   Value:
+    #     Fn::GetAtt: [FoldersTable, StreamArn]
+    #   Export:
+    #     Name: FoldersTableStreamArn-${self:provider.stage}
+
+    # FoldersTableName:
+    #   Description: DynamoDB Table Name
+    #   Value:
+    #     Ref: FoldersTable
+    #   Export:
+    #     Name: FoldersTableName-${self:provider.stage}
 
 plugins:
   - serverless-plugin-typescript
