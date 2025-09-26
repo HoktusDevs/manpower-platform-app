@@ -98,8 +98,8 @@ export const FileRow: React.FC<FileRowProps> = ({
                   </span>
                 )}
                 {/* Expiration Badge (placeholder) */}
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Expira en: 5 días
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 whitespace-nowrap">
+                  Expira: 5d
                 </span>
               </div>
             </div>
