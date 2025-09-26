@@ -76,6 +76,12 @@ export interface FilesResponse {
   error?: string;
 }
 
+export interface FileResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 export class FilesService {
   /**
    * Get files by folder ID
@@ -90,6 +96,24 @@ export class FilesService {
       : `${FILES_BASE_URL}/folder/${folderId}`;
 
     return fetchWithAuth<FilesResponse>(url);
+  }
+
+  static async deleteFile(fileId: string): Promise<FileResponse> {
+    const url = `${FILES_BASE_URL}/${fileId}`;
+    return fetchWithAuth<FileResponse>(url, {
+      method: 'DELETE',
+    });
+  }
+
+  static async deleteFiles(fileIds: string[]): Promise<FileResponse> {
+    const url = `${FILES_BASE_URL}/bulk-delete`;
+    return fetchWithAuth<FileResponse>(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fileIds }),
+    });
   }
 
   /**

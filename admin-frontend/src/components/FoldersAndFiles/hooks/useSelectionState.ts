@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { 
   FolderRow, 
+  File,
   UseSelectionStateReturn
 } from '../types';
 
@@ -8,7 +9,11 @@ import type {
  * Custom hook to manage selection state
  * Follows Single Responsibility Principle - only handles selection logic
  */
-export const useSelectionState = (filteredFolders: FolderRow[], allFolders: FolderRow[]): UseSelectionStateReturn => {
+export const useSelectionState = (
+  filteredFolders: FolderRow[], 
+  allFolders: FolderRow[], 
+  allFiles: File[] = []
+): UseSelectionStateReturn => {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   /**
@@ -99,6 +104,35 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
   };
 
   /**
+   * Select/deselect a file
+   */
+  const selectFile = (fileId: string): void => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
+  };
+
+  /**
+   * Get selected files
+   */
+  const getSelectedFiles = (): File[] => {
+    return allFiles.filter(file => selectedRows.has(file.documentId));
+  };
+
+  /**
+   * Get selected folders
+   */
+  const getSelectedFolders = (): FolderRow[] => {
+    return allFolders.filter(folder => selectedRows.has(folder.id));
+  };
+
+  /**
    * Delete selected folders and return deleted IDs
    */
   const deleteSelected = (): string[] => {
@@ -121,6 +155,9 @@ export const useSelectionState = (filteredFolders: FolderRow[], allFolders: Fold
     isAllSelected,
     selectRow,
     selectAll,
+    selectFile,
+    getSelectedFiles,
+    getSelectedFolders,
     clearSelection,
     deleteSelected,
   };

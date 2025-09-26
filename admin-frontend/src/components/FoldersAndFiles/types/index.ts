@@ -161,6 +161,9 @@ export interface UseSelectionStateReturn {
   isAllSelected: boolean;
   selectRow: (rowId: string) => void;
   selectAll: (rowIds: string[]) => void;
+  selectFile: (fileId: string) => void;
+  getSelectedFiles: () => File[];
+  getSelectedFolders: () => FolderRow[];
   clearSelection: () => void;
   deleteSelected: () => string[];
 }

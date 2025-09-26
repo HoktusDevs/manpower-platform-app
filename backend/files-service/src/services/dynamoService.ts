@@ -85,7 +85,7 @@ export class DynamoService {
     const command = new DeleteCommand({
       TableName: this.tableName,
       Key: {
-        fileId,
+        documentId: fileId,
         userId,
       },
     });

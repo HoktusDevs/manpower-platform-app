@@ -13,6 +13,7 @@ interface FoldersTableProps {
   isAllSelected: boolean;
   showRowActionsMenu: string | null;
   onSelectRow: SelectionEventHandlers['onRowSelect'];
+  onSelectFile?: (fileId: string) => void;
   onSelectAll: SelectionEventHandlers['onSelectAll'];
   onRowAction: (folderId: string, action: FolderAction) => void;
   onToggleRowActionsMenu: (folderId: string | null) => void;
@@ -33,6 +34,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
   isAllSelected,
   showRowActionsMenu,
   onSelectRow,
+  onSelectFile,
   onSelectAll,
   onRowAction,
   onToggleRowActionsMenu,
@@ -101,11 +103,11 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
           >
             <FileRow
               file={file}
-              isSelected={false} // TODO: Implement file selection
+              isSelected={selectedRows.has(file.documentId)}
               showActionsMenu={false} // TODO: Implement file actions menu
               isLastRow={isLastFile}
               indentLevel={level + 1}
-              onSelect={(fileId) => console.log('File selected:', fileId)}
+              onSelect={onSelectFile || (() => {})}
               onAction={(fileId, action) => console.log('File action:', fileId, action)}
               onToggleActionsMenu={(fileId) => console.log('Toggle file actions:', fileId)}
             />

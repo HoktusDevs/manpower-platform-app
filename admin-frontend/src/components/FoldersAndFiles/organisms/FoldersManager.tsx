@@ -13,6 +13,7 @@ import {
 } from '../hooks';
 import { useDownloadZip } from '../../../hooks/useDownloadZip';
 import { useFoldersContext } from '../context/FoldersContext';
+import { useDeleteFiles } from '../../../hooks/useFilesApi';
 import { FOLDER_OPERATION_MESSAGES } from '../types';
 // FilterOptions interface defined locally
 interface FilterOptions {
@@ -71,6 +72,9 @@ export const FoldersManager: React.FC = () => {
     downloadSelectedItems,
     clearProgress
   } = useDownloadZip();
+
+  // File deletion functionality
+  const deleteFilesMutation = useDeleteFiles();
 
   // Calculate folder level in hierarchy
   const getFolderLevel = (folder: FolderRow, allFolders: FolderRow[]): number => {
@@ -166,6 +170,9 @@ export const FoldersManager: React.FC = () => {
 
   const finalFilteredFolders = getFilteredFolders();
 
+  // Get all files from folders for selection
+  const allFiles = folders.flatMap(folder => folder.files || []);
+
   const {
     selectedRows,
     selectedCount,
@@ -173,8 +180,11 @@ export const FoldersManager: React.FC = () => {
     isAllSelected,
     selectRow,
     selectAll,
+    selectFile,
+    getSelectedFiles,
+    getSelectedFolders,
     deleteSelected,
-  } = useSelectionState(finalFilteredFolders, folders);
+  } = useSelectionState(finalFilteredFolders, folders, allFiles);
 
   const {
     showCreateModal,
@@ -225,20 +235,64 @@ export const FoldersManager: React.FC = () => {
       return;
     }
 
+    // Get selected items to determine the message
+    const selectedFiles = getSelectedFiles();
+    const selectedFolders = getSelectedFolders();
+    
+    let message = '';
+    if (selectedFiles.length > 0 && selectedFolders.length > 0) {
+      // Both files and folders selected
+      message = `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${selectedFolders.length} carpeta(s) y ${selectedFiles.length} archivo(s) seleccionado(s)?`;
+    } else if (selectedFiles.length > 0) {
+      // Only files selected
+      message = `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${selectedFiles.length} archivo(s) seleccionado(s)?`;
+    } else {
+      // Only folders selected (original behavior)
+      message = `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${selectedFolders.length} carpeta(s) seleccionada(s)?`;
+    }
+
     openConfirmModal({
       title: 'Confirmar eliminación',
-      message: `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} ${totalSelectedCount} carpeta(s) seleccionada(s)?`,
+      message,
       variant: 'danger',
       onConfirm: async () => {
-        const deletedIds = deleteSelected();
+        deleteSelected(); // Clear selection state
+        const selectedFiles = getSelectedFiles();
+        const selectedFolders = getSelectedFolders();
+        
         // Close modal immediately after optimistic deletion
         closeConfirmModal();
+        
         // Execute server deletion in background (no await)
-        deleteFolders(deletedIds)
-          .catch(() => {
-            // Rollback the optimistic deletion
-            refreshFolders();
-          });
+        const deletionPromises = [];
+        
+        // Delete folders if any are selected
+        if (selectedFolders.length > 0) {
+          deletionPromises.push(
+            deleteFolders(selectedFolders.map(f => f.id))
+              .catch(() => {
+                console.error('Error deleting folders');
+                refreshFolders();
+              })
+          );
+        }
+        
+        // Delete files if any are selected
+        if (selectedFiles.length > 0) {
+          deletionPromises.push(
+            deleteFilesMutation.mutateAsync(selectedFiles.map(f => f.documentId))
+              .catch(() => {
+                console.error('Error deleting files');
+                refreshFolders();
+              })
+          );
+        }
+        
+        // Wait for all deletions to complete
+        Promise.all(deletionPromises).catch(() => {
+          console.error('Some deletions failed');
+          refreshFolders();
+        });
       }
     });
   };
@@ -431,6 +485,7 @@ export const FoldersManager: React.FC = () => {
             isAllSelected={isAllSelected}
             showRowActionsMenu={showRowActionsMenu}
             onSelectRow={selectRow}
+            onSelectFile={selectFile}
             onSelectAll={handleSelectAll}
             onRowAction={handleRowAction}
             onToggleRowActionsMenu={setRowActionsMenu}
