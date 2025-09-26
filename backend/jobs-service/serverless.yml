@@ -137,6 +137,18 @@ functions:
           #   authorizerId:
           #     Ref: CognitoAuthorizer
 
+  deleteJobs:
+    handler: src/handlers/jobs.deleteJobs
+    events:
+      - http:
+          path: /jobs/batch
+          method: delete
+          cors: true
+          # authorizer:
+          #   type: COGNITO_USER_POOLS
+          #   authorizerId:
+          #     Ref: CognitoAuthorizer
+
   deleteJobsByFolder:
     handler: src/handlers/jobs.deleteJobsByFolder
     events:

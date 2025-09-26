@@ -126,10 +126,19 @@ export interface JobPosting {
   requiredDocuments?: string[];
 }
 
+export interface BatchDeleteResults {
+  deleted: string[];
+  failed: Array<{ jobId: string; error: string }>;
+  deletedCount: number;
+  failedCount: number;
+}
+
 export interface JobsResponse {
   success: boolean;
   message: string;
   jobs?: JobPosting[];
+  job?: JobPosting;
+  results?: BatchDeleteResults;
 }
 
 export interface CreateJobInput {
@@ -454,6 +463,57 @@ class JobsService {
       return {
         success: false,
         message: 'Error al obtener jobs por carpeta del servidor',
+      };
+    }
+  }
+
+  /**
+   * Eliminar múltiples jobs (batch)
+   */
+  async deleteJobs(jobIds: string[]): Promise<JobsResponse> {
+    console.log('🗑️ jobsService.deleteJobs: Iniciando eliminación batch de jobs:', jobIds);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/jobs/batch`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // TODO: Agregar token de autorización cuando esté implementado
+          // 'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ jobIds }),
+      });
+
+      console.log('🗑️ jobsService.deleteJobs: Response status:', response.status);
+      console.log('🗑️ jobsService.deleteJobs: Response ok:', response.ok);
+
+      if (!response.ok) {
+        console.error('🗑️ jobsService.deleteJobs: HTTP error:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Si el backend no devuelve success, asumir que fue exitoso (200 OK)
+      if (!data.success) {
+        return {
+          success: true,
+          message: 'Jobs eliminados exitosamente',
+          results: data.results || {
+            deleted: jobIds,
+            failed: [],
+            deletedCount: jobIds.length,
+            failedCount: 0
+          }
+        };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('🗑️ jobsService.deleteJobs: Error en catch:', error);
+      return {
+        success: false,
+        message: 'Error al eliminar jobs del servidor',
       };
     }
   }

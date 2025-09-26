@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
-import { CreateJobModal } from '../../JobManagement/CreateJobModal';
+import { UnifiedCreateJobModal } from '../../JobManagement/UnifiedCreateJobModal';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';
@@ -41,8 +41,6 @@ export const FoldersManager: React.FC = () => {
 
   // Job creation modal state
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
-  const [selectedCompanyForJob, setSelectedCompanyForJob] = useState<string>('');
-  const [selectedFolderPath, setSelectedFolderPath] = useState<string[]>([]);
 
   // Custom hooks for state management
   const {
@@ -74,19 +72,14 @@ export const FoldersManager: React.FC = () => {
 
   // Calculate folder level in hierarchy
   const getFolderLevel = (folder: FolderRow, allFolders: FolderRow[]): number => {
-    // Check if it's a root folder by path first
-    if (folder.path && folder.path.split('/').length === 2) {
-      return 0; // Root level based on path
-    }
-    
     if (!folder.parentId) return 0; // Root level
-    
+
     const parent = allFolders.find(f => f.id === folder.parentId);
     if (!parent) {
-      // Parent not found - treat as root if path suggests it
+      // Parent not found - treat as root level
       return 0;
     }
-    
+
     return getFolderLevel(parent, allFolders) + 1;
   };
 
@@ -247,33 +240,7 @@ export const FoldersManager: React.FC = () => {
     });
   };
 
-  // Helper function to get folder ID by name
-  const getFolderIdByName = (folderName: string): string | undefined => {
-    const folder = folders.find(f => f.name === folderName);
-    return folder?.id;
-  };
 
-  // Helper function to build folder path from folder ID
-  const getFolderPath = (folderId: string): string[] => {
-    const path: string[] = [];
-    let currentId: string | undefined = folderId;
-    
-    // Create a map for quick parent lookup
-    const folderMap = new Map<string, FolderRow>();
-    folders.forEach(folder => folderMap.set(folder.id, folder));
-    
-    while (currentId) {
-      const folder = folderMap.get(currentId);
-      if (folder) {
-        path.unshift(folder.name);
-        currentId = folder.parentId || undefined;
-      } else {
-        break;
-      }
-    }
-    
-    return path;
-  };
 
   const handleRowAction = (folderId: string, action: FolderAction): void => {
     switch (action) {
@@ -283,13 +250,7 @@ export const FoldersManager: React.FC = () => {
         break;
       }
       case 'create-job': {
-        // Get folder name to pre-fill company name
-        const folder = getFolderById(folderId);
-        if (folder) {
-          setSelectedCompanyForJob(folder.name);
-        }
-        // Store the folder path for context
-        setSelectedFolderPath(getFolderPath(folderId));
+        // Open unified create job modal
         setShowCreateJobModal(true);
         break;
       }
@@ -523,18 +484,15 @@ export const FoldersManager: React.FC = () => {
         />
       )}
 
-        {/* Create Job Modal */}
-    <CreateJobModal
+        {/* Unified Create Job Modal */}
+    <UnifiedCreateJobModal
       isOpen={showCreateJobModal}
       onClose={() => setShowCreateJobModal(false)}
       onSuccess={() => {
         setShowCreateJobModal(false);
         // La carga optimista ya maneja la actualización de la UI
       }}
-      preselectedCompany={selectedCompanyForJob}
       context="folders-management"
-      selectedFolderId={selectedCompanyForJob ? getFolderIdByName(selectedCompanyForJob) : undefined}
-      parentFolderPath={selectedFolderPath.join(' > ')}
     />
     </div>
   );

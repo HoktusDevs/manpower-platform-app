@@ -132,7 +132,10 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
     // Use the full path for display to show hierarchy
     const displayName = company.path.join(' > ');
     setSearchTerm(displayName);
-    onChange(displayName, company.id);
+
+    // Send only the actual folder name (not the full path) to avoid special characters
+    const actualCompanyName = company.path[company.path.length - 1] || company.name;
+    onChange(actualCompanyName, company.id);
     setIsOpen(false);
     inputRef.current?.blur();
   };

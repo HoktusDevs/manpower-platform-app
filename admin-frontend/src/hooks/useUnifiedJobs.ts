@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { jobsService } from '../services/jobsService';
 import type { JobPosting, CreateJobInput } from '../services/jobsService';
+import type { Folder } from '../services/foldersApiService';
 
 // Query keys factory
 export const JOBS_QUERY_KEYS = {
@@ -234,23 +235,59 @@ export const useUpdateJob = () => {
 };
 
 /**
- * Hook to delete a job with optimistic updates
+ * Hook to delete a job with optimistic updates and cascade delete associated folder
  */
 export const useDeleteJob = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (jobId: string) => {
+      // Get the job data from cache to find associated folder
+      const allJobs = queryClient.getQueryData<JobPosting[]>(JOBS_QUERY_KEYS.lists());
+      const jobToDelete = allJobs?.find(j => j.jobId === jobId);
+
+      // Delete the job first
       const response = await jobsService.deleteJob(jobId);
       if (!response.success) {
         throw new Error(response.message || 'Failed to delete job');
       }
+
+      // If job found, look for and delete associated "Cargo" folder
+      if (jobToDelete) {
+        // Get all folders from cache
+        const foldersData = queryClient.getQueriesData<Folder[]>({ queryKey: ['folders'] });
+        const folders = foldersData?.[0]?.[1] || [];
+
+        // Find folder with matching name and type "Cargo"
+        const associatedFolder = folders.find(
+          folder => folder.name === jobToDelete.title && folder.type === 'Cargo'
+        );
+
+        // Delete the folder if found
+        if (associatedFolder) {
+          try {
+            const { FoldersService } = await import('../services/foldersService');
+            await FoldersService.deleteFolder(associatedFolder.folderId);
+            console.log(`✅ Deleted associated folder: ${associatedFolder.name}`);
+          } catch (error) {
+            console.error('Failed to delete associated folder:', error);
+            // Continue even if folder deletion fails
+          }
+        }
+      }
+
       return response;
     },
     onMutate: async (jobId: string) => {
       await queryClient.cancelQueries({ queryKey: JOBS_QUERY_KEYS.all });
+      await queryClient.cancelQueries({ queryKey: ['folders'] });
 
       const previousJobs = queryClient.getQueriesData({ queryKey: JOBS_QUERY_KEYS.all });
+      const previousFolders = queryClient.getQueriesData({ queryKey: ['folders'] });
+
+      // Get job data to check for associated folder
+      const allJobs = queryClient.getQueryData<JobPosting[]>(JOBS_QUERY_KEYS.lists());
+      const jobToDelete = allJobs?.find(j => j.jobId === jobId);
 
       // Remove job optimistically from all queries
       queryClient.setQueriesData(
@@ -261,7 +298,20 @@ export const useDeleteJob = () => {
         }
       );
 
-      return { previousJobs };
+      // If job found, also remove associated folder optimistically
+      if (jobToDelete) {
+        queryClient.setQueriesData(
+          { queryKey: ['folders'] },
+          (old: Folder[] | undefined) => {
+            if (!old) return old;
+            return old.filter((folder) =>
+              !(folder.name === jobToDelete.title && folder.type === 'Cargo')
+            );
+          }
+        );
+      }
+
+      return { previousJobs, previousFolders };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousJobs) {
@@ -269,10 +319,15 @@ export const useDeleteJob = () => {
           queryClient.setQueryData(queryKey, data);
         });
       }
+      if (context?.previousFolders) {
+        context.previousFolders.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEYS.folders });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -280,29 +335,64 @@ export const useDeleteJob = () => {
 };
 
 /**
- * Hook to delete multiple jobs with optimistic updates
+ * Hook to delete multiple jobs with optimistic updates and cascade delete associated folders
  */
 export const useDeleteJobs = (onSuccess?: () => void, onError?: (error: Error) => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (jobIds: string[]) => {
-      // Delete jobs one by one (since there's no batch delete endpoint)
-      const results = await Promise.allSettled(
-        jobIds.map(id => jobsService.deleteJob(id))
-      );
+      // Get jobs data from cache to find associated folders
+      const allJobs = queryClient.getQueryData<JobPosting[]>(JOBS_QUERY_KEYS.lists());
+      const jobsToDelete = allJobs?.filter(j => jobIds.includes(j.jobId)) || [];
 
-      const failed = results.filter(r => r.status === 'rejected').length;
-      if (failed > 0) {
-        throw new Error(`Failed to delete ${failed} out of ${jobIds.length} jobs`);
+      // Delete jobs using batch endpoint
+      const jobsResult = await jobsService.deleteJobs(jobIds);
+      if (!jobsResult.success) {
+        throw new Error(jobsResult.message || 'Failed to delete jobs');
       }
 
-      return { deletedCount: jobIds.length };
+      // Find and delete associated "Cargo" folders
+      if (jobsToDelete.length > 0) {
+        // Get all folders from cache
+        const foldersData = queryClient.getQueriesData<Folder[]>({ queryKey: ['folders'] });
+        const folders = foldersData?.[0]?.[1] || [];
+
+        // Import FoldersService dynamically to avoid circular dependencies
+        const { FoldersService } = await import('../services/foldersService');
+
+        // Delete associated folders
+        const deleteFolderPromises = jobsToDelete.map(job => {
+          const associatedFolder = folders.find(
+            folder => folder.name === job.title && folder.type === 'Cargo'
+          );
+          if (associatedFolder) {
+            return FoldersService.deleteFolder(associatedFolder.folderId)
+              .then(() => console.log(`✅ Deleted associated folder: ${associatedFolder.name}`))
+              .catch(error => console.error(`Failed to delete folder ${associatedFolder.name}:`, error));
+          }
+          return Promise.resolve();
+        });
+
+        await Promise.allSettled(deleteFolderPromises);
+      }
+
+      return {
+        deletedCount: jobsResult.results?.deletedCount || jobIds.length,
+        failedCount: jobsResult.results?.failedCount || 0
+      };
     },
     onMutate: async (jobIds: string[]) => {
       await queryClient.cancelQueries({ queryKey: JOBS_QUERY_KEYS.all });
+      await queryClient.cancelQueries({ queryKey: ['folders'] });
 
       const previousJobs = queryClient.getQueriesData({ queryKey: JOBS_QUERY_KEYS.all });
+      const previousFolders = queryClient.getQueriesData({ queryKey: ['folders'] });
+
+      // Get jobs data to check for associated folders
+      const allJobs = queryClient.getQueryData<JobPosting[]>(JOBS_QUERY_KEYS.lists());
+      const jobsToDelete = allJobs?.filter(j => jobIds.includes(j.jobId)) || [];
+      const jobTitles = jobsToDelete.map(j => j.title);
 
       // Remove jobs optimistically from all queries
       queryClient.setQueriesData(
@@ -313,7 +403,20 @@ export const useDeleteJobs = (onSuccess?: () => void, onError?: (error: Error) =
         }
       );
 
-      return { previousJobs };
+      // Remove associated folders optimistically
+      if (jobTitles.length > 0) {
+        queryClient.setQueriesData(
+          { queryKey: ['folders'] },
+          (old: Folder[] | undefined) => {
+            if (!old) return old;
+            return old.filter((folder) =>
+              !(jobTitles.includes(folder.name) && folder.type === 'Cargo')
+            );
+          }
+        );
+      }
+
+      return { previousJobs, previousFolders };
     },
     onSuccess: () => {
       onSuccess?.();
@@ -324,11 +427,16 @@ export const useDeleteJobs = (onSuccess?: () => void, onError?: (error: Error) =
           queryClient.setQueryData(queryKey, data);
         });
       }
+      if (context?.previousFolders) {
+        context.previousFolders.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       onError?.(error instanceof Error ? error : new Error('Unknown error'));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEYS.folders });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),

@@ -129,6 +129,7 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>([]);
   const [documentInput, setDocumentInput] = useState('');
+  const [selectedCompanyFolderId, setSelectedCompanyFolderId] = useState<string | undefined>(selectedFolderId);
 
   // Sincronizar con props
   useEffect(() => {
@@ -226,8 +227,12 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   };
 
   // Handle company selection
-  const handleCompanySelection = (companyName: string) => {
+  const handleCompanySelection = (companyName: string, folderId?: string) => {
     setJobData(prev => ({ ...prev, companyName }));
+    // Store the selected folder ID for proper placement
+    if (folderId) {
+      setSelectedCompanyFolderId(folderId);
+    }
   };
 
   // Handle job creation
@@ -267,7 +272,7 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
           expiresAt: jobData.expiresAt ? new Date(jobData.expiresAt).toISOString() : undefined,
           requiredDocuments: requiredDocuments,
         },
-        parentFolderId: context === 'folders-management' ? selectedFolderId : undefined,
+        parentFolderId: context === 'folders-management' ? selectedFolderId : selectedCompanyFolderId,
         skipFolderCreation: false, // Siempre crear carpeta
       };
 

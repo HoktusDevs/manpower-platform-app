@@ -317,6 +317,96 @@ export const deleteJob: APIGatewayProxyHandler = async (event) => {
   }
 };
 
+// Delete multiple jobs (batch) - ADMIN ONLY
+export const deleteJobs: APIGatewayProxyHandler = async (event) => {
+  try {
+    const { userId, userRole } = extractUserFromEvent(event);
+
+    // Only admins can delete jobs
+    if (userRole !== 'admin') {
+      return createResponse(403, {
+        success: false,
+        message: 'Only administrators can delete jobs',
+      });
+    }
+
+    // Parse the request body to get job IDs
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required',
+      });
+    }
+
+    let jobIds: string[];
+    try {
+      const body = JSON.parse(event.body);
+      jobIds = body.jobIds;
+    } catch (parseError) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid JSON in request body',
+      });
+    }
+
+    if (!Array.isArray(jobIds) || jobIds.length === 0) {
+      return createResponse(400, {
+        success: false,
+        message: 'jobIds must be a non-empty array',
+      });
+    }
+
+    // Process batch deletion
+    const results = {
+      deleted: [] as string[],
+      failed: [] as { jobId: string; error: string }[],
+      deletedCount: 0,
+      failedCount: 0
+    };
+
+    console.log(`Starting batch deletion of ${jobIds.length} jobs`);
+
+    for (const jobId of jobIds) {
+      try {
+        const result = await jobService.deleteJob(jobId, userId);
+
+        if (result.success) {
+          results.deleted.push(jobId);
+          results.deletedCount++;
+          console.log(`Successfully deleted job: ${jobId}`);
+        } else {
+          results.failed.push({ jobId, error: result.message || 'Unknown error' });
+          results.failedCount++;
+          console.warn(`Failed to delete job ${jobId}: ${result.message}`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.failed.push({ jobId, error: errorMessage });
+        results.failedCount++;
+        console.error(`Error deleting job ${jobId}:`, error);
+      }
+    }
+
+    console.log(`Batch deletion completed. Deleted: ${results.deletedCount}, Failed: ${results.failedCount}`);
+
+    // Return success if at least some jobs were deleted, or all failed
+    const statusCode = results.deletedCount > 0 ? 200 : (results.failedCount === jobIds.length ? 400 : 207);
+
+    return createResponse(statusCode, {
+      success: results.deletedCount > 0,
+      message: `Batch deletion completed: ${results.deletedCount} deleted, ${results.failedCount} failed`,
+      results
+    });
+
+  } catch (error) {
+    console.error('Error in deleteJobs batch:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 // Get jobs by folder - ADMIN ONLY
 export const getJobsByFolder: APIGatewayProxyHandler = async (event) => {
   try {

@@ -78,6 +78,37 @@ async function unifiedFetch<T>(
  */
 class UnifiedJobFolderService {
   /**
+   * Create standalone folder without job creation
+   */
+  async createStandaloneFolder(folderInput: CreateFolderInput): Promise<UnifiedMutationResult> {
+    try {
+      const folderResponse = await unifiedFetch<{ success: boolean; folder: Folder; message: string }>(
+        `${FOLDERS_BASE_URL}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(folderInput),
+        }
+      );
+
+      if (!folderResponse.success || !folderResponse.folder) {
+        throw new Error(folderResponse.message || 'Failed to create folder');
+      }
+
+      return {
+        folder: folderResponse.folder,
+        success: true,
+        message: 'Folder created successfully',
+      };
+    } catch (error) {
+      console.error('Error in createStandaloneFolder:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create folder',
+      };
+    }
+  }
+
+  /**
    * Create job and folder atomically
    */
   async createJobWithFolder(input: CreateJobWithFolderInput): Promise<UnifiedMutationResult> {
@@ -87,7 +118,7 @@ class UnifiedJobFolderService {
 
       // Step 1: Create folder if needed
       if (!input.skipFolderCreation) {
-        const folderName = input.folderName || `${input.job.companyName} - ${input.job.title}`;
+        const folderName = input.folderName || input.job.title;
         const folderInput: CreateFolderInput = {
           name: folderName,
           type: 'Cargo',
@@ -364,6 +395,62 @@ export const unifiedService = new UnifiedJobFolderService();
 /**
  * React Query Hooks
  */
+
+/**
+ * Hook to create standalone folder without job creation
+ */
+export function useCreateStandaloneFolder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (folderInput: CreateFolderInput) => unifiedService.createStandaloneFolder(folderInput),
+    onMutate: async (folderInput) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+
+      // Snapshot previous values
+      const previousFolders = queryClient.getQueryData(UNIFIED_QUERY_KEYS.foldersList());
+
+      // Optimistically update folders cache
+      const optimisticFolder = {
+        folderId: `temp-folder-${Date.now()}`,
+        userId: 'user',
+        name: folderInput.name,
+        type: folderInput.type,
+        parentId: folderInput.parentId || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData(UNIFIED_QUERY_KEYS.foldersList(), (old: Folder[] | undefined) => {
+        if (!old) return [optimisticFolder];
+        return [...old, optimisticFolder];
+      });
+
+      return { previousFolders };
+    },
+    onError: (_error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousFolders) {
+        queryClient.setQueryData(UNIFIED_QUERY_KEYS.foldersList(), context.previousFolders);
+      }
+    },
+    onSuccess: (data) => {
+      // Replace optimistic data with real data
+      if (data.success && data.folder) {
+        queryClient.setQueryData(UNIFIED_QUERY_KEYS.foldersList(), (old: Folder[] | undefined) => {
+          if (!old) return old;
+          const filteredFolders = old.filter((f) => !f.folderId.startsWith('temp-folder-'));
+          return [...filteredFolders, data.folder];
+        });
+      }
+    },
+    onSettled: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+    },
+  });
+}
 
 /**
  * Hook to create job with folder atomically

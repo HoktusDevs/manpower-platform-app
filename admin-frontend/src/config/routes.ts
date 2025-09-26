@@ -1,10 +1,7 @@
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
 import { MigrationDashboard } from '../pages/admin/MigrationDashboard';
-import { ApplicationsManagementPage } from '../pages/admin/ApplicationsManagementPage';
-import { JobPostingsManagementPage } from '../pages/admin/JobPostingsManagementPage';
 import { FoldersAndFilesPage } from '../pages/admin/FoldersAndFilesPage';
 import { TestWhatsappPage } from '../pages/admin/TestWhatsappPage';
-import { TestOCRPage } from '../pages/admin/TestOCRPage';
 import { MessagingPage } from '../pages/admin/MessagingPage';
 import { SettingsPage } from '../pages/admin/SettingsPage';
 
@@ -32,20 +29,6 @@ export const adminRoutes: RouteConfig[] = [
     title: 'Migración'
   },
   {
-    path: 'applications',
-    element: ApplicationsManagementPage,
-    requireAuth: true,
-    requiredRole: 'admin',
-    title: 'Gestión de Aplicaciones'
-  },
-  {
-    path: 'jobs',
-    element: JobPostingsManagementPage,
-    requireAuth: true,
-    requiredRole: 'admin',
-    title: 'Gestión de Trabajos'
-  },
-  {
     path: 'folders',
     element: FoldersAndFilesPage,
     requireAuth: true,
@@ -58,13 +41,6 @@ export const adminRoutes: RouteConfig[] = [
     requireAuth: true,
     requiredRole: 'admin',
     title: 'Test WhatsApp'
-  },
-  {
-    path: 'test-ocr',
-    element: TestOCRPage,
-    requireAuth: true,
-    requiredRole: 'admin',
-    title: 'Test OCR'
   },
   {
     path: 'messaging',

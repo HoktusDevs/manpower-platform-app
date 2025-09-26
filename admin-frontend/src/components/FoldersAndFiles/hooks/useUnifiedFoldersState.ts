@@ -6,7 +6,7 @@ import {
   useDeleteFolder,
   useDeleteFolders,
 } from '../../../hooks/useUnifiedFolders';
-import { useCreateJobWithFolder } from '../../../services/unifiedJobFolderService';
+import { useCreateStandaloneFolder } from '../../../services/unifiedJobFolderService';
 import type {
   FolderRow,
   CreateFolderData,
@@ -35,10 +35,10 @@ export const useUnifiedFoldersState = (
   // React Query hooks using unified system
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
   const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
+  const createStandaloneFolderMutation = useCreateStandaloneFolder();
   const updateFolderMutation = useUpdateFolder();
   const deleteFolderMutation = useDeleteFolder();
   const deleteFoldersMutation = useDeleteFolders(onDeleteSuccess, onDeleteError);
-  const createJobWithFolderMutation = useCreateJobWithFolder();
 
   // Convert backend folders to frontend format
   const folders = useMemo(() => {
@@ -66,7 +66,7 @@ export const useUnifiedFoldersState = (
   }, [folders, searchTerm, currentFolderId]);
 
   /**
-   * Create new folder with automatic job creation for Cargo type
+   * Create new folder without job creation for all types
    */
   const createFolder = async (data: CreateFolderData, parentId: string | null = null): Promise<void> => {
     try {
@@ -79,17 +79,16 @@ export const useUnifiedFoldersState = (
         parentId: parentId || undefined,
       };
 
-      const result = await createFolderMutation.mutateAsync(input);
+      // Use standalone folder creation for "Cargo" type (no job creation)
+      // Use regular folder creation for other types
+      const result = data.type === 'Cargo'
+        ? await createStandaloneFolderMutation.mutateAsync(input)
+        : await createFolderMutation.mutateAsync(input);
 
       // Console.log for tracking
       if (result.folder) {
         console.log('📁 Carpeta creada:', result.folder);
-
-        // Si es carpeta tipo "Cargo", crear job automáticamente usando el servicio unificado
-        if (data.type === 'Cargo' && result.folder?.folderId) {
-          console.log('🚀 Creando job automáticamente para carpeta tipo "Cargo"...');
-          await createJobForCargoFolder(result.folder.folderId, folderName);
-        }
+        console.log('✅ No se creará job automáticamente para carpetas tipo "Cargo"');
       }
     } catch (error) {
       console.error('❌ Error creating folder:', error);
@@ -107,40 +106,6 @@ export const useUnifiedFoldersState = (
     return parts.length > 1 ? parts[parts.length - 1].trim() : folderName;
   };
 
-  /**
-   * Create job automatically for Cargo type folder using unified service
-   */
-  const createJobForCargoFolder = async (folderId: string, cargoName: string): Promise<void> => {
-    try {
-      console.log('🚀 Creando job para carpeta tipo "Cargo":', cargoName);
-
-      // Usar el servicio unificado para crear job (sin crear carpeta adicional)
-      await createJobWithFolderMutation.mutateAsync({
-        job: {
-          title: cargoName,
-          description: `Descripción del cargo: ${cargoName}`,
-          companyName: 'Empresa por definir',
-          requirements: 'Requisitos por definir',
-          salary: '',
-          location: 'Por definir',
-          employmentType: 'FULL_TIME',
-          experienceLevel: 'ENTRY_LEVEL',
-          benefits: '',
-          schedule: '',
-          expiresAt: undefined,
-          requiredDocuments: []
-        },
-        folderName: cargoName,
-        parentFolderId: folderId,
-        skipFolderCreation: true, // No crear carpeta adicional, usar la existente
-      });
-
-      console.log('✅ Job creado automáticamente usando servicio unificado');
-    } catch (error) {
-      console.error('❌ Error en createJobForCargoFolder:', error);
-      // No lanzar error para no romper la creación de carpeta
-    }
-  };
 
   /**
    * Delete folder by ID using unified service
