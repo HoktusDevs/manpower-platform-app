@@ -12,8 +12,8 @@ interface WebSocketMessage {
     fileId?: string;
     userId: string;
     eventType: 'INSERT' | 'MODIFY' | 'REMOVE';
-    folder?: any;
-    file?: any;
+    folder?: unknown;
+    file?: unknown;
     timestamp: number;
   };
   timestamp?: string;
@@ -25,7 +25,7 @@ interface FolderUpdateEvent {
     folderId: string;
     userId: string;
     eventType: 'INSERT' | 'MODIFY' | 'REMOVE';
-    folder?: any;
+    folder?: unknown;
     timestamp: number;
   };
 }
@@ -36,7 +36,7 @@ interface FileUpdateEvent {
     fileId: string;
     userId: string;
     eventType: 'INSERT' | 'MODIFY' | 'REMOVE';
-    file?: any;
+    file?: unknown;
     timestamp: number;
   };
 }
@@ -45,7 +45,7 @@ interface UseWebSocketReturn {
   isConnected: boolean;
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   lastMessage: WebSocketMessage | null;
-  sendMessage: (message: any) => void;
+  sendMessage: (message: Record<string, unknown>) => void;
   disconnect: () => void;
   connect: () => void;
 }
@@ -68,7 +68,7 @@ export const useWebSocket = (
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
-  const sendMessage = useCallback((message: any) => {
+  const sendMessage = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
       console.log('📤 Sent WebSocket message:', message);
@@ -247,7 +247,7 @@ export const useWebSocket = (
     return () => {
       disconnect();
     };
-  }, [autoConnect]);
+  }, [autoConnect, connect, disconnect]);
 
   return {
     isConnected,

@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FilesService } from '../services/filesService';
-import type { File, FilesResponse } from '../services/filesService';
+// Remove unused imports
 
 // Query keys factory
 export const FILES_QUERY_KEYS = {
@@ -88,7 +88,7 @@ export const useDeleteFile = () => {
       }
       return response;
     },
-    onSuccess: (data, fileId) => {
+    onSuccess: () => {
       // Invalidate and refetch files queries
       queryClient.invalidateQueries({ queryKey: FILES_QUERY_KEYS.all });
       

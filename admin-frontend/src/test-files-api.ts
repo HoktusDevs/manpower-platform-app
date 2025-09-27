@@ -33,6 +33,6 @@ async function testFilesAPI() {
 }
 
 // Export for use in browser console
-(window as any).testFilesAPI = testFilesAPI;
+(window as { testFilesAPI?: typeof testFilesAPI }).testFilesAPI = testFilesAPI;
 
 console.log('📝 Files API test function loaded. Run testFilesAPI() in the console to test.');

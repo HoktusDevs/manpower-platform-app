@@ -31,7 +31,7 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
   const foldersState = useUnifiedFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
 
   // Handle real-time folder updates
-  const handleFolderUpdate = useCallback((event: any) => {
+  const handleFolderUpdate = useCallback((event: { action: string; data?: { folder?: unknown; id?: string } }) => {
     console.log('🔄 Real-time folder update received:', event);
 
     switch (event.action) {
@@ -75,7 +75,7 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
   }, [foldersState]);
 
   // Handle real-time file updates
-  const handleFileUpdate = useCallback((event: any) => {
+  const handleFileUpdate = useCallback((event: { action: string; data?: { file?: unknown; id?: string } }) => {
     console.log('🔄 Real-time file update received:', event);
 
     switch (event.action) {

@@ -47,7 +47,7 @@ export const FoldersManager: React.FC = () => {
 
   // File preview modal state
   const [showFilePreviewModal, setShowFilePreviewModal] = useState(false);
-  const [previewFile, setPreviewFile] = useState<any>(null);
+  const [previewFile, setPreviewFile] = useState<{ file: { name: string; type: string }; previewUrl: string; fileUrl: string; title: string; ownerName: string; status: string; hoktusDecision: string; hoktusProcessingStatus: string; documentType: string; observations: unknown[]; ocrResult?: { success: boolean; text: string; confidence: number; processingTime: number; language: string; metadata: Record<string, unknown>; fields: Record<string, unknown> } } | null>(null);
 
   // Custom hooks for state management
   const {
@@ -360,23 +360,23 @@ export const FoldersManager: React.FC = () => {
               name: file.originalName,
               type: file.fileType || 'application/pdf'
             },
-            previewUrl: (file as any).fileUrl || '',
-            fileUrl: (file as any).fileUrl,
+            previewUrl: file.fileUrl || '',
+            fileUrl: file.fileUrl || '',
             title: file.originalName,
             ownerName: 'Usuario Admin', // Default owner name
             status: file.status || 'completed',
-            hoktusDecision: (file as any).hoktusDecision || 'PENDING',
-            hoktusProcessingStatus: (file as any).hoktusProcessingStatus || 'COMPLETED',
-            documentType: (file as any).documentType || 'PDF',
-            observations: (file as any).processingResult?.observations || [],
-            ocrResult: (file as any).processingResult ? {
+            hoktusDecision: file.hoktusDecision || 'PENDING',
+            hoktusProcessingStatus: file.hoktusProcessingStatus || 'COMPLETED',
+            documentType: file.documentType || 'PDF',
+            observations: file.processingResult?.observations || [],
+            ocrResult: file.processingResult ? {
               success: true,
-              text: (file as any).processingResult.contentAnalysis?.text || '',
-              confidence: (file as any).processingResult.contentAnalysis?.confidence_score || 0.95,
-              processingTime: (file as any).processingResult.processingTime || 0,
+              text: file.processingResult.contentAnalysis?.text || '',
+              confidence: file.processingResult.contentAnalysis?.confidence_score || 0.95,
+              processingTime: file.processingResult.processingTime || 0,
               language: 'es',
               metadata: {},
-              fields: (file as any).processingResult.data_structure || {}
+              fields: file.processingResult.data_structure || {}
             } : undefined
           };
           

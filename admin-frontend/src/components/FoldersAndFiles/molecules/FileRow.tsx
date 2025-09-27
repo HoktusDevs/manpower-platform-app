@@ -86,8 +86,8 @@ export const FileRow: React.FC<FileRowProps> = ({
                 {file.status && (
                   <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium h-6 min-w-[80px] ${
                     (() => {
-                      const hoktusDecision = (file as any).hoktusDecision;
-                      const hoktusProcessingStatus = (file as any).hoktusProcessingStatus;
+                      const hoktusDecision = file.hoktusDecision;
+                      const hoktusProcessingStatus = file.hoktusProcessingStatus;
                       
                       // Si está procesando
                       if (file.status === 'processing') {
@@ -122,8 +122,8 @@ export const FileRow: React.FC<FileRowProps> = ({
                     })()
                   }`}>
                     {(() => {
-                      const hoktusDecision = (file as any).hoktusDecision;
-                      const hoktusProcessingStatus = (file as any).hoktusProcessingStatus;
+                      const hoktusDecision = file.hoktusDecision;
+                      const hoktusProcessingStatus = file.hoktusProcessingStatus;
                       
                       // Si está procesando
                       if (file.status === 'processing') {
