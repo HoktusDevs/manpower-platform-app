@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useForms } from '../../hooks/useForms';
-import type { FormField, JobApplicationForm } from '../../services/formsService';
-import { jobPostingsService } from '../../services/jobPostingsService';
-import { useAuth } from '../../hooks/useAuth';
+import { useForms } from '../../../hooks/useForms';
+import type { FormField, JobApplicationForm } from '../../../services/formsService';
+import { jobPostingsService } from '../../../services/jobPostingsService';
+import { useAuth } from '../../../hooks/useAuth';
 import './FormsManager.css';
 
 interface FormBuilderProps {

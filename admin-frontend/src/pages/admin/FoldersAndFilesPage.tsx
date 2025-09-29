@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FoldersManager, FoldersProvider } from '../../components/FoldersAndFiles';
-import { DocumentViewer } from '../../components/Documents/DocumentViewer';
+import { DocumentViewer } from '../../components/Documents';
 import type { DocumentInfo } from '../../services/documentsService';
 import { useToast } from '../../core-ui/useToast';
 

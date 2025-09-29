@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DocumentCard } from './DocumentCard';
-import { documentsService, type DocumentInfo, type FolderDocument } from '../../services/documentsService';
+import { DocumentCard } from '../molecules';
+import { documentsService, type DocumentInfo, type FolderDocument } from '../../../services/documentsService';
 
 interface DocumentsListProps {
   folders: unknown[];

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DocumentInfo } from '../../services/documentsService';
+import type { DocumentInfo } from '../../../services/documentsService';
 
 interface DocumentViewerProps {
   document: DocumentInfo | null;

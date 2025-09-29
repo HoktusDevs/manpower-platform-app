@@ -16,3 +16,4 @@ export { DashboardMetrics } from './organisms/DashboardMetrics';
 export { QuickActions } from './organisms/QuickActions';
 export { RecentActivity } from './organisms/RecentActivity';
 export { Sidebar } from './organisms/Sidebar';
+export { default as FormsManager } from './organisms/FormsManager';
