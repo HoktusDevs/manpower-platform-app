@@ -8,10 +8,10 @@ export interface FolderRow {
   createdAt: string;
   parentId?: string | null;
   level?: number; // Hierarchy level (0 = root, 1+ = subfolders)
-  files?: File[]; // Files associated with this folder
+  files?: DocumentFile[]; // Files associated with this folder
 }
 
-export interface File {
+export interface DocumentFile {
   documentId: string;
   originalName: string;
   fileSize?: number;
@@ -39,6 +39,9 @@ export interface File {
     }>;
   };
 }
+
+// Legacy alias for backwards compatibility
+export type File = DocumentFile;
 
 export interface CreateFolderData {
   name: string;
@@ -183,7 +186,7 @@ export interface UseSelectionStateReturn {
   selectRow: (rowId: string) => void;
   selectAll: (rowIds: string[]) => void;
   selectFile: (fileId: string) => void;
-  getSelectedFiles: () => File[];
+  getSelectedFiles: () => DocumentFile[];
   getSelectedFolders: () => FolderRow[];
   clearSelection: () => void;
   deleteSelected: () => string[];

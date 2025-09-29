@@ -1,6 +1,7 @@
 import { Checkbox, FolderIcon, TypeBadge, RowActionsButton } from '../atoms';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useFoldersContext } from '../context/FoldersContext';
+import { useFolderStatusCounts } from '../hooks/useStatusCounts';
 import type { FolderRowProps } from '../types';
 
 /**
@@ -24,7 +25,10 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   onNavigateToFolder
 }) => {
   // Get optimistic states from context
-  const { optimistic } = useFoldersContext();
+  const { optimistic, folders } = useFoldersContext();
+
+  // Calculate status counts for this folder (including all subfolders recursively)
+  const statusCounts = useFolderStatusCounts(folder.id, folders);
 
   // Determine if this folder is in an optimistic state
   const isBeingCreated = optimistic.isCreating;
@@ -161,24 +165,29 @@ export const FolderRow: React.FC<FolderRowProps> = ({
         </div>
 
         {/* Status Columns */}
+        {/* Aprobado */}
         <div className="w-[200px] text-center">
-          <span className="text-sm text-gray-600">0</span>
+          <span className="text-sm text-gray-600">{statusCounts.approved}</span>
         </div>
 
+        {/* Rechazado */}
         <div className="w-[200px] text-center">
-          <span className="text-sm text-gray-600">0</span>
+          <span className="text-sm text-gray-600">{statusCounts.rejected}</span>
         </div>
 
+        {/* Pendiente */}
         <div className="w-[200px] text-center">
-          <span className="text-sm text-gray-600">{documentCount}</span>
+          <span className="text-sm text-gray-600">{statusCounts.pending}</span>
         </div>
 
+        {/* Por vencer */}
         <div className="w-[200px] text-center">
-          <span className="text-sm text-gray-600">0</span>
+          <span className="text-sm text-gray-600">{statusCounts.aboutToExpire}</span>
         </div>
 
+        {/* Vencido */}
         <div className="w-[200px] text-center">
-          <span className="text-sm text-gray-600">0</span>
+          <span className="text-sm text-gray-600">{statusCounts.expired}</span>
         </div>
 
         {/* Acciones Column */}
