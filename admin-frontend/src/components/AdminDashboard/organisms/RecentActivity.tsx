@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../../core-ui';
 import type { SelectOption } from '../../../core-ui';
-import { applicationsService } from '../../../services/applicationsService';
+import { useApplicationsData } from '../../../hooks/useApplicationsData';
 
 type ActivityFilter = 'postulaciones' | 'usuarios' | 'sistema';
 type TimeGranularity = 'daily' | 'weekly' | 'quarterly';
@@ -328,21 +328,22 @@ export function RecentActivity(): ReactNode {
   const [selectedGranularity, setSelectedGranularity] = useState<TimeGranularity>('daily');
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [, setHasLoadedData] = useState(false);
 
-  // Función para cargar datos desde la API
+  // Usar hook centralizado para datos de applications
+  const { getActivityData } = useApplicationsData();
+
+  // Función para cargar datos usando el hook centralizado
   const loadActivityData = useCallback(async (filter: ActivityFilter, granularity: TimeGranularity) => {
     setIsLoading(true);
     try {
-      const data = await applicationsService.getActivityData(filter, granularity);
+      const data = await getActivityData(filter, granularity);
       setActivityData(data);
-      setHasLoadedData(true);
     } catch {
       setActivityData(generateEmptyData(filter, granularity));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getActivityData]);
 
   // Cargar datos al montar el componente y cuando cambien los filtros
   useEffect(() => {
@@ -351,12 +352,12 @@ export function RecentActivity(): ReactNode {
 
   const handleActivityFilterChange = (newFilter: ActivityFilter): void => {
     setSelectedActivityFilter(newFilter);
-    loadActivityData(newFilter, selectedGranularity);
+    // loadActivityData se ejecutará automáticamente por el useEffect
   };
 
   const handleGranularityChange = (newGranularity: TimeGranularity): void => {
     setSelectedGranularity(newGranularity);
-    loadActivityData(selectedActivityFilter, newGranularity);
+    // loadActivityData se ejecutará automáticamente por el useEffect
   };
 
   // const handleLoadData = () => {

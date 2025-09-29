@@ -1,38 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
 import { MetricCard, Grid } from '../../../core-ui';
-import { applicationsService, type DashboardStats } from '../../../services/applicationsService';
+import { useApplicationsData } from '../../../hooks/useApplicationsData';
 
 export function DashboardMetrics() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalApplicants: 0,
-    approvedApplications: 0,
-    pendingApplications: 0,
-    activeApplications: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadStats = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const dashboardStats = await applicationsService.getDashboardStats();
-      setStats(dashboardStats);
-    } catch {
-      setError('Error al cargar las estadísticas');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  const { dashboardStats, isLoading, error } = useApplicationsData();
 
   const formatValue = (value: number): string => {
     if (isLoading) return 'Cargando...';
     if (error) return 'Error';
     return value.toLocaleString();
+  };
+
+  // Usar valores por defecto si no hay stats aún
+  const stats = dashboardStats || {
+    totalApplicants: 0,
+    approvedApplications: 0,
+    pendingApplications: 0,
+    activeApplications: 0,
   };
 
   return (
