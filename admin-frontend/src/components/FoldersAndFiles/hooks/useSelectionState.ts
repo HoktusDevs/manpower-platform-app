@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { 
-  FolderRow, 
-  File,
+import type {
+  FolderRow,
+  DocumentFile,
   UseSelectionStateReturn
 } from '../types';
 
@@ -12,7 +12,7 @@ import type {
 export const useSelectionState = (
   filteredFolders: FolderRow[], 
   allFolders: FolderRow[], 
-  allFiles: File[] = []
+  allFiles: DocumentFile[] = []
 ): UseSelectionStateReturn => {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
@@ -121,7 +121,7 @@ export const useSelectionState = (
   /**
    * Get selected files
    */
-  const getSelectedFiles = (): File[] => {
+  const getSelectedFiles = (): DocumentFile[] => {
     return allFiles.filter(file => selectedRows.has(file.documentId));
   };
 

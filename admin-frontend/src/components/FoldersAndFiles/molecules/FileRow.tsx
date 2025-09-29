@@ -1,9 +1,9 @@
 import { Checkbox, RowActionsButton } from '../atoms';
 import { FileActionsMenu } from './FileActionsMenu';
-import type { File, FileAction } from '../types';
+import type { DocumentFile, FileAction } from '../types';
 
 interface FileRowProps {
-  file: File;
+  file: DocumentFile;
   isSelected: boolean;
   showActionsMenu: boolean;
   isLastRow?: boolean;
