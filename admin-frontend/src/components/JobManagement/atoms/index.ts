@@ -1,5 +1,5 @@
-export { FormField } from './FormField';
-export type { FormFieldProps } from '../types';
+// TextInput (was FormField) moved to shared/atoms for reusability
+export { TextInput as FormField, type TextInputProps as FormFieldProps } from '../../../shared/atoms';
 
 export { SelectField } from './SelectField';
 export type { SelectFieldProps } from '../types';

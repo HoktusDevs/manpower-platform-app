@@ -76,7 +76,8 @@ export interface CreateJobModalProps {
 }
 
 // Form field props interface for reusable components
-export interface FormFieldProps {
+// Note: This is kept for compatibility, but FormField is now imported from shared/atoms
+export interface FormFieldPropsLegacy {
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;

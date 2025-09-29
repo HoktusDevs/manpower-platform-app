@@ -3,6 +3,7 @@ import { useForms } from '../../../hooks/useForms';
 import type { FormField, JobApplicationForm } from '../../../services/formsService';
 import { jobPostingsService } from '../../../services/jobPostingsService';
 import { useAuth } from '../../../hooks/useAuth';
+import { TextInput, TextArea } from '../../../shared/atoms';
 import './FormsManager.css';
 
 interface FormBuilderProps {
@@ -76,28 +77,21 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
 
         <div className="form-content">
           <div className="form-basic-info">
-            <div className="input-group">
-              <label htmlFor="form-title">Form Title *</label>
-              <input
-                id="form-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Job Application Form"
-                required
-              />
-            </div>
+            <TextInput
+              label="Form Title"
+              value={title}
+              onChange={setTitle}
+              placeholder="Job Application Form"
+              required
+            />
 
-            <div className="input-group">
-              <label htmlFor="form-description">Description</label>
-              <textarea
-                id="form-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Please fill out this form to apply for the position..."
-                rows={3}
-              />
-            </div>
+            <TextArea
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Please fill out this form to apply for the position..."
+              rows={3}
+            />
           </div>
 
           <div className="form-fields-section">
@@ -155,37 +149,29 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
                   </div>
 
                   <div className="field-properties">
-                    <div className="input-group">
-                      <label>Field Label *</label>
-                      <input
-                        type="text"
-                        value={field.label}
-                        onChange={(e) => updateField(index, { label: e.target.value })}
-                        required
-                      />
-                    </div>
+                    <TextInput
+                      label="Field Label"
+                      value={field.label}
+                      onChange={(value) => updateField(index, { label: value })}
+                      required
+                    />
 
-                    <div className="input-group">
-                      <label>Placeholder</label>
-                      <input
-                        type="text"
-                        value={field.placeholder || ''}
-                        onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                      />
-                    </div>
+                    <TextInput
+                      label="Placeholder"
+                      value={field.placeholder || ''}
+                      onChange={(value) => updateField(index, { placeholder: value })}
+                    />
 
                     {field.type === 'select' && (
-                      <div className="input-group">
-                        <label>Options (one per line)</label>
-                        <textarea
-                          value={field.options?.join('\n') || ''}
-                          onChange={(e) => updateField(index, { 
-                            options: e.target.value.split('\n').filter(opt => opt.trim()) 
-                          })}
-                          rows={3}
-                          placeholder="Option 1&#10;Option 2&#10;Option 3"
-                        />
-                      </div>
+                      <TextArea
+                        label="Options (one per line)"
+                        value={field.options?.join('\n') || ''}
+                        onChange={(value) => updateField(index, {
+                          options: value.split('\n').filter(opt => opt.trim())
+                        })}
+                        rows={3}
+                        placeholder="Option 1\nOption 2\nOption 3"
+                      />
                     )}
 
                     <div className="field-settings">

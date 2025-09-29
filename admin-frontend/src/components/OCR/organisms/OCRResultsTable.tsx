@@ -20,7 +20,12 @@ export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({
   );
 
   if (visibleDocuments.length === 0 && !isLoading) {
-    return <EmptyState />;
+    return (
+      <EmptyState
+        title="Sin resultados"
+        message="No hay resultados de OCR disponibles"
+      />
+    );
   }
 
   return (
