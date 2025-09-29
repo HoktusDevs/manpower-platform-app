@@ -1,0 +1,32 @@
+{
+  "name": "file-upload-service",
+  "version": "1.0.0",
+  "description": "File upload service with real-time WebSocket integration",
+  "main": "src/handlers/upload.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "remove": "serverless remove",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.896.0",
+    "@aws-sdk/client-dynamodb": "^3.896.0",
+    "@aws-sdk/lib-dynamodb": "^3.896.0",
+    "@aws-sdk/s3-request-presigner": "^3.896.0",
+    "aws-lambda": "^1.0.7",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^20.19.17",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.9.2",
+    "serverless": "^3.40.0",
+    "serverless-plugin-typescript": "^2.1.5"
+  },
+  "keywords": ["file-upload", "websocket", "realtime", "serverless"],
+  "author": "Hoktus Platform",
+  "license": "MIT"
+}

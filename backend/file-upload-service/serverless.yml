@@ -1,0 +1,133 @@
+service: file-upload-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    FILES_TABLE: manpower-documents-${self:provider.stage}
+    FOLDERS_TABLE: manpower-folders-${self:provider.stage}
+    S3_BUCKET: manpower-documents-${self:provider.stage}
+    WEBSOCKET_ENDPOINT: https://ni9nq1nd38.execute-api.us-east-1.amazonaws.com/dev
+    FILES_API_URL: https://58pmvhvqo2.execute-api.us-east-1.amazonaws.com/dev
+    FOLDERS_API_URL: https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev
+    SYSTEM_AUTH_TOKEN: eyJraWQiOiJ6Uldnd1YzdEJ2UFpyRjcwRkQ4XC9PcWZYQkFNWWZrOTFIdWVVZEFBZE9GMD0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJiNDE4MjRiOC03MGQxLTcwNTItNGQyNi1jYmZhZWZjYWM4ZWQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9rUUtQUFVxUk8iLCJjbGllbnRfaWQiOiIzN3QwcGtodTlrZHJmMDFscXFvajBlOTExZiIsIm9yaWdpbl9qdGkiOiI2NGRkMmVhYi04MDdlLTQ2MzEtYTc2Mi1lMzBiYTM1N2NmMTgiLCJldmVudF9pZCI6ImE1NDFjYmIzLTA1ZjgtNGY3MS1iZTI0LTM5MTZhOTA3MjgyYiIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE3NTkxNDE4MTQsImV4cCI6MTc1OTE0NTQxNCwiaWF0IjoxNzU5MTQxODE0LCJqdGkiOiI0MmEzN2ZmMC01MTBkLTQxYTEtYTJmNi1lZWRhMTcxYzJmOTQiLCJ1c2VybmFtZSI6ImI0MTgyNGI4LTcwZDEtNzA1Mi00ZDI2LWNiZmFlZmNhYzhlZCJ9.QS91lyNSLHyhmwdM6pt555V8YneT2HIzW0Spqs73Fx-8RlcOXKYatDWSvKezkNmQl2iVTg2fXuFoC0mR2LTgKE_3lP7ymFGw2iWkpRBqk3St0iPhMjLqN408ZT7hf4KncZoTAzcHVOlEvMfxD02xnMOhmzjVzZrrw9J7QmUR6EIhXNlXKGu7qk6kigqQMGOHbz5bgmDER3qj5mm-DfXorqB16qpTR3hXMCHEOv23t7-sp2ylLik1CgkDN-W-5gHIBtx92T0pNZolMNc8ZgU8K2ht1-Ih1yKGtK_jnn_jdHgpKnJoY4QUAYX3GV0Mn2DwrLTgGuJXo4T777GMnuvipA
+
+  iamRoleStatements:
+    # S3 permissions for file storage
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:DeleteObject
+        - s3:PutObjectAcl
+      Resource:
+        - arn:aws:s3:::manpower-documents-${self:provider.stage}/*
+
+    # DynamoDB permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-documents-${self:provider.stage}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/manpower-folders-${self:provider.stage}
+
+    # WebSocket API permissions for notifications
+    - Effect: Allow
+      Action:
+        - execute-api:ManageConnections
+        - execute-api:Invoke
+      Resource:
+        - arn:aws:execute-api:${self:provider.region}:*:*/dev/POST/@connections/*
+
+functions:
+  # File Upload Handler
+  uploadFile:
+    handler: src/handlers/upload.uploadFileHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /upload
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
+          request:
+            contentHandling: CONVERT_TO_BINARY
+
+  # Update Document Status
+  updateDocumentStatus:
+    handler: src/handlers/upload.updateDocumentStatusHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /upload
+          method: put
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
+  # Health Check
+  healthCheck:
+    handler: src/handlers/upload.healthCheckHandler
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    # S3 Bucket for file storage
+    FileStorageBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: manpower-documents-${self:provider.stage}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              AllowedHeaders:
+                - '*'
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+
+custom:
+  # Enable binary media types for file uploads
+  apiGatewayRestApi:
+    binaryMediaTypes:
+      - 'multipart/form-data'
+      - 'application/octet-stream'
+      - 'image/*'
+      - 'application/pdf'
+      - '*/*'
+
+plugins:
+  - serverless-plugin-typescript

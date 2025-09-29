@@ -13,12 +13,14 @@ const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE || 'manpower-websocket-c
 
 // Interface for broadcast events
 interface BroadcastEvent {
-  action: 'folder_created' | 'folder_updated' | 'folder_deleted';
+  action: 'folder_created' | 'folder_updated' | 'folder_deleted' | 'file_created' | 'file_updated' | 'file_deleted';
   data: {
-    folderId: string;
+    folderId?: string;
+    fileId?: string;
     userId: string;
     eventType: 'INSERT' | 'MODIFY' | 'REMOVE';
     folder?: any;
+    file?: any;
     timestamp: number;
   };
   targetUsers?: string[]; // Optional: specific users to target

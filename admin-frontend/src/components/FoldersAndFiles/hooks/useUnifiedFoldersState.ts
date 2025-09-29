@@ -35,7 +35,7 @@ export const useUnifiedFoldersState = (
 
   // React Query hooks using unified system
   const { data: backendFolders = [], isLoading, refetch: loadFolders } = useGetAllFolders();
-  const { data: allFiles = [] } = useGetAllFiles();
+  const { data: allFiles = [], refetch: loadFiles } = useGetAllFiles();
   const createFolderMutation = useCreateFolder(onCreateSuccess, onCreateError);
   const createStandaloneFolderMutation = useCreateStandaloneFolder();
   const updateFolderMutation = useUpdateFolder();
@@ -47,7 +47,7 @@ export const useUnifiedFoldersState = (
     console.log('🔄 useUnifiedFoldersState: Processing folders and files...');
     console.log('📁 Backend folders count:', backendFolders.length);
     console.log('📄 All files count:', allFiles.length);
-    console.log('📄 All files:', allFiles);
+    console.log('📄 All files with folderIds:', allFiles.map(f => ({name: f.originalName, folderId: f.folderId})));
     
     // Group files by folderId
     const filesByFolder = allFiles.reduce((acc, file) => {
@@ -67,8 +67,8 @@ export const useUnifiedFoldersState = (
       console.log(`📁 Folder ${folder.name} (${folder.folderId}): ${folderRow.files.length} files`);
       return folderRow;
     });
-    
-    console.log('✅ Processed folders:', result);
+
+    // console.log('✅ Processed folders:', result); // Reduced noise
     return result;
   }, [backendFolders, allFiles]);
 
@@ -288,10 +288,13 @@ export const useUnifiedFoldersState = (
   };
 
   /**
-   * Refresh folders data
+   * Refresh folders and files data
    */
   const refreshFolders = async (): Promise<void> => {
-    await loadFolders();
+    await Promise.all([
+      loadFolders(),
+      loadFiles()
+    ]);
   };
 
   return {

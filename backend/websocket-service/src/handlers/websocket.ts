@@ -36,37 +36,13 @@ const sendMessageToConnection = async (connectionId: string, data: any, event: A
   }
 };
 
-// Extract user info from JWT token
-const extractUserFromEvent = (event: APIGatewayProxyEvent) => {
-  try {
-    // Get authorization from query parameters (WebSocket doesn't support headers in connection)
-    const token = event.queryStringParameters?.token;
-
-    if (!token) {
-      console.warn('No token provided in query parameters');
-      return null;
-    }
-
-    // Decode JWT token (without verification for now - add proper verification in production)
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-
-    const claims = JSON.parse(jsonPayload);
-
-    return {
-      sub: claims.sub,
-      email: claims.email,
-      role: claims['custom:role'] || 'postulante',
-      userId: claims.sub,
-      userRole: claims['custom:role'] || 'postulante'
-    };
-  } catch (error) {
-    console.error('Error extracting user from token:', error);
-    return null;
-  }
+// Simple anonymous user - no auth needed
+const getAnonymousUser = (connectionId: string) => {
+  return {
+    userId: `anonymous-${connectionId}`,
+    email: 'anonymous@example.com',
+    role: 'guest'
+  };
 };
 
 const createResponse = (statusCode: number, body?: any) => ({
@@ -90,15 +66,11 @@ export const connectHandler: APIGatewayProxyHandler = async (event: APIGatewayPr
   const connectedAt = new Date().toISOString();
 
   try {
-    // Try to extract user info from token (optional)
-    const userInfo = extractUserFromEvent(event);
+    // Simple anonymous connection - no auth needed
+    const userInfo = getAnonymousUser(connectionId);
+    const { userId, email, role } = userInfo;
 
-    // Generate anonymous user if no token provided
-    const userId = userInfo?.userId || `anonymous-${connectionId}`;
-    const email = userInfo?.email || 'anonymous@example.com';
-    const role = userInfo?.role || 'guest';
-
-    console.log('👤 User connecting:', userId, email);
+    console.log('👤 Anonymous user connecting:', userId);
 
     // Store connection in DynamoDB
     const connectionData = {
@@ -255,12 +227,23 @@ export const defaultHandler: APIGatewayProxyHandler = async (event: APIGatewayPr
       case 'subscribe_folders':
         // Client wants to subscribe to folder updates
         console.log('📂 Client subscribed to folder updates');
-        const subscribeMessage = {
+        const subscribeFoldersMessage = {
           type: 'subscribed',
           topic: 'folders',
           message: 'Successfully subscribed to folder updates'
         };
-        await sendMessageToConnection(connectionId, subscribeMessage, event);
+        await sendMessageToConnection(connectionId, subscribeFoldersMessage, event);
+        return createResponse(200);
+
+      case 'subscribe_files':
+        // Client wants to subscribe to file updates
+        console.log('📄 Client subscribed to file updates');
+        const subscribeFilesMessage = {
+          type: 'subscribed',
+          topic: 'files',
+          message: 'Successfully subscribed to file updates'
+        };
+        await sendMessageToConnection(connectionId, subscribeFilesMessage, event);
         return createResponse(200);
 
       default:

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useUnifiedFoldersState } from '../hooks/useUnifiedFoldersState';
 import { useWebSocket } from '../../../hooks/useWebSocket';
@@ -23,7 +23,7 @@ interface FoldersProviderProps {
 interface FoldersContextValue extends UseFoldersStateReturn {
   webSocket: {
     isConnected: boolean;
-    connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+    connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled';
   };
   // Optimistic methods that provide instant feedback
   optimistic: {
@@ -48,6 +48,10 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
   onCreateError
 }) => {
   const foldersState = useUnifiedFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
+
+  // Debounce ref to prevent excessive refreshes
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const REFRESH_DEBOUNCE_MS = 500; // 500ms debounce
 
   // Optimistic mutation hooks
   const createFolderMutation = useCreateFolderOptimistic(
@@ -113,95 +117,90 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
     deleteFoldersMutation.mutate(ids);
   }, [deleteFoldersMutation]);
 
+  // Debounced refresh function to prevent loops
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    refreshTimeoutRef.current = setTimeout(() => {
+      // console.log('🔄 Performing debounced folder refresh...'); // Reduced noise
+      foldersState.refreshFolders().then(() => {
+        // console.log('✅ Folders refreshed successfully'); // Reduced noise
+      }).catch((error) => {
+        console.error('❌ Error refreshing folders:', error);
+      });
+    }, REFRESH_DEBOUNCE_MS);
+  }, [foldersState, REFRESH_DEBOUNCE_MS]);
+
   // Handle real-time folder updates
   const handleFolderUpdate = useCallback((event: { action: string; data?: { folder?: unknown; id?: string } }) => {
-    console.log('🔄 Real-time folder update received:', event);
+    // console.log('🔄 Real-time folder update received:', event); // Reduced noise
 
     switch (event.action) {
       case 'folder_created':
-        console.log('📁 New folder created in real-time:', event.data);
-        if (event.data?.folder) {
-          console.log('📁 Folder data:', event.data.folder);
-        }
-        // Force refresh to ensure UI updates
-        console.log('🔄 Triggering folder refresh...');
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed successfully');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders:', error);
-        });
+        console.log('📁 New folder created via WebSocket');
+        debouncedRefresh();
         break;
 
       case 'folder_updated':
-        console.log('📝 Folder updated in real-time:', event.data.folder);
-        // Force refresh to ensure UI updates
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed after update');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders after update:', error);
-        });
+        console.log('📝 Folder updated via WebSocket');
+        debouncedRefresh();
         break;
 
       case 'folder_deleted':
-        console.log('🗑️ Folder deleted in real-time:', event.data.folderId);
-        // Force refresh to ensure UI updates
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed after deletion');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders after deletion:', error);
-        });
+        console.log('🗑️ Folder deleted via WebSocket');
+        debouncedRefresh();
         break;
 
-      default:
-        console.log('ℹ️ Unknown folder update action:', event.action);
-    }
-  }, [foldersState]);
-
-  // Handle real-time file updates
-  const handleFileUpdate = useCallback((event: { action: string; data?: { file?: unknown; id?: string } }) => {
-    console.log('🔄 Real-time file update received:', event);
-
-    switch (event.action) {
       case 'file_created':
-        console.log('📄 New file created in real-time:', event.data);
-        if (event.data?.file) {
-          console.log('📄 File data:', event.data.file);
-        }
-        // Force refresh to ensure UI updates
-        console.log('🔄 Triggering folder refresh for file changes...');
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed after file creation');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders after file creation:', error);
-        });
+        console.log('📄 New file created via WebSocket');
+        debouncedRefresh();
         break;
 
       case 'file_updated':
-        console.log('📝 File updated in real-time:', event.data.file);
-        // Force refresh to ensure UI updates
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed after file update');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders after file update:', error);
-        });
+        console.log('📝 File updated via WebSocket');
+        debouncedRefresh();
         break;
 
       case 'file_deleted':
-        console.log('🗑️ File deleted in real-time:', event.data.fileId);
-        // Force refresh to ensure UI updates
-        foldersState.refreshFolders().then(() => {
-          console.log('✅ Folders refreshed after file deletion');
-        }).catch((error) => {
-          console.error('❌ Error refreshing folders after file deletion:', error);
-        });
+        console.log('🗑️ File deleted via WebSocket');
+        debouncedRefresh();
         break;
 
       default:
-        console.log('ℹ️ Unknown file update action:', event.action);
+        // console.log('ℹ️ Unknown folder update action:', event.action); // Reduced noise
+        break;
     }
-  }, [foldersState]);
+  }, [debouncedRefresh]);
 
-  // Initialize WebSocket connection
+  // Handle real-time file updates
+  const handleFileUpdate = useCallback((event: { action: string; data?: { file?: unknown; id?: string } }) => {
+    // console.log('🔄 Real-time file update received:', event); // Reduced noise
+
+    switch (event.action) {
+      case 'file_created':
+        console.log('📄 New file created via WebSocket');
+        debouncedRefresh();
+        break;
+
+      case 'file_updated':
+        console.log('📝 File updated via WebSocket');
+        debouncedRefresh();
+        break;
+
+      case 'file_deleted':
+        console.log('🗑️ File deleted via WebSocket');
+        debouncedRefresh();
+        break;
+
+      default:
+        // console.log('ℹ️ Unknown file update action:', event.action); // Reduced noise
+        break;
+    }
+  }, [debouncedRefresh]);
+
+  // Initialize WebSocket connection - Re-enabled with better error handling
   const { isConnected, connectionStatus } = useWebSocket(handleFolderUpdate, handleFileUpdate, true);
 
   const contextValue: FoldersContextValue = {

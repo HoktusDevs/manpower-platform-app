@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// WebSocket configuration
+// WebSocket configuration - NO AUTH NEEDED
 const WEBSOCKET_URL = 'wss://qjmj4uodm7.execute-api.us-east-1.amazonaws.com/dev';
 
 // Types for WebSocket messages
@@ -43,11 +43,12 @@ interface FileUpdateEvent {
 
 interface UseWebSocketReturn {
   isConnected: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled';
   lastMessage: WebSocketMessage | null;
   sendMessage: (message: Record<string, unknown>) => void;
   disconnect: () => void;
   connect: () => void;
+  resetConnection: () => void;
 }
 
 /**
@@ -59,14 +60,18 @@ export const useWebSocket = (
   autoConnect: boolean = true
 ): UseWebSocketReturn => {
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled'>('disconnected');
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
+  const maxReconnectAttempts = 2; // Reduced from 5 to 2 to avoid long loops
+
+  // Refs for stable function references
+  const connectRef = useRef<() => void>();
+  const disconnectRef = useRef<() => void>();
 
   const sendMessage = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -82,6 +87,13 @@ export const useWebSocket = (
   const connect = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       return; // Already connected
+    }
+
+    // Don't attempt to reconnect if we've exceeded max attempts
+    if (reconnectAttempts.current >= maxReconnectAttempts) {
+      console.warn('⚠️ Max reconnection attempts reached, WebSocket disabled');
+      setConnectionStatus('disabled');
+      return;
     }
 
     console.log('🔌 Connecting to WebSocket:', WEBSOCKET_URL);
@@ -103,7 +115,7 @@ export const useWebSocket = (
           const message: WebSocketMessage = JSON.parse(event.data);
           setLastMessage(message);
 
-          console.log('📨 Received WebSocket message:', message);
+          // console.log('📨 Received WebSocket message:', message); // Commented to reduce noise
 
           switch (message.type) {
             case 'connection_established':
@@ -164,11 +176,11 @@ export const useWebSocket = (
               break;
 
             case 'subscribed':
-              console.log('📂 Subscribed to folder and file updates');
+              // console.log('📂 Subscribed to folder and file updates'); // Commented to reduce noise
               break;
 
             case 'pong':
-              // Heartbeat response
+              // Heartbeat response - silent
               break;
 
             default:
@@ -200,13 +212,18 @@ export const useWebSocket = (
             connect();
           }, delay);
         } else if (reconnectAttempts.current >= maxReconnectAttempts) {
-          console.error('❌ Max reconnection attempts reached');
-          setConnectionStatus('error');
+          console.error('❌ Max reconnection attempts reached, disabling WebSocket');
+          setConnectionStatus('disabled');
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
+        console.error('❌ WebSocket error details:', {
+          type: error.type,
+          target: error.target,
+          message: 'WebSocket connection failed - likely CORS or network issue',
+          url: WEBSOCKET_URL
+        });
         setConnectionStatus('error');
       };
 
@@ -237,17 +254,28 @@ export const useWebSocket = (
     reconnectAttempts.current = 0;
   }, []);
 
+  // Update refs when functions change
+  connectRef.current = connect;
+  disconnectRef.current = disconnect;
+
+  const resetConnection = useCallback(() => {
+    console.log('🔄 Resetting WebSocket connection');
+    disconnect();
+    reconnectAttempts.current = 0;
+    setConnectionStatus('disconnected');
+  }, [disconnect]);
+
   // Auto-connect on mount if enabled
   useEffect(() => {
     if (autoConnect) {
-      connect();
+      connectRef.current?.();
     }
 
     // Cleanup on unmount
     return () => {
-      disconnect();
+      disconnectRef.current?.();
     };
-  }, [autoConnect, connect, disconnect]);
+  }, [autoConnect]); // Stable dependencies to prevent infinite loops
 
   return {
     isConnected,
@@ -255,6 +283,7 @@ export const useWebSocket = (
     lastMessage,
     sendMessage,
     disconnect,
-    connect
+    connect,
+    resetConnection
   };
 };
