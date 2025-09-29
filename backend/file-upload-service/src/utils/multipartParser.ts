@@ -37,22 +37,48 @@ export const parseMultipartFormData = async (
     if (event.isBase64Encoded) {
       bodyBuffer = Buffer.from(event.body || '', 'base64');
     } else {
-      bodyBuffer = Buffer.from(event.body || '', 'utf-8');
+      // For binary data, treat as binary not as UTF-8 to avoid corruption
+      bodyBuffer = Buffer.from(event.body || '', 'binary');
     }
 
-    // Parse multipart data
+    // Parse multipart data using proper boundary splitting
     const boundaryBuffer = Buffer.from(`--${boundary}`);
-    const parts = [];
-    let start = 0;
+    const endBoundaryBuffer = Buffer.from(`--${boundary}--`);
 
-    while (true) {
-      const boundaryIndex = bodyBuffer.indexOf(boundaryBuffer, start);
+    // Split by boundary
+    const parts = [];
+    let currentPos = 0;
+
+    while (currentPos < bodyBuffer.length) {
+      const boundaryIndex = bodyBuffer.indexOf(boundaryBuffer, currentPos);
       if (boundaryIndex === -1) break;
 
-      if (start > 0) {
-        parts.push(bodyBuffer.slice(start, boundaryIndex));
+      // Skip the boundary itself
+      const contentStart = boundaryIndex + boundaryBuffer.length;
+
+      // Find next boundary or end boundary
+      const nextBoundaryIndex = bodyBuffer.indexOf(boundaryBuffer, contentStart);
+      const endBoundaryIndex = bodyBuffer.indexOf(endBoundaryBuffer, contentStart);
+
+      let contentEnd;
+      if (endBoundaryIndex !== -1 && (nextBoundaryIndex === -1 || endBoundaryIndex < nextBoundaryIndex)) {
+        contentEnd = endBoundaryIndex;
+        currentPos = bodyBuffer.length; // This is the last part
+      } else if (nextBoundaryIndex !== -1) {
+        contentEnd = nextBoundaryIndex;
+        currentPos = nextBoundaryIndex;
+      } else {
+        break;
       }
-      start = boundaryIndex + boundaryBuffer.length;
+
+      // Extract the content between boundaries
+      if (contentStart < contentEnd && contentStart > boundaryIndex) {
+        const part = bodyBuffer.slice(contentStart, contentEnd);
+        // Skip empty parts and boundary-only parts
+        if (part.length > 4) {
+          parts.push(part);
+        }
+      }
     }
 
     // Parse each part
@@ -60,14 +86,25 @@ export const parseMultipartFormData = async (
     let fileData: { name: string; type: string; data: Buffer } | null = null;
 
     for (const part of parts) {
-      const headerEndIndex = part.indexOf(Buffer.from('\r\n\r\n'));
+      // Skip initial CRLF after boundary
+      let actualPart = part;
+      if (part.length >= 2 && part[0] === 0x0D && part[1] === 0x0A) {
+        actualPart = part.slice(2);
+      }
+
+      const headerEndIndex = actualPart.indexOf(Buffer.from('\r\n\r\n'));
       if (headerEndIndex === -1) continue;
 
-      const headerSection = part.slice(0, headerEndIndex).toString();
-      const bodySection = part.slice(headerEndIndex + 4);
+      const headerSection = actualPart.slice(0, headerEndIndex).toString();
+      const bodySection = actualPart.slice(headerEndIndex + 4);
 
-      // Remove trailing \r\n
-      const cleanBodySection = bodySection.slice(0, -2);
+      // Remove trailing CRLF only if it exists at the very end
+      let cleanBodySection = bodySection;
+      if (bodySection.length >= 2 &&
+          bodySection[bodySection.length - 2] === 0x0D && // \r
+          bodySection[bodySection.length - 1] === 0x0A) {  // \n
+        cleanBodySection = bodySection.slice(0, -2);
+      }
 
       // Parse Content-Disposition header
       const dispositionMatch = headerSection.match(/Content-Disposition: form-data; name="([^"]+)"(?:; filename="([^"]+)")?/);

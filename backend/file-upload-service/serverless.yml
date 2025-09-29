@@ -5,6 +5,9 @@ provider:
   runtime: nodejs20.x
   region: us-east-1
   stage: ${opt:stage, 'dev'}
+  apiGateway:
+    binaryMediaTypes:
+      - 'multipart/form-data'
   environment:
     STAGE: ${self:provider.stage}
     FILES_TABLE: manpower-documents-${self:provider.stage}
@@ -25,6 +28,14 @@ provider:
         - s3:PutObjectAcl
       Resource:
         - arn:aws:s3:::manpower-documents-${self:provider.stage}/*
+
+    # Additional S3 permissions for bucket operations
+    - Effect: Allow
+      Action:
+        - s3:ListBucket
+        - s3:GetBucketLocation
+      Resource:
+        - arn:aws:s3:::manpower-documents-${self:provider.stage}
 
     # DynamoDB permissions
     - Effect: Allow
@@ -48,9 +59,41 @@ provider:
         - arn:aws:execute-api:${self:provider.region}:*:*/dev/POST/@connections/*
 
 functions:
-  # File Upload Handler
-  uploadFile:
-    handler: src/handlers/upload.uploadFileHandler
+  # Get Upload URL (Step 1)
+  getUploadUrl:
+    handler: src/handlers/upload.getUploadUrlHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /upload-url
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
+  # Confirm Upload (Step 2)
+  confirmUpload:
+    handler: src/handlers/upload.confirmUploadHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /confirm-upload
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
+  # Legacy Upload Handler (backward compatibility)
+  legacyUpload:
+    handler: src/handlers/upload.legacyUploadHandler
     timeout: 30
     memorySize: 512
     events:
@@ -119,15 +162,25 @@ resources:
           IgnorePublicAcls: false
           RestrictPublicBuckets: false
 
+    # S3 Bucket Policy to allow presigned URLs
+    FileStorageBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: FileStorageBucket
+        PolicyDocument:
+          Statement:
+            - Sid: AllowPresignedUrls
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource:
+                - "arn:aws:s3:::manpower-documents-${self:provider.stage}/*"
+
 custom:
-  # Enable binary media types for file uploads
-  apiGatewayRestApi:
-    binaryMediaTypes:
-      - 'multipart/form-data'
-      - 'application/octet-stream'
-      - 'image/*'
-      - 'application/pdf'
-      - '*/*'
+  serverlessPluginTypescript:
+    tsConfigFileLocation: './tsconfig.json'
 
 plugins:
   - serverless-plugin-typescript

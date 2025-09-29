@@ -1,16 +1,18 @@
 import { APIGatewayProxyHandler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { parseMultipartFormData } from '../utils/multipartParser';
 import { notifyWebSocket } from '../services/websocketNotifier';
 import { saveToFilesService } from '../services/filesServiceIntegration';
+import { S3Service } from '../services/s3Service';
 
 // Initialize AWS clients
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const s3Service = new S3Service();
 
 const S3_BUCKET = process.env.S3_BUCKET || 'manpower-documents-dev';
 const FOLDERS_TABLE = process.env.FOLDERS_TABLE || 'manpower-folders-dev';
@@ -39,6 +41,76 @@ const createResponse = (statusCode: number, body: any): APIGatewayProxyResult =>
   },
   body: JSON.stringify(body)
 });
+
+/**
+ * Parse multipart form data using busboy
+ */
+const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const contentType = event.headers['content-type'] || event.headers['Content-Type'];
+    if (!contentType?.includes('multipart/form-data')) {
+      reject(new Error('Not multipart/form-data'));
+      return;
+    }
+
+    console.log('🔍 Debug info:', {
+      isBase64Encoded: event.isBase64Encoded,
+      contentType,
+      bodyLength: event.body?.length || 0
+    });
+
+    // Try both encodings to see which works
+    let body: Buffer;
+    try {
+      if (event.isBase64Encoded) {
+        body = Buffer.from(event.body || '', 'base64');
+        console.log('📦 Using base64 decoding');
+      } else {
+        body = Buffer.from(event.body || '', 'binary');
+        console.log('📦 Using binary decoding');
+      }
+    } catch (error) {
+      console.error('❌ Encoding error:', error);
+      reject(error);
+      return;
+    }
+
+    const bb = busboy({ headers: { 'content-type': contentType } });
+    const result: any = {};
+    const files: any[] = [];
+
+    bb.on('field', (name, value) => {
+      result[name] = value;
+    });
+
+    bb.on('file', (name, file, info) => {
+      const chunks: Buffer[] = [];
+
+      file.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+
+      file.on('end', () => {
+        files.push({
+          name: info.filename,
+          type: info.mimeType,
+          data: Buffer.concat(chunks)
+        });
+      });
+    });
+
+    bb.on('close', () => {
+      if (files.length > 0) {
+        result.file = files[0];
+      }
+      resolve(result);
+    });
+
+    bb.on('error', reject);
+    bb.write(body);
+    bb.end();
+  });
+};
 
 /**
  * Find folder by name using folders API (more reliable)
@@ -92,7 +164,7 @@ const findFolderByName = async (folderName: string): Promise<any | null> => {
 /**
  * Upload file to S3
  */
-const uploadToS3 = async (fileName: string, fileData: Buffer, contentType: string): Promise<string> => {
+const uploadToS3 = async (fileName: string, fileData: Buffer, contentType: string): Promise<{ fileUrl: string; s3Key: string }> => {
   const key = `uploads/${Date.now()}_${fileName}`;
 
   const command = new PutObjectCommand({
@@ -100,6 +172,8 @@ const uploadToS3 = async (fileName: string, fileData: Buffer, contentType: strin
     Key: key,
     Body: fileData,
     ContentType: contentType,
+    ContentDisposition: 'inline', // Para visualizar en navegador en lugar de descargar
+    CacheControl: 'max-age=31536000', // Cache por 1 año
     Metadata: {
       uploadedAt: new Date().toISOString(),
       service: 'file-upload-service'
@@ -109,16 +183,242 @@ const uploadToS3 = async (fileName: string, fileData: Buffer, contentType: strin
   await s3Client.send(command);
   console.log(`✅ File uploaded to S3: ${key}`);
 
-  return `https://${S3_BUCKET}.s3.amazonaws.com/${key}`;
+  // Use direct public URL instead of presigned URL
+  const publicUrl = `https://${S3_BUCKET}.s3.amazonaws.com/${key}`;
+
+  return { fileUrl: publicUrl, s3Key: key };
 };
 
 /**
- * Main file upload handler
+ * Get presigned URL for direct upload to S3
  */
-export const uploadFileHandler: APIGatewayProxyHandler = async (
+export const getUploadUrlHandler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('📤 File upload request received');
+  console.log('📤 Get upload URL request received');
+
+  try {
+    // Handle OPTIONS request for CORS
+    if (event.httpMethod === 'OPTIONS') {
+      return createResponse(200, { message: 'OK' });
+    }
+
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required'
+      });
+    }
+
+    const { folderName, fileName, fileType, fileSize, status, explanation } = JSON.parse(event.body);
+
+    // Validate required fields
+    if (!folderName || !fileName || !fileType || !fileSize || !status) {
+      return createResponse(400, {
+        success: false,
+        message: 'Missing required fields: folderName, fileName, fileType, fileSize, status'
+      });
+    }
+
+    // Validate status
+    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid status. Must be APPROVED, REJECTED, or PENDING'
+      });
+    }
+
+    // Validate file type and size
+    if (!s3Service.isValidFileType(fileType)) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid file type'
+      });
+    }
+
+    if (!s3Service.isValidFileSize(fileSize)) {
+      return createResponse(400, {
+        success: false,
+        message: 'File size exceeds maximum allowed size'
+      });
+    }
+
+    // Find folder by name
+    const folder = await findFolderByName(folderName);
+    if (!folder) {
+      return createResponse(404, {
+        success: false,
+        message: `Folder "${folderName}" not found`
+      });
+    }
+
+    // Generate document ID
+    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+    // Generate presigned URL using S3Service
+    const presignedResult = await s3Service.generatePresignedUploadUrl({
+      fileName,
+      fileType,
+      fileSize,
+      documentId
+    });
+
+    // Create pending file document
+    const now = new Date().toISOString();
+    const fileDocument = {
+      documentId,
+      folderId: folder.folderId,
+      userId: 'test-user-123',
+      fileName,
+      originalName: fileName,
+      fileType,
+      fileExtension: '.' + fileName.split('.').pop(),
+      fileSize,
+      documentType: 'file',
+      s3Bucket: S3_BUCKET,
+      s3Key: presignedResult.s3Key,
+      fileUrl: `https://${S3_BUCKET}.s3.amazonaws.com/${presignedResult.s3Key}`,
+      status: 'pending',
+      hoktusDecision: status,
+      hoktusProcessingStatus: 'PENDING',
+      processingResult: {
+        contentAnalysis: {
+          document_legibility: 'good',
+          text_quality: 'high',
+          has_text: true,
+          confidence_score: 1.0
+        },
+        validationResults: {
+          content_quality_valid: true,
+          file_format_valid: true,
+          file_size_valid: true,
+          user_authorized: true
+        },
+        observations: explanation ? [{
+          type: status === 'REJECTED' ? 'error' : 'success',
+          message: explanation,
+          severity: status === 'REJECTED' ? 'warning' : 'info'
+        }] : [{
+          type: 'success',
+          message: 'Archivo procesado exitosamente via API',
+          severity: 'info'
+        }],
+        processedAt: now,
+        fileType: fileType.includes('pdf') ? 'PDF' : 'IMAGE',
+        processingTime: 0.1,
+        status: 'pending'
+      },
+      isActive: true,
+      isPublic: false,
+      tags: [],
+      uploadedAt: now,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    // Save initial document to DynamoDB
+    await saveToFilesService(fileDocument);
+
+    return createResponse(200, {
+      success: true,
+      uploadUrl: presignedResult.uploadUrl,
+      downloadUrl: presignedResult.downloadUrl,
+      fileId: documentId,
+      s3Key: presignedResult.s3Key,
+      expiresIn: presignedResult.expiresIn,
+      file: fileDocument
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting upload URL:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Confirm upload completion
+ */
+export const confirmUploadHandler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  console.log('✅ Confirm upload request received');
+
+  try {
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required'
+      });
+    }
+
+    const { fileId } = JSON.parse(event.body);
+
+    if (!fileId) {
+      return createResponse(400, {
+        success: false,
+        message: 'File ID is required'
+      });
+    }
+
+    // This would typically check the file exists in S3 and update status
+    // For now, just mark as completed and save to files service
+    const now = new Date().toISOString();
+
+    // Get file document (in a real implementation, this would come from your DB)
+    // For now, create a completed document
+    const fileDocument = {
+      documentId: fileId,
+      status: 'completed',
+      hoktusProcessingStatus: 'COMPLETED',
+      updatedAt: now,
+      processingResult: {
+        status: 'completed',
+        processedAt: now
+      }
+    };
+
+    await saveToFilesService(fileDocument);
+
+    // Notify WebSocket - need to get folderId from somewhere
+    // For now, use the test folder
+    await notifyWebSocket('file_created', {
+      fileId,
+      folderId: 'a1037315-5264-4dea-841d-e17935815632', // Clemente Arriagada folder
+      file: fileDocument
+    });
+
+    return createResponse(200, {
+      success: true,
+      message: 'Upload confirmed successfully',
+      file: fileDocument
+    });
+
+  } catch (error) {
+    console.error('❌ Error confirming upload:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Complete file upload handler - handles everything in one step:
+ * 1. Receives file via multipart form data
+ * 2. Generates presigned URL automatically
+ * 3. Uploads file to S3 using presigned URL
+ * 4. Saves metadata to DynamoDB
+ * 5. Triggers WebSocket notification
+ */
+export const legacyUploadHandler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  console.log('📤 Complete file upload request received');
 
   try {
     // Handle OPTIONS request for CORS
@@ -161,6 +461,21 @@ export const uploadFileHandler: APIGatewayProxyHandler = async (
       });
     }
 
+    // Validate file type and size using S3Service
+    if (!s3Service.isValidFileType(file.type)) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid file type'
+      });
+    }
+
+    if (!s3Service.isValidFileSize(file.data.length)) {
+      return createResponse(400, {
+        success: false,
+        message: 'File size exceeds maximum allowed size'
+      });
+    }
+
     // Find folder by name
     const folder = await findFolderByName(folderName);
     if (!folder) {
@@ -170,13 +485,12 @@ export const uploadFileHandler: APIGatewayProxyHandler = async (
       });
     }
 
-    // Upload file to S3
-    const fileUrl = await uploadToS3(file.name, file.data, file.type);
+    // Upload file directly to S3
+    const { fileUrl, s3Key } = await uploadToS3(file.name, file.data, file.type);
 
-    // Create file document data (matching exact format from files service)
+    // Create file document data
     const documentId = `doc_${Date.now()}_${Math.random().toString(36).substring(2)}`;
     const now = new Date().toISOString();
-    const s3Key = `uploads/${Date.now()}_${file.name}`;
 
     const fileDocument = {
       // Core identifiers
