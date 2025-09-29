@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useToast } from '../../core-ui/useToast';
+import { useToast } from '../../../core-ui/useToast';
 import {
   validateJobPostingBasic,
   formatZodErrors
-} from '../../schemas/jobPostingSchema';
-import { CompanySelector } from '../CompanySelector';
-import { DocumentTypeAutocomplete } from '../DocumentTypeAutocomplete';
-import { useCreateJobWithFolder } from '../../services/unifiedJobFolderService';
-import type { JobPosting } from '../../services/jobsService';
+} from '../../../schemas/jobPostingSchema';
+import { CompanySelector } from '../../CompanySelector';
+import { DocumentTypeAutocomplete } from '../../DocumentTypeAutocomplete';
+import { useCreateJobWithFolder } from '../../../services/unifiedJobFolderService';
+import type { JobPosting } from '../../../services/jobsService';
 
 interface UnifiedCreateJobModalProps {
   isOpen: boolean;

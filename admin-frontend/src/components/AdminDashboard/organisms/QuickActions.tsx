@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Button, Container, Typography } from '../../core-ui';
+import { Button, Container, Typography } from '../../../core-ui';
 
 export function QuickActions(): ReactNode {
   return (

@@ -1,13 +1,23 @@
-// Main components
-export { OCRResultsTable } from './OCRResultsTable';
-export { DocumentPreviewModal } from './DocumentPreviewModal';
+// Atoms
+export * from './atoms';
 
-// Sub-components
-export { OCRResultsSkeleton } from './components/OCRResultsSkeleton';
-export { DocumentTableRow } from './components/DocumentTableRow';
-export { DocumentStatusBadge } from './components/DocumentStatusBadge';
-export { DocumentActions } from './components/DocumentActions';
-export { EmptyState } from './components/EmptyState';
+// Molecules
+export * from './molecules';
+
+// Organisms
+export * from './organisms';
+
+// Hooks
+export * from './hooks';
+
+// Legacy exports for backward compatibility
+export { OCRResultsTable } from './organisms/OCRResultsTable';
+export { DocumentPreviewModal } from './organisms/DocumentPreviewModal';
+export { OCRResultsSkeleton } from './molecules/OCRResultsSkeleton';
+export { DocumentTableRow } from './molecules/DocumentTableRow';
+export { DocumentStatusBadge } from './atoms/DocumentStatusBadge';
+export { DocumentActions } from './molecules/DocumentActions';
+export { EmptyState } from './atoms/EmptyState';
 
 // Utilities - moved to DocumentStatusBadge component
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import type { OCRResultsTableProps } from './types/OCRTypes';
-import { OCRResultsSkeleton } from './components/OCRResultsSkeleton';
-import { DocumentTableRow } from './components/DocumentTableRow';
-import { EmptyState } from './components/EmptyState';
-import { TABLE_HEADERS, TABLE_CLASSES } from './constants/tableConstants';
+import type { OCRResultsTableProps } from '../types/OCRTypes';
+import { OCRResultsSkeleton } from '../molecules';
+import { DocumentTableRow } from '../molecules';
+import { EmptyState } from '../atoms';
+import { TABLE_HEADERS, TABLE_CLASSES } from '../constants/tableConstants';
 
 export const OCRResultsTable: React.FC<OCRResultsTableProps> = ({ 
   documents, 

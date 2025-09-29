@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../core-ui';
-import type { SelectOption } from '../../core-ui';
-import { applicationsService } from '../../services/applicationsService';
+import { CustomSelect, Container, Typography, EmptyState, Flex, Loading } from '../../../core-ui';
+import type { SelectOption } from '../../../core-ui';
+import { applicationsService } from '../../../services/applicationsService';
 
 type ActivityFilter = 'postulaciones' | 'usuarios' | 'sistema';
 type TimeGranularity = 'daily' | 'weekly' | 'quarterly';

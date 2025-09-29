@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
-import { DocumentPreviewModal } from '../../OCR/DocumentPreviewModal';
-import { UnifiedCreateJobModal } from '../../JobManagement/UnifiedCreateJobModal';
+import { DocumentPreviewModal } from '../../OCR';
+import { UnifiedCreateJobModal } from '../../JobManagement';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
 import { FoldersTable } from './FoldersTable';
 import { FoldersGrid } from './FoldersGrid';

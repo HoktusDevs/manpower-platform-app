@@ -14,7 +14,7 @@ interface DocumentFile {
   documentType?: string;
   observations?: unknown[];
 }
-import { DocumentStatusBadge } from './DocumentStatusBadge';
+import { DocumentStatusBadge } from '../atoms';
 import { DocumentActions } from './DocumentActions';
 
 interface DocumentTableRowProps {

@@ -29,8 +29,7 @@ interface ProcessDocumentsRequest {
 //   error?: string;
 //   lambdaError?: boolean;
 // }
-import { OCRResultsTable } from '../../components/OCR/OCRResultsTable';
-import { DocumentPreviewModal } from '../../components/OCR/DocumentPreviewModal';
+import { OCRResultsTable, DocumentPreviewModal } from '../../components/OCR';
 import { cognitoAuthService } from '../../services/cognitoAuthService';
 
 interface DocumentFile {

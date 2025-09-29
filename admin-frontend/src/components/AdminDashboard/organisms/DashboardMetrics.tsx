@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MetricCard, Grid } from '../../core-ui';
-import { applicationsService, type DashboardStats } from '../../services/applicationsService';
+import { MetricCard, Grid } from '../../../core-ui';
+import { applicationsService, type DashboardStats } from '../../../services/applicationsService';
 
 export function DashboardMetrics() {
   const [stats, setStats] = useState<DashboardStats>({

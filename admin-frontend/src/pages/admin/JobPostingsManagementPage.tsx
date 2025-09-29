@@ -7,7 +7,7 @@ import type { TableColumn, TableAction, BulkAction } from '../../components/Univ
 import { type JobPosting } from '../../services/jobsService';
 import { useGetAllJobs, useDeleteJobs, useToggleJobStatus } from '../../hooks/useUnifiedJobs';
 import { useDeleteJobWithFolder } from '../../services/unifiedJobFolderService';
-import { UnifiedCreateJobModal } from '../../components/JobManagement/UnifiedCreateJobModal';
+import { UnifiedCreateJobModal } from '../../components/JobManagement';
 
 export const JobPostingsManagementPage: React.FC = () => {
   const { showSuccess, showError } = useToast();
