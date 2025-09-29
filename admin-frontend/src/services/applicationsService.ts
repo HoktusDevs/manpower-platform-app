@@ -249,23 +249,17 @@ class ApplicationsService {
     const data: ActivityData[] = [];
 
     console.log('Generating activity data for filter:', filter);
-    data.push({
-      dateString: now.toISOString().split('T')[0],
-      dayOfWeek: now.getDay(),
-      dayName: now.toLocaleDateString('es-ES', { weekday: 'long' }),
-      count: 0
-    });
-    
+
     // Generar la semana actual (lunes a domingo)
-    // Calcular el lunes de esta semana
+    const daysOfWeek = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
     const currentDay = now.getDay(); // 0 = domingo, 1 = lunes, etc.
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Si es domingo, retroceder 6 días; si no, calcular días hasta el lunes
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(now);
       date.setDate(now.getDate() + mondayOffset + i); // Empezar desde el lunes de esta semana
       const dateString = date.toISOString().split('T')[0];
-      
+
       console.log('Processing date:', dateString);
 
       // Contar aplicaciones para este día
@@ -273,24 +267,24 @@ class ApplicationsService {
         const appDate = new Date(app.createdAt);
         const appDateString = appDate.toISOString().split('T')[0];
         const matches = appDateString === dateString;
-        
+
         if (matches) {
           console.log('Found match for date:', dateString);
         }
 
         return matches;
       });
-      
+
       const count = dayApplications.length;
 
       console.log('Applications count for', dateString, ':', count);
-      
+
       data.push({
         date: dateString,
         count,
         type: filter,
         details: this.getActivityDetails(filter, count),
-        period: date.toLocaleDateString('es-ES', { weekday: 'short' })
+        period: daysOfWeek[i]
       });
     }
     
@@ -378,16 +372,20 @@ class ApplicationsService {
     
     switch (granularity) {
       case 'daily': {
-        for (let i = 6; i >= 0; i--) {
+        const daysOfWeek = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+        for (let i = 0; i < 7; i++) {
           const date = new Date(now);
-          date.setDate(now.getDate() - i);
-          
+          // Calcular el lunes de esta semana y sumar i días
+          const currentDay = now.getDay();
+          const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+          date.setDate(now.getDate() + mondayOffset + i);
+
           data.push({
             date: date.toISOString().split('T')[0],
             count: 0,
             type: filter,
             details: this.getEmptyDetails(filter),
-            period: date.toLocaleDateString('es-ES', { weekday: 'short' })
+            period: daysOfWeek[i]
           });
         }
         break;

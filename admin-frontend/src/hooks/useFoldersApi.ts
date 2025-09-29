@@ -102,7 +102,7 @@ export const useCreateFolder = (onSuccess?: () => void, onError?: (error: Error)
 
   return useMutation({
     mutationFn: async (input: CreateFolderInput) => {
-      const response = await FoldersApiService.createFolder(input).send();
+      const response = await FoldersApiService.createFolder(input);
       return response;
     },
     onMutate: async (input: CreateFolderInput) => {

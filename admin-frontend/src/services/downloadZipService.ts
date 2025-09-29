@@ -21,11 +21,11 @@ class DownloadZipService {
 
       // Obtener todas las carpetas raíz
       const foldersResponse = await FoldersApiService.getAllFolders();
-      if (!foldersResponse.success || !foldersResponse.data) {
+      if (!foldersResponse.success || !foldersResponse.folders) {
         throw new Error('No se pudieron obtener las carpetas');
       }
 
-      const allFolders = foldersResponse.data.folders;
+      const allFolders = foldersResponse.folders;
       const allItems: DownloadItem[] = allFolders.map(folder => ({
         id: folder.folderId,
         name: folder.name,

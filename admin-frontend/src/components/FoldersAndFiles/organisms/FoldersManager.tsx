@@ -55,10 +55,6 @@ export const FoldersManager: React.FC = () => {
     filteredFolders,
     searchTerm,
     isLoading,
-    createFolder,
-    deleteFolder,
-    deleteFolders,
-    updateFolder,
     getFolderById,
     getSubfolders,
     navigateToFolder,
@@ -67,6 +63,7 @@ export const FoldersManager: React.FC = () => {
     getBreadcrumbPath,
     setSearchTerm,
     refreshFolders,
+    optimistic
   } = useFoldersContext();
 
   // Download functionality
@@ -266,37 +263,23 @@ export const FoldersManager: React.FC = () => {
         
         // Close modal immediately after optimistic deletion
         closeConfirmModal();
-        
-        // Execute server deletion in background (no await)
-        const deletionPromises = [];
-        
+
+        // Execute optimistic deletions for immediate feedback
+
         // Delete folders if any are selected
         if (selectedFolders.length > 0) {
-          deletionPromises.push(
-            deleteFolders(selectedFolders.map(f => f.id))
-              .catch(() => {
-                console.error('Error deleting folders');
-                refreshFolders();
-              })
-          );
+          // Use optimistic deletion for immediate feedback
+          optimistic.deleteFolders(selectedFolders.map(f => f.id));
         }
-        
-        // Delete files if any are selected
+
+        // Delete files if any are selected (keep existing logic for files)
         if (selectedFiles.length > 0) {
-          deletionPromises.push(
-            deleteFilesMutation.mutateAsync(selectedFiles.map(f => f.documentId))
-              .catch(() => {
-                console.error('Error deleting files');
-                refreshFolders();
-              })
-          );
+          deleteFilesMutation.mutateAsync(selectedFiles.map(f => f.documentId))
+            .catch(() => {
+              console.error('Error deleting files');
+              refreshFolders();
+            });
         }
-        
-        // Wait for all deletions to complete
-        Promise.all(deletionPromises).catch(() => {
-          console.error('Some deletions failed');
-          refreshFolders();
-        });
       }
     });
   };
@@ -331,7 +314,8 @@ export const FoldersManager: React.FC = () => {
           message: `${FOLDER_OPERATION_MESSAGES.DELETE_CONFIRMATION} la carpeta "${folder.name}"?`,
           variant: 'danger',
           onConfirm: () => {
-            deleteFolder(folderId);
+            // Use optimistic deletion for immediate feedback
+            optimistic.deleteFolder(folderId);
             // Remove from selection if selected
             if (selectedRows.has(folderId)) {
               selectRow(folderId);
@@ -441,11 +425,11 @@ export const FoldersManager: React.FC = () => {
 
   const handleCreateSubmit = (data: CreateFolderData): void => {
     if (modalMode === 'edit' && editingFolderId) {
-      // Update existing folder
-      updateFolder(editingFolderId, data);
+      // Update existing folder with optimistic feedback
+      optimistic.updateFolder(editingFolderId, data);
     } else {
-      // Create new folder (with parent if specified)
-      createFolder(data, parentFolderId);
+      // Create new folder with optimistic feedback (with parent if specified)
+      optimistic.createFolder(data, parentFolderId);
     }
     closeCreateModal();
   };

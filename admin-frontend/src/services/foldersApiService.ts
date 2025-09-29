@@ -1,9 +1,9 @@
 /**
  * Folders API Service
- * Service layer for folders-service microservice using Alova
+ * Service layer for folders-service microservice using Axios
  */
 
-import { foldersAlova } from '../lib/alova';
+import { foldersAxios } from '../lib/axios';
 import { API_CONFIG } from '../config/api.config';
 
 // Types matching backend expectations
@@ -51,8 +51,8 @@ export class FoldersApiService {
   /**
    * Create a new folder
    */
-  static createFolder(input: CreateFolderInput) {
-    return foldersAlova.Post<FolderResponse>(
+  static async createFolder(input: CreateFolderInput): Promise<FolderResponse> {
+    return foldersAxios.post(
       API_CONFIG.folders.endpoints.base,
       input
     );
@@ -61,7 +61,7 @@ export class FoldersApiService {
   /**
    * Get all folders
    */
-  static getAllFolders(limit?: number, nextToken?: string) {
+  static async getAllFolders(limit?: number, nextToken?: string): Promise<FolderResponse> {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());
     if (nextToken) params.append('nextToken', nextToken);
@@ -71,14 +71,14 @@ export class FoldersApiService {
       ? `${API_CONFIG.folders.endpoints.base}?${queryString}`
       : API_CONFIG.folders.endpoints.base;
 
-    return foldersAlova.Get<FolderResponse>(url);
+    return foldersAxios.get(url);
   }
 
   /**
    * Get a single folder by ID
    */
-  static getFolder(folderId: string) {
-    return foldersAlova.Get<FolderResponse>(
+  static async getFolder(folderId: string): Promise<FolderResponse> {
+    return foldersAxios.get(
       API_CONFIG.folders.endpoints.byId(folderId)
     );
   }
@@ -86,7 +86,7 @@ export class FoldersApiService {
   /**
    * Get folder children (subfolders)
    */
-  static getFolderChildren(folderId: string, limit?: number) {
+  static async getFolderChildren(folderId: string, limit?: number): Promise<FolderResponse> {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());
 
@@ -95,14 +95,14 @@ export class FoldersApiService {
       ? `${API_CONFIG.folders.endpoints.children(folderId)}?${queryString}`
       : API_CONFIG.folders.endpoints.children(folderId);
 
-    return foldersAlova.Get<FolderResponse>(url);
+    return foldersAxios.get(url);
   }
 
   /**
    * Get root folders (folders without parent)
    */
-  static getRootFolders() {
-    return foldersAlova.Get<FolderResponse>(
+  static async getRootFolders(): Promise<FolderResponse> {
+    return foldersAxios.get(
       API_CONFIG.folders.endpoints.root
     );
   }
@@ -110,8 +110,8 @@ export class FoldersApiService {
   /**
    * Update a folder
    */
-  static updateFolder(folderId: string, input: UpdateFolderInput) {
-    return foldersAlova.Put<FolderResponse>(
+  static async updateFolder(folderId: string, input: UpdateFolderInput): Promise<FolderResponse> {
+    return foldersAxios.put(
       API_CONFIG.folders.endpoints.byId(folderId),
       input
     );
@@ -120,8 +120,8 @@ export class FoldersApiService {
   /**
    * Delete a single folder
    */
-  static deleteFolder(folderId: string) {
-    return foldersAlova.Delete<FolderResponse>(
+  static async deleteFolder(folderId: string): Promise<FolderResponse> {
+    return foldersAxios.delete(
       API_CONFIG.folders.endpoints.byId(folderId)
     );
   }
@@ -129,10 +129,10 @@ export class FoldersApiService {
   /**
    * Delete multiple folders
    */
-  static deleteFolders(folderIds: string[]) {
-    return foldersAlova.Delete<FolderResponse>(
+  static async deleteFolders(folderIds: string[]): Promise<FolderResponse> {
+    return foldersAxios.delete(
       API_CONFIG.folders.endpoints.batch,
-      { folderIds }
+      { data: { folderIds } }
     );
   }
 }

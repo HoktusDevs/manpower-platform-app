@@ -2,6 +2,14 @@ import React, { createContext, useContext, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useUnifiedFoldersState } from '../hooks/useUnifiedFoldersState';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+import {
+  useCreateFolderOptimistic,
+  useUpdateFolderOptimistic,
+  useDeleteFolderOptimistic,
+  useDeleteFoldersOptimistic,
+  type CreateFolderInput,
+  type UpdateFolderInput
+} from '../../../hooks/useFoldersApiOptimistic';
 import type { UseFoldersStateReturn } from '../types';
 
 interface FoldersProviderProps {
@@ -17,6 +25,17 @@ interface FoldersContextValue extends UseFoldersStateReturn {
     isConnected: boolean;
     connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   };
+  // Optimistic methods that provide instant feedback
+  optimistic: {
+    createFolder: (data: CreateFolderInput, parentId?: string | null) => void;
+    updateFolder: (id: string, data: UpdateFolderInput) => void;
+    deleteFolder: (id: string) => void;
+    deleteFolders: (ids: string[]) => void;
+    isCreating: boolean;
+    isUpdating: boolean;
+    isDeleting: boolean;
+    isBatchDeleting: boolean;
+  };
 }
 
 const FoldersContext = createContext<FoldersContextValue | null>(null);
@@ -29,6 +48,70 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
   onCreateError
 }) => {
   const foldersState = useUnifiedFoldersState(onDeleteSuccess, onDeleteError, onCreateSuccess, onCreateError);
+
+  // Optimistic mutation hooks
+  const createFolderMutation = useCreateFolderOptimistic(
+    (folder) => {
+      onCreateSuccess?.();
+      console.log('✅ Folder created optimistically:', folder);
+    },
+    (error) => {
+      onCreateError?.(error);
+      console.error('❌ Error creating folder optimistically:', error);
+    }
+  );
+
+  const updateFolderMutation = useUpdateFolderOptimistic(
+    (folder) => {
+      console.log('✅ Folder updated optimistically:', folder);
+    },
+    (error) => {
+      console.error('❌ Error updating folder optimistically:', error);
+    }
+  );
+
+  const deleteFolderMutation = useDeleteFolderOptimistic(
+    (folderId) => {
+      onDeleteSuccess?.();
+      console.log('✅ Folder deleted optimistically:', folderId);
+    },
+    (error) => {
+      onDeleteError?.(error);
+      console.error('❌ Error deleting folder optimistically:', error);
+    }
+  );
+
+  const deleteFoldersMutation = useDeleteFoldersOptimistic(
+    () => {
+      onDeleteSuccess?.();
+      console.log('✅ Folders batch deleted optimistically');
+    },
+    (error) => {
+      onDeleteError?.(error);
+      console.error('❌ Error batch deleting folders optimistically:', error);
+    }
+  );
+
+  // Optimistic wrapper functions
+  const optimisticCreateFolder = useCallback((data: CreateFolderInput, parentId?: string | null) => {
+    const folderInput = {
+      ...data,
+      parentId: parentId || undefined
+    };
+    createFolderMutation.mutate(folderInput);
+  }, [createFolderMutation]);
+
+  const optimisticUpdateFolder = useCallback((id: string, data: UpdateFolderInput) => {
+    updateFolderMutation.mutate({ folderId: id, input: data });
+  }, [updateFolderMutation]);
+
+  const optimisticDeleteFolder = useCallback((id: string) => {
+    deleteFolderMutation.mutate(id);
+  }, [deleteFolderMutation]);
+
+  const optimisticDeleteFolders = useCallback((ids: string[]) => {
+    deleteFoldersMutation.mutate(ids);
+  }, [deleteFoldersMutation]);
 
   // Handle real-time folder updates
   const handleFolderUpdate = useCallback((event: { action: string; data?: { folder?: unknown; id?: string } }) => {
@@ -126,6 +209,16 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
     webSocket: {
       isConnected,
       connectionStatus
+    },
+    optimistic: {
+      createFolder: optimisticCreateFolder,
+      updateFolder: optimisticUpdateFolder,
+      deleteFolder: optimisticDeleteFolder,
+      deleteFolders: optimisticDeleteFolders,
+      isCreating: createFolderMutation.isPending,
+      isUpdating: updateFolderMutation.isPending,
+      isDeleting: deleteFolderMutation.isPending,
+      isBatchDeleting: deleteFoldersMutation.isPending,
     }
   };
 

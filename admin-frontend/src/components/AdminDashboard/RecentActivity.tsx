@@ -35,19 +35,21 @@ const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity)
   switch (granularity) {
     case 'daily': {
       // Estructura para 7 días de la semana (Lun a Dom)
-      const currentDay = now.getDay();
-      const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
-      
+      const daysOfWeek = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+
       for (let i = 0; i < 7; i++) {
         const date = new Date(now);
+        // Calcular el lunes de esta semana
+        const currentDay = now.getDay();
+        const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
         date.setDate(now.getDate() - mondayOffset + i);
-        
+
         data.push({
           date: date.toISOString().split('T')[0],
           count: 0,
           type: filter,
           details: getEmptyDetails(filter),
-          period: date.toLocaleDateString('es-ES', { weekday: 'short' })
+          period: daysOfWeek[i]
         });
       }
       break;
@@ -192,7 +194,7 @@ const UniversalChart = ({ data, granularity, filter }: { data: ActivityData[], g
                     
                     {/* X-axis period label */}
                     <div className="mt-3 text-xs font-medium text-gray-600">
-                      {item.period || 'N/A'}
+                      {item.period}
                     </div>
                   </div>
                 );
