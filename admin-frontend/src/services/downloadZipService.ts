@@ -26,20 +26,26 @@ class DownloadZipService {
       }
 
       const allFolders = foldersResponse.folders;
-      const allItems: DownloadItem[] = allFolders.map(folder => ({
-        id: folder.folderId,
-        name: folder.name,
-        type: 'folder' as const,
-        children: []
-      }));
+      const allItems: DownloadItem[] = allFolders.map(folder => {
+        // Agregar archivos de la carpeta como children
+        const fileChildren: DownloadItem[] = folder.files ? folder.files.map(file => ({
+          id: file.documentId,
+          name: file.originalName,
+          type: 'file' as const,
+          fileUrl: file.fileUrl
+        })) : [];
 
-      // Obtener todos los documentos
-      const documents = await documentsService.getMyDocuments();
-      const documentItems: DownloadItem[] = documents.map(doc => ({
-        id: doc.documentId,
-        name: doc.originalName,
-        type: 'file' as const
-      }));
+        return {
+          id: folder.folderId,
+          name: folder.name,
+          type: 'folder' as const,
+          children: fileChildren
+        };
+      });
+
+      // Note: No se incluyen archivos sueltos en "descargar todo"
+      // Solo se descargan las carpetas con su contenido
+      const documentItems: DownloadItem[] = [];
 
       // Combinar carpetas y documentos
       const allContent = [...allItems, ...documentItems];
@@ -62,7 +68,8 @@ class DownloadZipService {
   async downloadSelectedItems(
     selectedIds: string[],
     allFolders: Folder[],
-    onProgress?: (progress: DownloadProgress) => void
+    onProgress?: (progress: DownloadProgress) => void,
+    selectedFiles?: unknown[]
   ): Promise<void> {
     try {
       onProgress?.({
@@ -72,18 +79,42 @@ class DownloadZipService {
         status: 'preparing'
       });
 
-      // Obtener elementos seleccionados
+      // Obtener elementos seleccionados (carpetas y archivos)
       const selectedItems: DownloadItem[] = [];
-      
+
       for (const id of selectedIds) {
+        // Buscar carpeta
         const folder = allFolders.find(f => f.folderId === id);
         if (folder) {
+          // Agregar archivos de la carpeta como children
+          const fileChildren: DownloadItem[] = folder.files ? folder.files.map(file => ({
+            id: file.documentId,
+            name: file.originalName,
+            type: 'file' as const,
+            fileUrl: file.fileUrl
+          })) : [];
+
           selectedItems.push({
             id: folder.folderId,
             name: folder.name,
             type: 'folder',
-            children: []
+            children: fileChildren
           });
+          continue;
+        }
+
+        // Buscar archivo en los archivos seleccionados
+        if (selectedFiles) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const document = selectedFiles.find((doc: any) => doc && doc.documentId === id);
+          if (document && typeof document === 'object' && 'documentId' in document) {
+            selectedItems.push({
+              id: (document as { documentId: string }).documentId,
+              name: (document as { originalName?: string; fileName?: string }).originalName || (document as { fileName?: string }).fileName || 'archivo',
+              type: 'file',
+              fileUrl: (document as { fileUrl?: string }).fileUrl
+            });
+          }
         }
       }
 
@@ -195,25 +226,33 @@ class DownloadZipService {
    */
   private async addFileToZip(zip: JSZip, file: DownloadItem, path: string): Promise<void> {
     try {
-      // Obtener URL de descarga del archivo
-      const downloadResponse = await this.getFileDownloadUrl(file.id);
-      
-      if (!downloadResponse.downloadUrl) {
+      let downloadUrl = file.fileUrl;
+
+      // Si no hay fileUrl, intentar obtenerla del backend
+      if (!downloadUrl) {
+        const downloadResponse = await this.getFileDownloadUrl(file.id);
+        downloadUrl = downloadResponse.downloadUrl;
+      }
+
+      if (!downloadUrl) {
+        console.warn(`No se pudo obtener URL de descarga para ${file.name}`);
         return;
       }
 
       // Descargar archivo
-      const response = await fetch(downloadResponse.downloadUrl);
+      const response = await fetch(downloadUrl);
       if (!response.ok) {
+        console.warn(`Error al descargar ${file.name}: ${response.status}`);
         return;
       }
 
       const fileBlob = await response.blob();
       const filePath = path ? `${path}/${file.name}` : file.name;
-      
+
       // Agregar archivo al ZIP
       zip.file(filePath, fileBlob);
-    } catch {
+    } catch (error) {
+      console.error(`Error al agregar archivo ${file.name} al ZIP:`, error);
       // Error al agregar archivo al ZIP, continuar con el siguiente
     }
   }

@@ -7,7 +7,7 @@ export interface UseDownloadZipReturn {
   isDownloading: boolean;
   progress: DownloadProgress | null;
   downloadAllContent: () => Promise<void>;
-  downloadSelectedItems: (selectedIds: string[], allFolders: Folder[]) => Promise<void>;
+  downloadSelectedItems: (selectedIds: string[], allFolders: Folder[], selectedFiles?: unknown[]) => Promise<void>;
   clearProgress: () => void;
 }
 
@@ -33,13 +33,14 @@ export const useDownloadZip = (): UseDownloadZipReturn => {
   }, [handleProgress]);
 
   const downloadSelectedItems = useCallback(async (
-    selectedIds: string[], 
-    allFolders: Folder[]
+    selectedIds: string[],
+    allFolders: Folder[],
+    selectedFiles?: unknown[]
   ): Promise<void> => {
     setIsDownloading(true);
     setProgress(null);
     try {
-      await downloadZipService.downloadSelectedItems(selectedIds, allFolders, handleProgress);
+      await downloadZipService.downloadSelectedItems(selectedIds, allFolders, handleProgress, selectedFiles);
     } finally {
       setIsDownloading(false);
     }

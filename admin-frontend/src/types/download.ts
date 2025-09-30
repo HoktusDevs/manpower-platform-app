@@ -9,5 +9,6 @@ export interface DownloadItem {
   id: string;
   name: string;
   type: 'folder' | 'file';
+  fileUrl?: string; // URL del archivo para descarga directa
   children?: DownloadItem[];
 }

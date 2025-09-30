@@ -491,10 +491,11 @@ export const FoldersManager: React.FC = () => {
       alert('No hay elementos seleccionados para descargar');
       return;
     }
-    
+
     try {
       const selectedIds = Array.from(selectedRows);
-      await downloadSelectedItems(selectedIds, folders);
+      const selectedFiles = getSelectedFiles();
+      await downloadSelectedItems(selectedIds, folders, selectedFiles);
     } catch {
       // El error ya se maneja en el hook
     }
@@ -675,7 +676,23 @@ export const FoldersManager: React.FC = () => {
           showFilesDirectly ? (
             <div className="bg-white overflow-visible">
               <div className="p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Archivos ({filesToShow.length})</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <Checkbox
+                    checked={filesToShow.length > 0 && filesToShow.every(file => selectedRows.has(file.documentId))}
+                    onChange={() => {
+                      const allSelected = filesToShow.every(file => selectedRows.has(file.documentId));
+                      filesToShow.forEach(file => {
+                        if (allSelected && selectedRows.has(file.documentId)) {
+                          selectFile(file.documentId);
+                        } else if (!allSelected && !selectedRows.has(file.documentId)) {
+                          selectFile(file.documentId);
+                        }
+                      });
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <h3 className="text-sm font-medium text-gray-700">Archivos ({filesToShow.length})</h3>
+                </div>
                 <div className="space-y-2">
                   {filesToShow.map((file) => (
                     <div
@@ -683,11 +700,19 @@ export const FoldersManager: React.FC = () => {
                       className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
                         selectedRows.has(file.documentId) ? 'bg-blue-50 border-blue-500' : 'border-gray-200'
                       }`}
-                      onClick={() => selectFile(file.documentId)}
+                      onClick={(e) => {
+                        // Don't trigger if clicking on checkbox
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                          selectFile(file.documentId);
+                        }
+                      }}
                     >
                       <Checkbox
                         checked={selectedRows.has(file.documentId)}
-                        onChange={() => selectFile(file.documentId)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          selectFile(file.documentId);
+                        }}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <svg className="w-8 h-8 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
