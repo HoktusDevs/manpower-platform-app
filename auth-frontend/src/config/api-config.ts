@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  AUTH_SERVICE_URL: 'https://7pptifb3zk.execute-api.us-east-1.amazonaws.com/dev',
+  AUTH_SERVICE_URL: import.meta.env['VITE_AUTH_SERVICE_URL'] || 'https://7pptifb3zk.execute-api.us-east-1.amazonaws.com/dev',
   TIMEOUT: 30000,
 } as const;
 
