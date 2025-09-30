@@ -160,13 +160,6 @@ class HttpAuthRepository implements AuthRepository {
         body: request,
       });
 
-      console.log('🔍 DEBUG AUTH SERVICE: Backend response:', response);
-      console.log('🔍 DEBUG AUTH SERVICE: Conditions:', {
-        success: response.success,
-        hasUser: !!response.user,
-        hasSessionKey: !!(response as AuthServiceResponse & { sessionKey?: string }).sessionKey
-      });
-
       const responseWithSessionKey = response as AuthServiceResponse & { sessionKey?: string };
       if (response.success && response.user && responseWithSessionKey.sessionKey) {
         const user = {

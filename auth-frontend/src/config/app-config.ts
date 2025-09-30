@@ -8,15 +8,6 @@ const isLocalDevelopment = window.location.hostname === 'localhost' || window.lo
 // Check if we're running on port 6100 (local auth-frontend)
 const isLocalAuthFrontend = window.location.port === '6100';
 
-// Debug logging to help troubleshoot
-console.log('🔍 CONFIG DEBUG:', {
-  hostname: window.location.hostname,
-  port: window.location.port,
-  isLocalDevelopment,
-  isLocalAuthFrontend,
-  fullUrl: window.location.href
-});
-
 export const APP_CONFIG = {
   // Frontend URLs - use local URLs only when auth-frontend is running locally
   ADMIN_FRONTEND_URL: (isLocalDevelopment && isLocalAuthFrontend)

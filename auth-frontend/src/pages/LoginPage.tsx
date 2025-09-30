@@ -37,13 +37,6 @@ export const LoginPage: React.FC = () => {
         password: formData.password,
       });
 
-      console.log('🔍 DEBUG LOGIN: Full response:', response);
-      console.log('🔍 DEBUG LOGIN: Conditions:', {
-        success: response.success,
-        hasUser: !!response.user,
-        hasSessionKey: !!response.sessionKey
-      });
-
       if (response.success && response.user && response.sessionKey) {
         const userRole = response.user['custom:role'] || 'postulante';
         setLoginSuccess({ role: userRole });
@@ -51,14 +44,7 @@ export const LoginPage: React.FC = () => {
         // Redirect based on user role using dynamic configuration
         const redirectUrl = userRole === 'admin' ? APP_CONFIG.ADMIN_FRONTEND_URL : APP_CONFIG.APPLICANT_FRONTEND_URL;
         const urlWithSessionKey = `${redirectUrl}?sessionKey=${encodeURIComponent(response.sessionKey)}`;
-        
-        console.log('🔍 REDIRECT DEBUG:', {
-          userRole,
-          redirectUrl,
-          fullUrl: urlWithSessionKey,
-          appConfig: APP_CONFIG
-        });
-        
+
         window.location.href = urlWithSessionKey;
       } else {
         setError(response.message || 'Error en el inicio de sesión');
