@@ -145,8 +145,8 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       />
 
       {/* Table Rows - Scrollable */}
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
-        <ul>
+      <div className="overflow-y-auto overflow-x-visible" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+        <ul className="overflow-visible">
           {folders.map((folder) => renderFolderWithSubfolders(folder)).flat()}
         </ul>
       </div>

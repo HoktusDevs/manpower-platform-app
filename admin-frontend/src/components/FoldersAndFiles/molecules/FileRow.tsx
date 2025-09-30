@@ -1,3 +1,4 @@
+import React from 'react';
 import { Checkbox, RowActionsButton } from '../atoms';
 import { FileActionsMenu } from './FileActionsMenu';
 import type { DocumentFile, FileAction } from '../types';
@@ -28,6 +29,8 @@ export const FileRow: React.FC<FileRowProps> = ({
   onAction,
   onToggleActionsMenu
 }) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
   const handleSelect = (): void => {
     onSelect(file.documentId);
   };
@@ -167,12 +170,13 @@ export const FileRow: React.FC<FileRowProps> = ({
           <div className="flex items-center justify-end">
             {/* Row Actions */}
             <div className="relative">
-              <RowActionsButton onClick={handleToggleActionsMenu} />
-              
+              <RowActionsButton ref={buttonRef} onClick={handleToggleActionsMenu} />
+
               <FileActionsMenu
                 show={showActionsMenu}
                 fileId={file.documentId}
                 onAction={onAction}
+                buttonRef={buttonRef}
               />
             </div>
           </div>

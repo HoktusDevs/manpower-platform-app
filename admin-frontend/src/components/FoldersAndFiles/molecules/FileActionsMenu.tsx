@@ -1,29 +1,54 @@
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { FileAction } from '../types';
 
 interface FileActionsMenuProps {
   show: boolean;
   fileId: string;
   onAction: (fileId: string, action: FileAction) => void;
+  buttonRef?: React.RefObject<HTMLButtonElement>;
 }
 
 /**
  * FileActionsMenu Molecule
  * Dropdown menu for individual file actions
  * Includes the 3 actions from Test OCR: view, download, delete
+ * Uses Portal to render outside scroll container
  */
 export const FileActionsMenu: React.FC<FileActionsMenuProps> = ({
   show,
   fileId,
-  onAction
+  onAction,
+  buttonRef
 }) => {
+  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (show && buttonRef?.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + window.scrollY + 8,
+        right: window.innerWidth - rect.right + window.scrollX
+      });
+    }
+  }, [show, buttonRef]);
+
   if (!show) return null;
 
   const handleAction = (action: FileAction): void => {
     onAction(fileId, action);
   };
 
-  return (
-    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+  const menuContent = (
+    <div
+      ref={menuRef}
+      className="fixed w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"
+      style={{
+        top: `${position.top}px`,
+        right: `${position.right}px`
+      }}
+    >
       <div className="py-1">
         {/* Ver/View Action */}
         <button
@@ -61,4 +86,6 @@ export const FileActionsMenu: React.FC<FileActionsMenuProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(menuContent, document.body);
 };
