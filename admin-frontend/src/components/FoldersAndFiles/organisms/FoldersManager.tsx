@@ -129,8 +129,8 @@ export const FoldersManager: React.FC = () => {
             // Level 3 subfolders
             return folder.level === 3;
           case 'file':
-            // Files (not implemented yet)
-            return false;
+            // Show folders that contain files
+            return folder.files && folder.files.length > 0;
           default:
             return true;
         }
@@ -177,22 +177,32 @@ export const FoldersManager: React.FC = () => {
 
   const finalFilteredFolders = getFilteredFolders();
 
+  // Get all files from folders for selection
+  const allFiles = folders.flatMap(folder => folder.files || []);
+
   // Get current folder's files when there are no subfolders
   const currentFolder = getCurrentFolder();
   const currentFolderFiles = currentFolder?.files || [];
-  // Show files directly if we're inside a folder with no subfolders but has files
-  const showFilesDirectly = finalFilteredFolders.length === 0 && currentFolderFiles.length > 0;
+
+  // Determine if we should show files directly
+  // Case 1: Inside a folder with no subfolders but has files
+  const insideFolderWithFiles = finalFilteredFolders.length === 0 && currentFolderFiles.length > 0;
+  // Case 2: Filter by "file" type - show all files from all folders
+  const filteringByFiles = currentFilters.type === 'file';
+
+  const showFilesDirectly = insideFolderWithFiles || filteringByFiles;
+  const filesToShow = filteringByFiles ? allFiles : currentFolderFiles;
 
   console.log('🔍 Debug - showFilesDirectly:', {
     showFilesDirectly,
+    filteringByFiles,
+    insideFolderWithFiles,
     finalFilteredFoldersLength: finalFilteredFolders.length,
     currentFolderFilesLength: currentFolderFiles.length,
+    allFilesLength: allFiles.length,
     currentFolder: currentFolder?.name,
-    searchTerm
+    currentFilterType: currentFilters.type
   });
-
-  // Get all files from folders for selection
-  const allFiles = folders.flatMap(folder => folder.files || []);
 
   const {
     selectedRows,
@@ -586,17 +596,17 @@ export const FoldersManager: React.FC = () => {
               <TableHeader
                 isAllSelected={isAllSelected}
                 selectedCount={selectedCount}
-                totalCount={currentFolderFiles.length}
+                totalCount={filesToShow.length}
                 onSelectAll={handleSelectAll}
               />
               <ul>
-                {currentFolderFiles.map((file, index) => (
+                {filesToShow.map((file, index) => (
                   <div key={file.documentId}>
                     <FileRow
                       file={file}
                       isSelected={selectedRows.has(file.documentId)}
                       showActionsMenu={showRowActionsMenu === file.documentId}
-                      isLastRow={index === currentFolderFiles.length - 1}
+                      isLastRow={index === filesToShow.length - 1}
                       indentLevel={0}
                       onSelect={selectFile}
                       onAction={handleFileAction}
@@ -629,7 +639,7 @@ export const FoldersManager: React.FC = () => {
           showFilesDirectly ? (
             <div className="bg-white overflow-visible p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {currentFolderFiles.map((file) => (
+                {filesToShow.map((file) => (
                   <div
                     key={file.documentId}
                     className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
@@ -665,9 +675,9 @@ export const FoldersManager: React.FC = () => {
           showFilesDirectly ? (
             <div className="bg-white overflow-visible">
               <div className="p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Archivos ({currentFolderFiles.length})</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Archivos ({filesToShow.length})</h3>
                 <div className="space-y-2">
-                  {currentFolderFiles.map((file) => (
+                  {filesToShow.map((file) => (
                     <div
                       key={file.documentId}
                       className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
