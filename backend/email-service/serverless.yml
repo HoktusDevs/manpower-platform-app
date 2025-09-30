@@ -1,0 +1,144 @@
+service: email-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    EMAILS_TABLE: ${self:custom.emailsTable}
+    EMAIL_FROM: ${env:EMAIL_FROM, 'carriagadafalcone@gmail.com'}
+    EMAIL_FROM_NAME: ${env:EMAIL_FROM_NAME, 'Manpower Platform - Testing'}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - '*'
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowCredentials: false
+  iamRoleStatements:
+    # SES permissions
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+        - ses:SendTemplatedEmail
+      Resource: "*"
+    # DynamoDB permissions
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - Fn::GetAtt: [EmailsTable, Arn]
+        - Fn::Join:
+            - '/'
+            - - Fn::GetAtt: [EmailsTable, Arn]
+              - 'index/*'
+
+custom:
+  emailsTable: emails-${self:provider.stage}
+
+functions:
+  # Health Check
+  healthCheck:
+    handler: src/handlers/health.checkHealth
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  # Send Email
+  sendEmail:
+    handler: src/handlers/email.sendEmail
+    events:
+      - http:
+          path: /email/send
+          method: post
+          cors: true
+
+  # Send Bulk Emails
+  sendBulkEmail:
+    handler: src/handlers/email.sendBulkEmail
+    events:
+      - http:
+          path: /email/send-bulk
+          method: post
+          cors: true
+
+  # Get Email Status
+  getEmailStatus:
+    handler: src/handlers/email.getEmailStatus
+    events:
+      - http:
+          path: /email/{emailId}/status
+          method: get
+          cors: true
+
+  # Get Email History
+  getEmailHistory:
+    handler: src/handlers/email.getEmailHistory
+    events:
+      - http:
+          path: /email/history
+          method: get
+          cors: true
+
+  # Resend Email
+  resendEmail:
+    handler: src/handlers/email.resendEmail
+    events:
+      - http:
+          path: /email/{emailId}/resend
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB Table for Email Tracking
+    EmailsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.emailsTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: emailId
+            AttributeType: S
+          - AttributeName: recipientEmail
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+        KeySchema:
+          - AttributeName: emailId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: recipientEmail-createdAt-index
+            KeySchema:
+              - AttributeName: recipientEmail
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
