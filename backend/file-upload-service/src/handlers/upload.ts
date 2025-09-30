@@ -688,18 +688,18 @@ export const updateDocumentStatusHandler: APIGatewayProxyHandler = async (
     }
 
     const updateData = JSON.parse(event.body);
-    const { documentId, status, explanation } = updateData;
+    const { documentId, status, explanation, fileName } = updateData;
 
     // Validate required fields
-    if (!documentId || !status) {
+    if (!documentId) {
       return createResponse(400, {
         success: false,
-        message: 'Missing required fields: documentId, status'
+        message: 'Missing required field: documentId'
       });
     }
 
-    // Validate status
-    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+    // Validate status if provided
+    if (status && !['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
       return createResponse(400, {
         success: false,
         message: 'Invalid status. Must be APPROVED, REJECTED, or PENDING'
@@ -711,6 +711,14 @@ export const updateDocumentStatusHandler: APIGatewayProxyHandler = async (
       return createResponse(400, {
         success: false,
         message: 'Explanation is required when status is REJECTED'
+      });
+    }
+
+    // At least one field must be provided for update
+    if (!status && !fileName) {
+      return createResponse(400, {
+        success: false,
+        message: 'At least one field must be provided for update: status, fileName'
       });
     }
 
@@ -742,26 +750,43 @@ export const updateDocumentStatusHandler: APIGatewayProxyHandler = async (
 
     // Update the document
     const now = new Date().toISOString();
+
+    // Build dynamic update expression
+    const updateParts: string[] = ['updatedAt = :updatedAt'];
+    const expressionValues: any = {
+      ':updatedAt': now
+    };
+
+    if (status) {
+      updateParts.push('hoktusDecision = :status');
+      updateParts.push('hoktusProcessingStatus = :processingStatus');
+      expressionValues[':status'] = status;
+      expressionValues[':processingStatus'] = 'COMPLETED';
+    }
+
+    if (fileName) {
+      updateParts.push('originalName = :fileName');
+      updateParts.push('fileName = :fileName');
+      expressionValues[':fileName'] = fileName;
+    }
+
+    if (explanation) {
+      updateParts.push('processingResult.observations = :observations');
+      expressionValues[':observations'] = [{
+        type: status === 'REJECTED' ? 'error' : 'success',
+        message: explanation,
+        severity: status === 'REJECTED' ? 'warning' : 'info'
+      }];
+    }
+
     const updateCommand = new UpdateCommand({
       TableName: FILES_TABLE,
       Key: {
         documentId: documentId,
         userId: 'test-user-123'
       },
-      UpdateExpression: 'SET hoktusDecision = :status, hoktusProcessingStatus = :processingStatus, updatedAt = :updatedAt' +
-                        (explanation ? ', processingResult.observations = :observations' : ''),
-      ExpressionAttributeValues: {
-        ':status': status,
-        ':processingStatus': 'COMPLETED',
-        ':updatedAt': now,
-        ...(explanation && {
-          ':observations': [{
-            type: status === 'REJECTED' ? 'error' : 'success',
-            message: explanation,
-            severity: status === 'REJECTED' ? 'warning' : 'info'
-          }]
-        })
-      },
+      UpdateExpression: `SET ${updateParts.join(', ')}`,
+      ExpressionAttributeValues: expressionValues,
       ReturnValues: 'ALL_NEW'
     });
 
@@ -774,11 +799,15 @@ export const updateDocumentStatusHandler: APIGatewayProxyHandler = async (
       file: updateResult.Attributes
     });
 
-    console.log(`✅ Document status updated: ${documentId} → ${status}`);
+    const updatedFields = [];
+    if (status) updatedFields.push(`status → ${status}`);
+    if (fileName) updatedFields.push(`fileName → ${fileName}`);
+
+    console.log(`✅ Document updated: ${documentId} (${updatedFields.join(', ')})`);
 
     return createResponse(200, {
       success: true,
-      message: 'Document status updated successfully',
+      message: `Document updated successfully: ${updatedFields.join(', ')}`,
       document: updateResult.Attributes
     });
 
