@@ -16,53 +16,12 @@ import type {
   RefreshTokenResponse,
   BasicResponse,
 } from '../types/auth-service';
-import { API_CONFIG, API_ENDPOINTS } from '../config/api-config';
+import { API_ENDPOINTS } from '../config/api-config';
+import { axiosInstance } from '../config/axios-config';
+import { AxiosError } from 'axios';
 
 class HttpAuthRepository implements AuthRepository {
-  private readonly baseUrl = API_CONFIG.AUTH_SERVICE_URL;
-  private readonly timeout = API_CONFIG.TIMEOUT;
   private accessToken: string | null = null;
-
-  private async makeRequest<T>(
-    endpoint: string,
-    options: {
-      method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-      body?: object;
-      requiresAuth?: boolean;
-    }
-  ): Promise<T> {
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (options.requiresAuth && this.accessToken) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
-      }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        method: options.method,
-        headers,
-        body: options.body ? JSON.stringify(options.body) : null,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`HTTP request failed for ${endpoint}:`, error);
-      throw error;
-    }
-  }
 
   async register(request: RegisterRequest): Promise<AuthResponse> {
     try {
@@ -91,10 +50,7 @@ class HttpAuthRepository implements AuthRepository {
             skills: ['Habilidades básicas'],
           } as RegisterEmployeeRequest;
 
-      const response = await this.makeRequest<AuthServiceResponse>(endpoint, {
-        method: 'POST',
-        body: requestBody,
-      });
+      const { data: response } = await axiosInstance.post<AuthServiceResponse>(endpoint, requestBody);
 
       if (response.user) {
         const authResponse: AuthResponse = {
@@ -123,22 +79,23 @@ class HttpAuthRepository implements AuthRepository {
       };
     } catch (error) {
       console.error('Registration error:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Registration failed',
+        message: axiosError.response?.data?.message || axiosError.message || 'Registration failed',
       };
     }
   }
 
   async confirmSignUp(request: ConfirmSignUpRequest): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<BasicResponse>(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
-        method: 'POST',
-        body: {
+      const { data: response } = await axiosInstance.post<BasicResponse>(
+        API_ENDPOINTS.AUTH.VERIFY_EMAIL,
+        {
           email: request.email,
           code: request.confirmationCode,
-        },
-      });
+        }
+      );
 
       return {
         success: response.success,
@@ -146,19 +103,20 @@ class HttpAuthRepository implements AuthRepository {
       };
     } catch (error) {
       console.error('Email confirmation error:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Email confirmation failed',
+        message: axiosError.response?.data?.message || axiosError.message || 'Email confirmation failed',
       };
     }
   }
 
   async login(request: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<AuthServiceResponse>(API_ENDPOINTS.AUTH.LOGIN, {
-        method: 'POST',
-        body: request,
-      });
+      const { data: response } = await axiosInstance.post<AuthServiceResponse>(
+        API_ENDPOINTS.AUTH.LOGIN,
+        request
+      );
 
       const responseWithSessionKey = response as AuthServiceResponse & { sessionKey?: string };
       if (response.success && response.user && responseWithSessionKey.sessionKey) {
@@ -183,9 +141,10 @@ class HttpAuthRepository implements AuthRepository {
       };
     } catch (error) {
       console.error('Login error:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Login failed',
+        message: axiosError.response?.data?.message || axiosError.message || 'Login failed',
       };
     }
   }
@@ -226,12 +185,12 @@ class HttpAuthRepository implements AuthRepository {
 
   async forgotPassword(request: ForgotPasswordRequest): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<BasicResponse>(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-        method: 'POST',
-        body: {
+      const { data: response } = await axiosInstance.post<BasicResponse>(
+        API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+        {
           email: request.email,
-        },
-      });
+        }
+      );
 
       return {
         success: response.success,
@@ -239,23 +198,24 @@ class HttpAuthRepository implements AuthRepository {
       };
     } catch (error) {
       console.error('Forgot password error:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Password reset request failed',
+        message: axiosError.response?.data?.message || axiosError.message || 'Password reset request failed',
       };
     }
   }
 
   async resetPassword(request: ResetPasswordRequest): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<BasicResponse>(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-        method: 'POST',
-        body: {
+      const { data: response } = await axiosInstance.post<BasicResponse>(
+        API_ENDPOINTS.AUTH.RESET_PASSWORD,
+        {
           email: request.email,
           code: request.confirmationCode,
           newPassword: request.newPassword,
-        },
-      });
+        }
+      );
 
       return {
         success: response.success,
@@ -263,9 +223,10 @@ class HttpAuthRepository implements AuthRepository {
       };
     } catch (error) {
       console.error('Reset password error:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Password reset failed',
+        message: axiosError.response?.data?.message || axiosError.message || 'Password reset failed',
       };
     }
   }
@@ -281,12 +242,8 @@ class HttpAuthRepository implements AuthRepository {
 
   async refreshToken(): Promise<boolean> {
     try {
-      const response = await this.makeRequest<RefreshTokenResponse>(
-        API_ENDPOINTS.AUTH.REFRESH,
-        {
-          method: 'POST',
-          requiresAuth: true,
-        }
+      const { data: response } = await axiosInstance.post<RefreshTokenResponse>(
+        API_ENDPOINTS.AUTH.REFRESH
       );
 
       if (response.success && response.data?.accessToken) {

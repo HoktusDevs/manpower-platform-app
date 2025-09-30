@@ -10,7 +10,9 @@
     "preview": "vite preview --port 6100"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
     "aws-amplify": "^6.15.6",
+    "axios": "^1.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"
