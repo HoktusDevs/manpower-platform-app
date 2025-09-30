@@ -5,16 +5,77 @@ Handler de API Gateway para el procesamiento de documentos en Lambda.
 import json
 import logging
 from typing import Dict, Any
+from datetime import datetime, timezone
+from decimal import Decimal
+
+import boto3
+
+# Ya no necesitamos el pipeline aquí - se ejecuta en document_processor
+# from src.services.document_processing_pipeline import DocumentProcessingPipeline
 
 # Configurar logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Inicializar servicios (con validación)
+def initialize_services():
+    """Inicializa y valida los servicios necesarios."""
+    import os
+
+    # Validar SQS Queue URL
+    queue_url = os.getenv('DOCUMENT_PROCESSING_QUEUE_URL')
+    if not queue_url:
+        logger.error("❌ DOCUMENT_PROCESSING_QUEUE_URL no configurada")
+        raise ValueError("DOCUMENT_PROCESSING_QUEUE_URL es requerida")
+
+    try:
+        # Inicializar clientes AWS
+        sqs_client = boto3.client('sqs')
+        dynamodb = boto3.resource('dynamodb')
+
+        # Usar stage dinámico
+        stage = os.getenv('STAGE', 'dev')
+        table_name = f'document-processing-results-{stage}'
+        results_table = dynamodb.Table(table_name)
+
+        logger.info("✅ Servicios inicializados correctamente (modo asíncrono con SQS)")
+        logger.info(f"   - SQS Queue: {queue_url}")
+        logger.info(f"   - DynamoDB Table: {table_name}")
+
+        return sqs_client, results_table, queue_url
+    except Exception as e:
+        logger.error(f"❌ Error inicializando servicios: {e}")
+        raise
+
+# Inicializar una sola vez (cold start)
+try:
+    sqs_client, results_table, queue_url = initialize_services()
+except Exception as init_error:
+    logger.error(f"CRITICAL: No se pudieron inicializar servicios: {init_error}")
+    sqs_client = None
+    results_table = None
+    queue_url = None
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Handler principal de API Gateway para procesamiento de documentos.
-    Versión simplificada para pruebas.
+    Encola documentos en SQS para procesamiento asíncrono.
     """
+    # Validar que los servicios estén inicializados
+    if sqs_client is None or results_table is None or queue_url is None:
+        logger.error("Servicios no inicializados - no se puede procesar")
+        return {
+            'statusCode': 503,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'error': 'Service Unavailable',
+                'message': 'Los servicios no están correctamente inicializados. Verifica las variables de entorno.'
+            })
+        }
+
     try:
         logger.info(f"API Handler received event: {event}")
         
@@ -64,229 +125,125 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({'error': 'owner_user_name and documents are required'})
                 }
             
-            logger.info(f"Procesando {len(documents)} documentos para {owner_user_name}")
-            
-            # Procesar documentos con WebSocket (sin dependencias complejas por ahora)
+            logger.info(f"Encolando {len(documents)} documentos para {owner_user_name}")
+
+            # Encolar documentos en SQS para procesamiento asíncrono
             try:
-                import boto3
-                from datetime import datetime, timezone
-                import asyncio
-                
-                # Configurar servicios básicos
-                dynamodb = boto3.resource('dynamodb')
-                results_table = dynamodb.Table('document-processing-results-dev')
-                
-                # PASO 1: Guardar documentos inmediatamente con estado PROCESSING
-                for doc in documents:
+                enqueued_count = 0
+                failed_count = 0
+                batch_id = context.aws_request_id
+
+                for index, doc in enumerate(documents):
                     try:
-                        logger.info(f"Guardando documento: {doc['file_name']}")
-                        
-                        # Crear documento con estado PROCESSING
-                        from decimal import Decimal
-                        result_dict = {
-                            'document_id': doc['platform_document_id'],
+                        document_id = doc.get('platform_document_id', f'doc_{batch_id}_{index}')
+                        logger.info(f"📬 Encolando documento: {doc['file_name']} (ID: {document_id})")
+
+                        # PASO 1: Guardar documento con estado QUEUED
+                        initial_record = {
+                            'document_id': document_id,
                             'file_name': doc['file_name'],
                             'file_url': doc['file_url'],
-                            'file_size': doc.get('file_size', 0),  # Tamaño del archivo en bytes
+                            'file_size': doc.get('file_size', 0),
                             'owner_user_name': owner_user_name,
-                            'processing_status': 'PROCESSING',
+                            'processing_status': 'QUEUED',
                             'final_decision': None,
                             'document_type': None,
                             'ocr_result': None,
                             'data_structure': None,
                             'observations': [],
+                            'batch_id': batch_id,
                             'created_at': datetime.now(timezone.utc).isoformat(),
                             'ttl': int(datetime.now(timezone.utc).timestamp()) + (30 * 24 * 60 * 60)
                         }
-                        
-                        # Guardar en DynamoDB inmediatamente
-                        results_table.put_item(Item=result_dict)
-                        logger.info(f"Documento {doc['platform_document_id']} guardado en DynamoDB con estado PROCESSING")
-                        
-                    except Exception as e:
-                        logger.error(f"Error guardando documento {doc['platform_document_id']}: {e}")
-                
-                # PASO 2: Procesar documentos en segundo plano (simulado)
-                for doc in documents:
-                    try:
-                        logger.info(f"Procesando documento en segundo plano: {doc['file_name']}")
-                        
-                        # Procesamiento inmediato sin delays artificiales
-                        
-                        # Actualizar documento con resultados reales
-                        from decimal import Decimal
-                        
-                        # Extraer datos reales del documento
-                        file_name = doc['file_name']
-                        file_url = doc['file_url']
-                        
-                        # PROCESAMIENTO REAL DEL DOCUMENTO
-                        logger.info(f"Iniciando procesamiento real del documento: {file_name}")
-                        
-                        # 1. VERIFICAR TIPO DE ARCHIVO
-                        file_extension = file_name.lower().split('.')[-1]
-                        if file_extension not in ['pdf', 'jpg', 'jpeg', 'png']:
-                            raise Exception(f"Tipo de archivo no soportado: {file_extension}")
-                        
-                        # 2. SIMULAR OCR REAL (por ahora)
-                        # TODO: Implementar OCR real con Azure Vision o similar
-                        extracted_text = f"TEXTO EXTRAÍDO DEL DOCUMENTO REAL:\n"
-                        extracted_text += f"Archivo: {file_name}\n"
-                        extracted_text += f"Propietario: {owner_user_name}\n"
-                        extracted_text += f"Fecha de procesamiento: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n"
-                        extracted_text += f"Tipo: {file_extension.upper()}\n"
-                        
-                        # 3. SIMULAR ANÁLISIS DE CONTENIDO
-                        # TODO: Implementar análisis real con IA/ML
-                        content_analysis = {
-                            'has_text': True,
-                            'text_quality': 'high',
-                            'document_legibility': 'good',
-                            'suspicious_patterns': False,
-                            'confidence_score': Decimal('0.95')
+
+                        results_table.put_item(Item=initial_record)
+                        logger.info(f"✅ Documento {document_id} guardado con estado QUEUED")
+
+                        # PASO 2: Encolar mensaje en SQS
+                        message_body = {
+                            'owner_user_name': owner_user_name,
+                            'document_data': {
+                                'platform_document_id': document_id,
+                                'file_name': doc['file_name'],
+                                'file_url': doc['file_url'],
+                                'file_size': doc.get('file_size', 0)
+                            },
+                            'processing_type': 'platform_document',
+                            'batch_id': batch_id,
+                            'document_index': index,
+                            'enqueued_at': datetime.now(timezone.utc).isoformat()
                         }
-                        
-                        # 4. VALIDACIÓN DE DATOS REAL
-                        # Verificar que el nombre del propietario existe en el documento
-                        owner_name_in_document = False
-                        owner_name_confidence = Decimal('0.0')
-                        
-                        # Simular búsqueda del nombre en el documento
-                        # TODO: Implementar búsqueda real en el texto extraído del OCR
-                        # SIMULACIÓN REALISTA: Solo algunos nombres específicos están en documentos válidos
-                        valid_document_names = ['Clemente Arriagada', 'Clemente Arriagada Falcone', 'María González', 'Carlos López']
-                        
-                        # Simular texto de documento real (sin el nombre del propietario)
-                        simulated_document_text = "CERTIFICADO DE AFILIACIÓN\nA.F.P. Modelo S.A. certifica que el Sr. [NOMBRE_DEL_DOCUMENTO], R.U.T. 17.702.177-6, ingresó al nuevo Sistema Previsional"
-                        
-                        # Buscar el nombre en la lista de nombres válidos
-                        owner_name_upper = owner_user_name.upper()
-                        if owner_user_name in valid_document_names:
-                            owner_name_in_document = True
-                            owner_name_confidence = Decimal('0.95')
-                            logger.info(f"✅ Nombre '{owner_user_name}' encontrado en documentos válidos")
-                        else:
-                            owner_name_in_document = False
-                            owner_name_confidence = Decimal('0.0')
-                            logger.warning(f"❌ Nombre '{owner_user_name}' NO está en la lista de documentos válidos")
-                        
-                        # Validaciones reales
-                        validation_results = {
-                            'owner_name_valid': len(owner_user_name) > 3,
-                            'owner_name_in_document': owner_name_in_document,
-                            'owner_name_confidence': Decimal(str(owner_name_confidence)),
-                            'document_format_valid': file_extension in ['pdf', 'jpg', 'jpeg', 'png'],
-                            'file_size_valid': True,  # TODO: Verificar tamaño real
-                            'content_quality_valid': content_analysis['text_quality'] == 'high'
-                        }
-                        
-                        # 5. DECIDIR APROBACIÓN/RECHAZO BASADO EN CRITERIOS REALES
-                        # CRITERIOS ESTRICTOS: El nombre DEBE estar en el documento
-                        critical_validations = [
-                            validation_results['owner_name_valid'],
-                            validation_results['owner_name_in_document'],  # ← CRÍTICO: Nombre debe estar en documento
-                            validation_results['document_format_valid'],
-                            validation_results['content_quality_valid']
-                        ]
-                        
-                        all_critical_validations_passed = all(critical_validations)
-                        final_decision = 'APPROVED' if all_critical_validations_passed else 'REJECTED'
-                        
-                        logger.info(f"Validaciones críticas: {critical_validations}")
-                        logger.info(f"Decisión final: {final_decision}")
-                        
-                        # 6. GENERAR OBSERVACIONES SI ES NECESARIO
-                        observations = []
-                        
-                        if not validation_results['owner_name_valid']:
-                            observations.append({
-                                'type': 'validation_error',
-                                'message': 'Nombre del propietario muy corto',
-                                'severity': 'warning'
-                            })
-                        
-                        if not validation_results['owner_name_in_document']:
-                            observations.append({
-                                'type': 'critical_error',
-                                'message': f'Nombre "{owner_user_name}" NO encontrado en el documento',
-                                'severity': 'error',
-                                'action_required': 'Verificar que el nombre del propietario coincida con el documento'
-                            })
-                        
-                        if not all_critical_validations_passed:
-                            observations.append({
-                                'type': 'validation_error',
-                                'message': 'Documento no cumple con los criterios de calidad',
-                                'severity': 'error'
-                            })
-                        
-                        # Agregar observación de éxito si todo está bien
-                        if all_critical_validations_passed:
-                            observations.append({
-                                'type': 'success',
-                                'message': f'Nombre "{owner_user_name}" verificado exitosamente en el documento',
-                                'severity': 'info',
-                                'confidence': owner_name_confidence
-                            })
-                        
-                        # 7. EXTRAER DATOS REALES
-                        extracted_name = owner_user_name
-                        extracted_document_number = f"DOC-{doc['platform_document_id'][-8:]}"
-                        
-                        logger.info(f"Procesamiento completado - Decisión: {final_decision}")
-                        logger.info(f"Validaciones: {validation_results}")
-                        logger.info(f"Observaciones: {len(observations)}")
-                        
-                        results_table.update_item(
-                            Key={'document_id': doc['platform_document_id']},
-                            UpdateExpression='SET processing_status = :status, final_decision = :decision, document_type = :type, ocr_result = :ocr, data_structure = :data, observations = :observations',
-                            ExpressionAttributeValues={
-                                ':status': 'COMPLETED',
-                                ':decision': final_decision,
-                                ':type': file_extension.upper(),
-                                ':ocr': {
-                                    'text': extracted_text,
-                                    'confidence': Decimal(str(content_analysis['confidence_score']))
+
+                        sqs_response = sqs_client.send_message(
+                            QueueUrl=queue_url,
+                            MessageBody=json.dumps(message_body),
+                            MessageAttributes={
+                                'owner_user_name': {
+                                    'StringValue': owner_user_name,
+                                    'DataType': 'String'
                                 },
-                                ':data': {
-                                    'name': extracted_name,
-                                    'document_number': extracted_document_number,
-                                    'file_name': file_name,
-                                    'file_url': file_url,
-                                    'processed_at': datetime.now(timezone.utc).isoformat(),
-                                    'validation_results': validation_results,
-                                    'content_analysis': content_analysis
-                                },
-                                ':observations': observations
+                                'document_type': {
+                                    'StringValue': 'platform_document',
+                                    'DataType': 'String'
+                                }
                             }
                         )
-                        
-                        logger.info(f"Documento {doc['platform_document_id']} procesado y actualizado en DynamoDB")
-                        
-                        # El DynamoDB Stream trigger se encargará de enviar la notificación WebSocket automáticamente
-                        # No es necesario enviar notificación manual aquí
-                        logger.info(f"✅ Documento actualizado en DynamoDB - Stream trigger enviará notificación WebSocket")
-                        
+
+                        logger.info(f"📨 Documento encolado en SQS - MessageId: {sqs_response['MessageId']}")
+                        enqueued_count += 1
+
                     except Exception as e:
-                        logger.error(f"Error procesando documento {doc['platform_document_id']}: {e}")
+                        failed_count += 1
+                        logger.error(f"❌ Error encolando documento {doc.get('platform_document_id', 'unknown')}: {e}")
+
+                        # Guardar error en DynamoDB
+                        try:
+                            error_record = {
+                                'document_id': doc.get('platform_document_id', f'error_{batch_id}_{failed_count}'),
+                                'file_name': doc.get('file_name', 'unknown'),
+                                'file_url': doc.get('file_url', ''),
+                                'owner_user_name': owner_user_name,
+                                'processing_status': 'FAILED',
+                                'final_decision': 'MANUAL_REVIEW',
+                                'document_type': 'Desconocido',
+                                'observations': [{
+                                    'capa': 'API_HANDLER',
+                                    'razon': f'Error encolando documento: {str(e)}',
+                                    'regla': 'Error de Encolamiento'
+                                }],
+                                'batch_id': batch_id,
+                                'created_at': datetime.now(timezone.utc).isoformat(),
+                                'ttl': int(datetime.now(timezone.utc).timestamp()) + (30 * 24 * 60 * 60)
+                            }
+                            results_table.put_item(Item=error_record)
+                        except Exception as db_error:
+                            logger.error(f"Error guardando error en DynamoDB: {db_error}")
                 
+                # Responder inmediatamente - procesamiento será asíncrono
+                logger.info(f"✅ Encolamiento completado: {enqueued_count} encolados, {failed_count} fallidos")
+
                 return {
-                    'statusCode': 200,
+                    'statusCode': 202,  # 202 Accepted - procesamiento asíncrono
                     'headers': {
                         'Content-Type': 'application/json',
                         'Access-Control-Allow-Origin': '*',
                     },
                     'body': json.dumps({
-                        'message': 'Documentos procesados exitosamente',
-                        'status': 'success',
+                        'message': 'Documentos encolados exitosamente para procesamiento asíncrono',
+                        'status': 'accepted',
                         'owner_user_name': owner_user_name,
-                        'document_count': len(documents),
-                        'batch_id': context.aws_request_id
+                        'enqueued': enqueued_count,
+                        'failed': failed_count,
+                        'total': len(documents),
+                        'batch_id': batch_id,
+                        'note': 'Los documentos serán procesados en segundo plano. Recibirás notificaciones WebSocket con el progreso.'
                     })
                 }
                 
             except Exception as e:
-                logger.error(f"Error en procesamiento: {e}")
+                logger.error(f"Error en encolamiento: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 return {
                     'statusCode': 500,
                     'headers': {
@@ -294,8 +251,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'Access-Control-Allow-Origin': '*',
                     },
                     'body': json.dumps({
-                        'error': 'Error en procesamiento',
-                        'message': str(e)
+                        'error': 'Error encolando documentos',
+                        'message': str(e),
+                        'note': 'Verifica que DOCUMENT_PROCESSING_QUEUE_URL esté configurada'
                     })
                 }
         

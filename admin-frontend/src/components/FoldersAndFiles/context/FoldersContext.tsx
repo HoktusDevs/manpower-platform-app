@@ -200,8 +200,38 @@ export const FoldersProvider: React.FC<FoldersProviderProps> = ({
     }
   }, [debouncedRefresh]);
 
+  // Handle real-time document processing updates
+  const handleDocumentProcessingUpdate = useCallback((event: {
+    type: string;
+    documentId?: string;
+    status?: string;
+    processingStatus?: string;
+    phase?: string;
+    message?: string;
+    finalDecision?: string;
+    documentType?: string;
+  }) => {
+    console.log('🔄 Document processing update received:', event);
+
+    // Solo refrescar cuando hay cambios relevantes
+    if (event.type === 'document_processing_update') {
+      const { status, processingStatus, phase, message } = event;
+
+      console.log(`📊 Document ${event.documentId}: ${message || status}`);
+      console.log(`   Phase: ${phase}, Status: ${processingStatus}`);
+
+      // Refrescar para actualizar el estado en la UI
+      debouncedRefresh();
+    }
+  }, [debouncedRefresh]);
+
   // Initialize WebSocket connection - Re-enabled with better error handling
-  const { isConnected, connectionStatus } = useWebSocket(handleFolderUpdate, handleFileUpdate, true);
+  const { isConnected, connectionStatus } = useWebSocket(
+    handleFolderUpdate,
+    handleFileUpdate,
+    true,
+    handleDocumentProcessingUpdate
+  );
 
   const contextValue: FoldersContextValue = {
     ...foldersState,

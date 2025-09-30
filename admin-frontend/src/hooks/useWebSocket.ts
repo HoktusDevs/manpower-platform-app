@@ -5,7 +5,7 @@ const WEBSOCKET_URL = 'wss://qjmj4uodm7.execute-api.us-east-1.amazonaws.com/dev'
 
 // Types for WebSocket messages
 interface WebSocketMessage {
-  type: 'connection_established' | 'realtime_update' | 'subscribed' | 'pong';
+  type: 'connection_established' | 'realtime_update' | 'subscribed' | 'pong' | 'document_processing_update';
   action?: 'folder_created' | 'folder_updated' | 'folder_deleted' | 'file_created' | 'file_updated' | 'file_deleted';
   data?: {
     folderId?: string;
@@ -16,6 +16,17 @@ interface WebSocketMessage {
     file?: unknown;
     timestamp: number;
   };
+  // Document processing fields
+  documentId?: string;
+  status?: string;
+  processingStatus?: string;
+  phase?: string;
+  message?: string;
+  finalDecision?: string;
+  documentType?: string;
+  fileName?: string;
+  owner?: string;
+  confidence?: number;
   timestamp?: string;
 }
 
@@ -41,6 +52,21 @@ interface FileUpdateEvent {
   };
 }
 
+interface DocumentProcessingUpdateEvent {
+  type: string;
+  documentId?: string;
+  status?: string;
+  processingStatus?: string;
+  phase?: string;
+  message?: string;
+  finalDecision?: string;
+  documentType?: string;
+  fileName?: string;
+  owner?: string;
+  confidence?: number;
+  timestamp?: string;
+}
+
 interface UseWebSocketReturn {
   isConnected: boolean;
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled';
@@ -57,7 +83,8 @@ interface UseWebSocketReturn {
 export const useWebSocket = (
   onFolderUpdate?: (event: FolderUpdateEvent) => void,
   onFileUpdate?: (event: FileUpdateEvent) => void,
-  autoConnect: boolean = true
+  autoConnect: boolean = true,
+  onDocumentProcessingUpdate?: (event: DocumentProcessingUpdateEvent) => void
 ): UseWebSocketReturn => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled'>('disconnected');
@@ -183,6 +210,26 @@ export const useWebSocket = (
               // Heartbeat response - silent
               break;
 
+            case 'document_processing_update':
+              if (onDocumentProcessingUpdate) {
+                console.log('📊 Document processing update received:', message);
+                onDocumentProcessingUpdate({
+                  type: message.type,
+                  documentId: message.documentId,
+                  status: message.status,
+                  processingStatus: message.processingStatus,
+                  phase: message.phase,
+                  message: message.message,
+                  finalDecision: message.finalDecision,
+                  documentType: message.documentType,
+                  fileName: message.fileName,
+                  owner: message.owner,
+                  confidence: message.confidence,
+                  timestamp: message.timestamp
+                });
+              }
+              break;
+
             default:
               console.log('ℹ️ Unknown message type:', message.type);
           }
@@ -231,7 +278,7 @@ export const useWebSocket = (
       console.error('❌ Error creating WebSocket:', error);
       setConnectionStatus('error');
     }
-  }, [onFolderUpdate, onFileUpdate]);
+  }, [onFolderUpdate, onFileUpdate, onDocumentProcessingUpdate]);
 
   const disconnect = useCallback(() => {
     console.log('🔌 Disconnecting WebSocket');

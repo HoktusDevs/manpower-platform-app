@@ -18,8 +18,8 @@ provider:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
     LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}
-    # SQS Configuration (temporalmente comentado)
-    # DOCUMENT_PROCESSING_QUEUE_URL: !Ref DocumentProcessingQueue
+    # SQS Configuration
+    DOCUMENT_PROCESSING_QUEUE_URL: !Ref DocumentProcessingQueue
     # Callback Configuration
     DOCUMENT_RESULTS_NOTIFICATION_URL: ${env:DOCUMENT_RESULTS_NOTIFICATION_URL, ''}
     # Azure Vision
@@ -74,6 +74,15 @@ provider:
       Resource:
         - "arn:aws:execute-api:${self:provider.region}:*:*/*"
         - "arn:aws:execute-api:${self:provider.region}:*:*/*/*"
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+      Resource:
+        - !GetAtt DocumentProcessingQueue.Arn
+        - !GetAtt DocumentProcessingDLQ.Arn
 
 functions:
   # API Gateway para recibir documentos
@@ -94,6 +103,24 @@ functions:
   # Worker para procesar documentos desde SQS
   document-processor:
     handler: src/handlers/document_processor.handler
+    events:
+      - sqs:
+          arn: !GetAtt DocumentProcessingQueue.Arn
+          batchSize: 1  # Procesar 1 documento a la vez
+          maximumBatchingWindowInSeconds: 0
+    timeout: 300  # 5 minutos
+    memorySize: 1024
+
+  # Procesar archivos subidos manualmente desde /admin/folders
+  process-uploaded-files:
+    handler: src/handlers/uploaded_files_processor.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: arn:aws:dynamodb:${self:provider.region}:*:table/manpower-documents-${self:provider.stage}/stream/*
+          batchSize: 1
+          startingPosition: LATEST
+          enabled: true
     timeout: 300  # 5 minutos
     memorySize: 1024
 
@@ -190,26 +217,26 @@ functions:
 
 resources:
   Resources:
-    # SQS Queue para procesamiento de documentos (temporalmente comentado)
-    # DocumentProcessingQueue:
-    #   Type: AWS::SQS::Queue
-    #   Properties:
-    #     QueueName: doc-processor-queue-${self:provider.stage}
-    #     VisibilityTimeoutSeconds: 360  # 6 minutos (mayor que timeout de Lambda)
-    #     MessageRetentionPeriod: 1209600  # 14 días
-    #     ReceiveMessageWaitTimeSeconds: 20  # Long polling
-    #     RedrivePolicy:
-    #       deadLetterTargetArn: !GetAtt DocumentProcessingDLQ.Arn
-    #       maxReceiveCount: 3
+    # SQS Queue para procesamiento de documentos
+    DocumentProcessingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: doc-processor-queue-${self:provider.stage}
+        VisibilityTimeoutSeconds: 360  # 6 minutos (mayor que timeout de Lambda)
+        MessageRetentionPeriod: 1209600  # 14 días
+        ReceiveMessageWaitTimeSeconds: 20  # Long polling
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt DocumentProcessingDLQ.Arn
+          maxReceiveCount: 3
 
-    # Dead Letter Queue (temporalmente comentado)
-    # DocumentProcessingDLQ:
-    #   Type: AWS::SQS::Queue
-    #   Properties:
-    #     QueueName: doc-processor-dlq-${self:provider.stage}
-    #     MessageRetentionPeriod: 1209600  # 14 días
+    # Dead Letter Queue
+    DocumentProcessingDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: doc-processor-dlq-${self:provider.stage}
+        MessageRetentionPeriod: 1209600  # 14 días
 
-        # WebSocket Connections Table
+    # WebSocket Connections Table
         WebSocketConnectionsTable:
           Type: AWS::DynamoDB::Table
           Properties:
