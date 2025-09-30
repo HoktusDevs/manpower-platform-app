@@ -91,6 +91,27 @@ functions:
               - Authorization
             allowCredentials: false
 
+  # New Upload Handler (accepts folderId directly)
+  upload:
+    handler: src/handlers/upload.uploadHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /upload
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
+          request:
+            contentHandling: CONVERT_TO_BINARY
+
   # Legacy Upload Handler (backward compatibility)
   legacyUpload:
     handler: src/handlers/upload.legacyUploadHandler
@@ -98,7 +119,7 @@ functions:
     memorySize: 512
     events:
       - http:
-          path: /upload
+          path: /upload-legacy
           method: post
           cors:
             origin: '*'

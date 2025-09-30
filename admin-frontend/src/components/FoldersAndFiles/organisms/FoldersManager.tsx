@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation } from '../molecules';
+import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation, FileUploadModal } from '../molecules';
 import { DocumentPreviewModal } from '../../OCR';
 import { UnifiedCreateJobModal } from '../../JobManagement';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
@@ -44,6 +44,10 @@ export const FoldersManager: React.FC = () => {
 
   // Job creation modal state
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
+
+  // File upload modal state
+  const [showFileUploadModal, setShowFileUploadModal] = useState(false);
+  const [selectedUploadFolderId, setSelectedUploadFolderId] = useState<string | null>(null);
 
   // File preview modal state
   const [showFilePreviewModal, setShowFilePreviewModal] = useState(false);
@@ -293,9 +297,11 @@ export const FoldersManager: React.FC = () => {
         openCreateModal(folderId);
         break;
       }
-      case 'create-job': {
-        // Open unified create job modal
-        setShowCreateJobModal(true);
+      case 'upload-files': {
+        // Store the folder ID for file upload
+        setSelectedUploadFolderId(folderId);
+        // Open file upload modal
+        setShowFileUploadModal(true);
         break;
       }
       case 'edit': {
@@ -623,6 +629,22 @@ export const FoldersManager: React.FC = () => {
         variant={confirmModalData.variant}
         onConfirm={confirmModalData.onConfirm}
         onCancel={closeConfirmModal}
+      />
+
+      {/* File Upload Modal */}
+      <FileUploadModal
+        isOpen={showFileUploadModal}
+        onClose={() => {
+          setShowFileUploadModal(false);
+          setSelectedUploadFolderId(null);
+        }}
+        folderId={selectedUploadFolderId}
+        folderName={selectedUploadFolderId ? getFolderById(selectedUploadFolderId)?.name : undefined}
+        onUploadSuccess={() => {
+          // Refresh folders to show new files
+          refreshFolders();
+          console.log('Files uploaded successfully!');
+        }}
       />
 
       {/* Download Progress Modal */}

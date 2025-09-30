@@ -72,7 +72,7 @@ export interface CreateModalFormData {
 }
 
 // Action types for folder operations
-export type FolderAction = 'edit' | 'delete' | 'create-subfolder' | 'create-job';
+export type FolderAction = 'edit' | 'delete' | 'create-subfolder' | 'upload-files';
 
 // Action types for file operations
 export type FileAction = 'view' | 'download' | 'delete';

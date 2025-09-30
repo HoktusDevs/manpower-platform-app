@@ -11,3 +11,4 @@ export { EmptyState } from './EmptyState';
 export { CreateFolderModal } from './CreateFolderModal';
 export { ConfirmationModal } from './ConfirmationModal';
 export { BreadcrumbNavigation } from './BreadcrumbNavigation';
+export { FileUploadModal } from './FileUploadModal';

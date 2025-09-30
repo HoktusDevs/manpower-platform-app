@@ -7,6 +7,7 @@ import { parseMultipartFormData } from '../utils/multipartParser';
 import { notifyWebSocket } from '../services/websocketNotifier';
 import { saveToFilesService } from '../services/filesServiceIntegration';
 import { S3Service } from '../services/s3Service';
+import busboy from 'busboy';
 
 // Initialize AWS clients
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -31,6 +32,28 @@ interface UploadRequest {
   };
 }
 
+interface NewUploadRequest {
+  folderId: string;
+  fileName: string;
+  fileType: string;
+  file: {
+    name: string;
+    type: string;
+    data: Buffer;
+  };
+}
+
+interface NewParsedFormData {
+  folderId?: string;
+  fileName?: string;
+  fileType?: string;
+  file?: {
+    name: string;
+    type: string;
+    data: Buffer;
+  };
+}
+
 const createResponse = (statusCode: number, body: any): APIGatewayProxyResult => ({
   statusCode,
   headers: {
@@ -43,9 +66,9 @@ const createResponse = (statusCode: number, body: any): APIGatewayProxyResult =>
 });
 
 /**
- * Parse multipart form data using busboy
+ * Parse multipart form data using busboy for new format (folderId)
  */
-const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<any> => {
+const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<NewParsedFormData | null> => {
   return new Promise((resolve, reject) => {
     const contentType = event.headers['content-type'] || event.headers['Content-Type'];
     if (!contentType?.includes('multipart/form-data')) {
@@ -79,14 +102,16 @@ const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<any> => 
     const result: any = {};
     const files: any[] = [];
 
-    bb.on('field', (name, value) => {
+    bb.on('field', (name: string, value: string) => {
+      console.log(`📝 Field received: ${name} = ${value}`);
       result[name] = value;
     });
 
-    bb.on('file', (name, file, info) => {
+    bb.on('file', (name: string, file: any, info: any) => {
+      console.log(`📁 File received: ${name} = ${info.filename} (${info.mimeType})`);
       const chunks: Buffer[] = [];
 
-      file.on('data', (chunk) => {
+      file.on('data', (chunk: Buffer) => {
         chunks.push(chunk);
       });
 
@@ -96,6 +121,7 @@ const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<any> => 
           type: info.mimeType,
           data: Buffer.concat(chunks)
         });
+        console.log(`✅ File processed: ${info.filename} (${Buffer.concat(chunks).length} bytes)`);
       });
     });
 
@@ -103,13 +129,70 @@ const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<any> => 
       if (files.length > 0) {
         result.file = files[0];
       }
+      console.log('🎯 Final parsed result:', {
+        folderId: result.folderId,
+        fileName: result.fileName,
+        fileType: result.fileType,
+        fileCount: files.length
+      });
       resolve(result);
     });
 
-    bb.on('error', reject);
+    bb.on('error', (error: Error) => {
+      console.error('❌ Busboy error:', error);
+      reject(error);
+    });
+
     bb.write(body);
     bb.end();
   });
+};
+
+/**
+ * Find folder by ID using folders API
+ */
+const findFolderById = async (folderId: string): Promise<any | null> => {
+  try {
+    console.log(`🔍 Searching for folder with ID: "${folderId}"`);
+
+    // Use folders API instead of direct DynamoDB access
+    const foldersApiUrl = process.env.FOLDERS_API_URL || 'https://83upriwf35.execute-api.us-east-1.amazonaws.com/dev';
+    const systemToken = process.env.SYSTEM_AUTH_TOKEN;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    if (systemToken) {
+      headers['Authorization'] = `Bearer ${systemToken}`;
+    }
+
+    const response = await fetch(`${foldersApiUrl}/folders`, { headers });
+
+    if (!response.ok) {
+      console.error(`❌ Folders API returned ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json() as any;
+    const folders = data.folders || [];
+
+    console.log(`📂 Total folders found: ${folders.length}`);
+    console.log(`📂 Looking for ID: "${folderId}"`);
+
+    const folder = folders.find((f: any) => f.folderId === folderId && f.isActive !== false);
+
+    if (folder) {
+      console.log(`✅ Found folder: ${folder.name} (${folder.folderId})`);
+      return folder;
+    }
+
+    console.log(`❌ Folder with ID "${folderId}" not found in ${folders.length} folders`);
+    return null;
+  } catch (error) {
+    console.error('❌ Error finding folder by ID:', error);
+    return null;
+  }
 };
 
 /**
@@ -701,6 +784,176 @@ export const updateDocumentStatusHandler: APIGatewayProxyHandler = async (
 
   } catch (error) {
     console.error('❌ Error updating document status:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * New upload handler that accepts folderId directly (for frontend)
+ * Handles multipart form data with: file, folderId, fileName, fileType
+ */
+export const uploadHandler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  console.log('📤 New upload request received (with folderId)');
+
+  try {
+    // Handle OPTIONS request for CORS
+    if (event.httpMethod === 'OPTIONS') {
+      return createResponse(200, { message: 'OK' });
+    }
+
+    // Parse multipart form data using busboy for new format
+    const uploadData = await parseMultipartWithBusboy(event);
+    if (!uploadData) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid multipart form data'
+      });
+    }
+
+    const { folderId, fileName, fileType, file } = uploadData;
+
+    console.log('📊 Upload data received:', {
+      folderId,
+      fileName,
+      fileType,
+      fileSize: file?.data?.length || 0
+    });
+
+    // Validate required fields
+    if (!folderId || !file) {
+      return createResponse(400, {
+        success: false,
+        message: 'Missing required fields: folderId, file'
+      });
+    }
+
+    // Use fileName from form data or fall back to file.name
+    const actualFileName = fileName || file.name;
+    const actualFileType = fileType || file.type;
+
+    console.log('🔍 Using file details:', {
+      fileName: actualFileName,
+      fileType: actualFileType,
+      size: file.data.length
+    });
+
+    // Validate file type and size using S3Service
+    if (!s3Service.isValidFileType(actualFileType)) {
+      return createResponse(400, {
+        success: false,
+        message: 'Invalid file type'
+      });
+    }
+
+    if (!s3Service.isValidFileSize(file.data.length)) {
+      return createResponse(400, {
+        success: false,
+        message: 'File size exceeds maximum allowed size'
+      });
+    }
+
+    // Find folder by ID
+    const folder = await findFolderById(folderId);
+    if (!folder) {
+      return createResponse(404, {
+        success: false,
+        message: `Folder with ID "${folderId}" not found`
+      });
+    }
+
+    console.log(`✅ Target folder found: ${folder.name} (${folder.folderId})`);
+
+    // Upload file directly to S3
+    const { fileUrl, s3Key } = await uploadToS3(actualFileName, file.data, actualFileType);
+
+    // Create file document data
+    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    const now = new Date().toISOString();
+
+    const fileDocument = {
+      // Core identifiers
+      documentId,
+      folderId: folder.folderId,
+      userId: 'test-user-123',
+
+      // File info
+      fileName: actualFileName,
+      originalName: actualFileName,
+      fileType: actualFileType,
+      fileExtension: '.' + actualFileName.split('.').pop(),
+      fileSize: file.data.length,
+      documentType: 'file',
+
+      // Storage info
+      s3Bucket: S3_BUCKET,
+      s3Key,
+      fileUrl,
+
+      // Status and processing - default to PENDING for user review
+      status: 'completed',
+      hoktusDecision: 'PENDING',
+      hoktusProcessingStatus: 'COMPLETED',
+
+      // Processing results (matching existing format)
+      processingResult: {
+        contentAnalysis: {
+          document_legibility: 'good',
+          text_quality: 'high',
+          has_text: true,
+          confidence_score: 1.0
+        },
+        validationResults: {
+          content_quality_valid: true,
+          file_format_valid: true,
+          file_size_valid: true,
+          user_authorized: true
+        },
+        observations: [{
+          type: 'success',
+          message: 'Archivo subido exitosamente desde el frontend',
+          severity: 'info'
+        }],
+        processedAt: now,
+        fileType: actualFileType.includes('pdf') ? 'PDF' : 'IMAGE',
+        processingTime: 0.1,
+        status: 'completed'
+      },
+
+      // Metadata
+      isActive: true,
+      isPublic: false,
+      tags: [],
+      uploadedAt: now,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    // Save to files service database
+    await saveToFilesService(fileDocument);
+
+    // Notify via WebSocket for real-time updates
+    await notifyWebSocket('file_created', {
+      fileId: documentId,
+      folderId: folder.folderId,
+      file: fileDocument
+    });
+
+    console.log(`✅ File uploaded successfully: ${actualFileName} → ${folder.name} (${folder.folderId})`);
+
+    return createResponse(201, {
+      success: true,
+      message: 'File uploaded successfully',
+      file: fileDocument
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
     return createResponse(500, {
       success: false,
       message: 'Internal server error',
