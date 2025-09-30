@@ -75,8 +75,9 @@ export const sendEmail = async (
     }
 
     const recipients = Array.isArray(request.to) ? request.to : [request.to];
-    const recipientEmail = recipients[0].email;
-    const recipientName = recipients[0].name;
+    const firstRecipient = recipients[0];
+    const recipientEmail = typeof firstRecipient === 'string' ? firstRecipient : firstRecipient.email;
+    const recipientName = typeof firstRecipient === 'string' ? undefined : firstRecipient.name;
 
     // Create email record
     const emailRecord = await emailRepository.createEmailRecord({

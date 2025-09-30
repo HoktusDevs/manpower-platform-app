@@ -68,7 +68,7 @@ functions:
     handler: src/handlers/email.sendEmail
     events:
       - http:
-          path: /email/send
+          path: /send
           method: post
           cors: true
 
@@ -77,7 +77,7 @@ functions:
     handler: src/handlers/email.sendBulkEmail
     events:
       - http:
-          path: /email/send-bulk
+          path: /send-bulk
           method: post
           cors: true
 
@@ -86,7 +86,7 @@ functions:
     handler: src/handlers/email.getEmailStatus
     events:
       - http:
-          path: /email/{emailId}/status
+          path: /{emailId}/status
           method: get
           cors: true
 
@@ -95,7 +95,7 @@ functions:
     handler: src/handlers/email.getEmailHistory
     events:
       - http:
-          path: /email/history
+          path: /history
           method: get
           cors: true
 
@@ -104,7 +104,7 @@ functions:
     handler: src/handlers/email.resendEmail
     events:
       - http:
-          path: /email/{emailId}/resend
+          path: /{emailId}/resend
           method: post
           cors: true
 
