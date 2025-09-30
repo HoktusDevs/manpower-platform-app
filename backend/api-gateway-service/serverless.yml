@@ -28,6 +28,10 @@ functions:
           method: get
           cors: true
 
+  # Email Service Lambda Proxy
+  emailProxy:
+    handler: src/handlers/emailProxy.handler
+
 resources:
   Resources:
     # Main API Gateway
@@ -300,6 +304,50 @@ resources:
             ResponseParameters:
               method.response.header.Access-Control-Allow-Origin: true
 
+    # Email Service Lambda Proxy Resources
+    EmailResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Fn::GetAtt: [MainApiGateway, RootResourceId]
+        PathPart: email
+
+    EmailProxyResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ParentId:
+          Ref: EmailResource
+        PathPart: "{proxy+}"
+
+    EmailProxyMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId:
+          Ref: MainApiGateway
+        ResourceId:
+          Ref: EmailProxyResource
+        HttpMethod: ANY
+        AuthorizationType: NONE
+        Integration:
+          Type: AWS_PROXY
+          IntegrationHttpMethod: POST
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EmailProxyLambdaFunction.Arn}/invocations
+
+    EmailProxyLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName:
+          Ref: EmailProxyLambdaFunction
+        Action: lambda:InvokeFunction
+        Principal: apigateway.amazonaws.com
+        SourceArn:
+          Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MainApiGateway}/*/*
+
     # Deployment
     ApiGatewayDeployment:
       Type: AWS::ApiGateway::Deployment
@@ -310,6 +358,7 @@ resources:
         - JobsProxyMethod
         - OCRProxyMethod
         - WhatsAppProxyMethod
+        - EmailProxyMethod
       Properties:
         RestApiId:
           Ref: MainApiGateway
