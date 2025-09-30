@@ -113,23 +113,6 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
           </div>
         </div>
 
-        {/* Expand/Collapse Button for Files */}
-        {documentCount > 0 && (
-          <button
-            onClick={handleToggleExpanded}
-            className="mt-2 p-1 rounded hover:bg-gray-200 transition-colors"
-            aria-label={isExpanded ? 'Contraer archivos' : 'Expandir archivos'}
-          >
-            <svg 
-              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        )}
       </div>
     </div>
   );

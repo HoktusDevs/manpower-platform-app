@@ -76,10 +76,23 @@ export const useUnifiedFoldersState = (
   const filteredFolders = useMemo(() => {
     // If searching, show all matching folders regardless of hierarchy and location
     if (searchTerm.trim()) {
-      return folders.filter(folder =>
-        folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        folder.type.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const lowerSearchTerm = searchTerm.toLowerCase();
+
+      return folders.filter(folder => {
+        // Match folder name or type
+        const folderMatches =
+          folder.name.toLowerCase().includes(lowerSearchTerm) ||
+          folder.type.toLowerCase().includes(lowerSearchTerm);
+
+        // Match any file name within the folder
+        const hasMatchingFile = folder.files && Array.isArray(folder.files) &&
+          folder.files.some((file: any) =>
+            file.originalName?.toLowerCase().includes(lowerSearchTerm) ||
+            file.name?.toLowerCase().includes(lowerSearchTerm)
+          );
+
+        return folderMatches || hasMatchingFile;
+      });
     }
 
     // Show folders in current directory level

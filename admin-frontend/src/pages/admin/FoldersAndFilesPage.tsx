@@ -38,7 +38,7 @@ export const FoldersAndFilesPage: React.FC = () => {
   };
 
   return (
-    <FoldersProvider 
+    <FoldersProvider
       onDeleteSuccess={handleDeleteSuccess}
       onDeleteError={handleDeleteError}
       onCreateSuccess={handleCreateSuccess}

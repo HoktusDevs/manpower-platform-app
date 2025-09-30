@@ -67,11 +67,11 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
     const isExpanded = expandedFolders.has(folder.id);
     const subfolders = getSubfolders(folder.id);
     const elements: React.JSX.Element[] = [];
-    
+
     // Main folder row
     elements.push(
-      <div 
-        key={folder.id} 
+      <div
+        key={folder.id}
         ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
       >
         <FolderRow
@@ -90,7 +90,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
         />
       </div>
     );
-    
+
     // Expanded subfolders
     if (isExpanded && subfolders.length > 0) {
       subfolders.forEach(subfolder => {
@@ -103,7 +103,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
       folder.files.forEach((file, index) => {
         const isLastFile = index === folder.files.length - 1;
         elements.push(
-          <div 
+          <div
             key={`file-${file.documentId}`}
           >
             <FileRow
@@ -120,7 +120,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
         );
       });
     }
-    
+
     return elements;
   };
 
@@ -136,18 +136,20 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
 
   return (
     <div className="bg-white overflow-visible">
-      {/* Table Header */}
+      {/* Table Header - Fixed */}
       <TableHeader
         isAllSelected={isAllSelected}
         selectedCount={selectedCount}
         totalCount={folders.length}
         onSelectAll={onSelectAll}
       />
-      
-      {/* Table Rows */}
-      <ul>
-        {folders.map((folder) => renderFolderWithSubfolders(folder)).flat()}
-      </ul>
+
+      {/* Table Rows - Scrollable */}
+      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+        <ul>
+          {folders.map((folder) => renderFolderWithSubfolders(folder)).flat()}
+        </ul>
+      </div>
     </div>
   );
 };

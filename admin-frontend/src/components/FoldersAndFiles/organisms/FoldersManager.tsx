@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation, FileUploadModal } from '../molecules';
+import { ToolbarSection, CreateFolderModal, ConfirmationModal, BreadcrumbNavigation, FileUploadModal, TableHeader, FileRow } from '../molecules';
+import { Checkbox } from '../atoms';
 import { DocumentPreviewModal } from '../../OCR';
 import { UnifiedCreateJobModal } from '../../JobManagement';
 import { DownloadProgressComponent } from '../molecules/DownloadProgress';
@@ -61,6 +62,7 @@ export const FoldersManager: React.FC = () => {
     isLoading,
     getFolderById,
     getSubfolders,
+    getCurrentFolder,
     navigateToFolder,
     navigateBack,
     navigateToRoot,
@@ -163,7 +165,7 @@ export const FoldersManager: React.FC = () => {
   const getFilteredFolders = () => {
     // If filtering by specific levels, show ALL folders (not just current directory)
     const isLevelFilter = currentFilters.type.startsWith('level-');
-    
+
     if (isLevelFilter) {
       // For level filters, use ALL folders, not just current directory
       return applyFilters(folders, currentFilters);
@@ -174,6 +176,20 @@ export const FoldersManager: React.FC = () => {
   };
 
   const finalFilteredFolders = getFilteredFolders();
+
+  // Get current folder's files when there are no subfolders
+  const currentFolder = getCurrentFolder();
+  const currentFolderFiles = currentFolder?.files || [];
+  // Show files directly if we're inside a folder with no subfolders but has files
+  const showFilesDirectly = finalFilteredFolders.length === 0 && currentFolderFiles.length > 0;
+
+  console.log('🔍 Debug - showFilesDirectly:', {
+    showFilesDirectly,
+    finalFilteredFoldersLength: finalFilteredFolders.length,
+    currentFolderFilesLength: currentFolderFiles.length,
+    currentFolder: currentFolder?.name,
+    searchTerm
+  });
 
   // Get all files from folders for selection
   const allFiles = folders.flatMap(folder => folder.files || []);
@@ -565,46 +581,131 @@ export const FoldersManager: React.FC = () => {
             </div>
           </div>
         ) : viewMode === 'table' ? (
-          <FoldersTable
-            folders={finalFilteredFolders}
-            selectedRows={selectedRows}
-            selectedCount={selectedCount}
-            isAllSelected={isAllSelected}
-            showRowActionsMenu={showRowActionsMenu}
-            onSelectRow={selectRow}
-            onSelectFile={selectFile}
-            onSelectAll={handleSelectAll}
-            onRowAction={handleRowAction}
-            onFileAction={handleFileAction}
-            onToggleRowActionsMenu={setRowActionsMenu}
-            onToggleFileActionsMenu={setRowActionsMenu}
-            rowActionsMenuRef={rowActionsMenuRef.ref}
-            onNavigateToFolder={navigateToFolder}
-            getSubfolders={getSubfolders}
-          />
+          showFilesDirectly ? (
+            <div className="bg-white overflow-visible">
+              <TableHeader
+                isAllSelected={isAllSelected}
+                selectedCount={selectedCount}
+                totalCount={currentFolderFiles.length}
+                onSelectAll={handleSelectAll}
+              />
+              <ul>
+                {currentFolderFiles.map((file, index) => (
+                  <div key={file.documentId}>
+                    <FileRow
+                      file={file}
+                      isSelected={selectedRows.has(file.documentId)}
+                      showActionsMenu={showRowActionsMenu === file.documentId}
+                      isLastRow={index === currentFolderFiles.length - 1}
+                      indentLevel={0}
+                      onSelect={selectFile}
+                      onAction={handleFileAction}
+                      onToggleActionsMenu={setRowActionsMenu}
+                    />
+                  </div>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <FoldersTable
+              folders={finalFilteredFolders}
+              selectedRows={selectedRows}
+              selectedCount={selectedCount}
+              isAllSelected={isAllSelected}
+              showRowActionsMenu={showRowActionsMenu}
+              onSelectRow={selectRow}
+              onSelectFile={selectFile}
+              onSelectAll={handleSelectAll}
+              onRowAction={handleRowAction}
+              onFileAction={handleFileAction}
+              onToggleRowActionsMenu={setRowActionsMenu}
+              onToggleFileActionsMenu={setRowActionsMenu}
+              rowActionsMenuRef={rowActionsMenuRef.ref}
+              onNavigateToFolder={navigateToFolder}
+              getSubfolders={getSubfolders}
+            />
+          )
         ) : viewMode === 'grid' ? (
-          <FoldersGrid
-            folders={finalFilteredFolders}
-            selectedRows={selectedRows}
-            showRowActionsMenu={showRowActionsMenu}
-            onSelectRow={selectRow}
-            onRowAction={handleRowAction}
-            onToggleRowActionsMenu={setRowActionsMenu}
-            rowActionsMenuRef={rowActionsMenuRef.ref}
-            onNavigateToFolder={navigateToFolder}
-            getSubfolders={getSubfolders}
-          />
+          showFilesDirectly ? (
+            <div className="bg-white overflow-visible p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {currentFolderFiles.map((file) => (
+                  <div
+                    key={file.documentId}
+                    className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    onClick={() => selectFile(file.documentId)}
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-sm text-center truncate w-full">{file.originalName}</span>
+                    {file.fileSize && (
+                      <span className="text-xs text-gray-400 mt-1">
+                        {(file.fileSize / 1024).toFixed(1)} KB
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <FoldersGrid
+              folders={finalFilteredFolders}
+              selectedRows={selectedRows}
+              showRowActionsMenu={showRowActionsMenu}
+              onSelectRow={selectRow}
+              onRowAction={handleRowAction}
+              onToggleRowActionsMenu={setRowActionsMenu}
+              rowActionsMenuRef={rowActionsMenuRef.ref}
+              onNavigateToFolder={navigateToFolder}
+              getSubfolders={getSubfolders}
+            />
+          )
         ) : (
-          <FoldersAccordion
-            folders={finalFilteredFolders}
-            selectedRows={selectedRows}
-            showRowActionsMenu={showRowActionsMenu}
-            onSelectRow={selectRow}
-            onAction={handleRowAction}
-            onToggleRowActionsMenu={setRowActionsMenu}
-            onNavigateToFolder={navigateToFolder}
-            getSubfolders={getSubfolders}
-          />
+          showFilesDirectly ? (
+            <div className="bg-white overflow-visible">
+              <div className="p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Archivos ({currentFolderFiles.length})</h3>
+                <div className="space-y-2">
+                  {currentFolderFiles.map((file) => (
+                    <div
+                      key={file.documentId}
+                      className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
+                        selectedRows.has(file.documentId) ? 'bg-blue-50 border-blue-500' : 'border-gray-200'
+                      }`}
+                      onClick={() => selectFile(file.documentId)}
+                    >
+                      <Checkbox
+                        checked={selectedRows.has(file.documentId)}
+                        onChange={() => selectFile(file.documentId)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <svg className="w-8 h-8 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{file.originalName}</p>
+                        <p className="text-xs text-gray-500">
+                          {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)} KB` : ''}{file.createdAt ? ` • ${new Date(file.createdAt).toLocaleDateString()}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <FoldersAccordion
+              folders={finalFilteredFolders}
+              selectedRows={selectedRows}
+              showRowActionsMenu={showRowActionsMenu}
+              onSelectRow={selectRow}
+              onAction={handleRowAction}
+              onToggleRowActionsMenu={setRowActionsMenu}
+              onNavigateToFolder={navigateToFolder}
+              getSubfolders={getSubfolders}
+            />
+          )
         )}
       </div>
 
