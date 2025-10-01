@@ -40,18 +40,17 @@ export const FileRow: React.FC<FileRowProps> = ({
   };
 
   const handleDoubleClick = (): void => {
-    // TODO: Implement file preview or download
-    console.log('File double-clicked:', file.originalName);
+    onAction(file.documentId, 'view');
   };
 
   const rowClassName = `px-6 py-4 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''} ${!isLastRow ? 'border-b border-gray-200' : ''}`;
 
   return (
-    <li className={rowClassName} onDoubleClick={handleDoubleClick}>
+    <li className={rowClassName}>
       <div className="flex items-center w-full">
         {/* Carpeta Column - limited width */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center">
+          <div className="flex items-center cursor-pointer" onDoubleClick={handleDoubleClick}>
             {/* Checkbox - always aligned to the left */}
             <div className="w-6 flex-shrink-0 mr-2">
               <Checkbox
