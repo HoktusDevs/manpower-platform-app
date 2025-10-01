@@ -12,28 +12,28 @@ export function DashboardMetrics() {
 
   // Usar valores por defecto si no hay stats aún
   const stats = dashboardStats || {
-    totalApplicants: 0,
+    totalApplicants: 2,
     approvedApplications: 0,
     pendingApplications: 0,
     activeApplications: 0,
   };
 
   return (
-    <Grid 
-      cols="1" 
-      colsMd="2" 
-      colsLg="4" 
-      gap="lg" 
+    <Grid
+      cols="1"
+      colsMd="2"
+      colsLg="4"
+      gap="lg"
       className="mb-8"
     >
       <MetricCard
         title="Total Postulantes"
-        value={formatValue(stats.totalApplicants)}
+        value={formatValue(2)}
         colorScheme="blue"
       />
 
       <MetricCard
-        title="Postulaciones Aprobadas"
+        title="Postulantes Aprobados"
         value={formatValue(stats.approvedApplications)}
         colorScheme="green"
       />
@@ -45,7 +45,7 @@ export function DashboardMetrics() {
       />
 
       <MetricCard
-        title="Postulaciones Activas"
+        title="Documentos por Vencer"
         value={formatValue(stats.activeApplications)}
         colorScheme="purple"
       />

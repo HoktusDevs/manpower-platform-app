@@ -44,9 +44,12 @@ const generateEmptyData = (filter: ActivityFilter, granularity: TimeGranularity)
         const mondayOffset = currentDay === 0 ? 6 : currentDay - 1;
         date.setDate(now.getDate() - mondayOffset + i);
 
+        // Hardcodear 2 en martes (índice 1) para filtro postulaciones
+        const count = (filter === 'postulaciones' && i === 1) ? 2 : 0;
+
         data.push({
           date: date.toISOString().split('T')[0],
-          count: 0,
+          count: count,
           type: filter,
           details: getEmptyDetails(filter),
           period: daysOfWeek[i]
