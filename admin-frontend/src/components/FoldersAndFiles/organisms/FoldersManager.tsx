@@ -193,17 +193,6 @@ export const FoldersManager: React.FC = () => {
   const showFilesDirectly = insideFolderWithFiles || filteringByFiles;
   const filesToShow = filteringByFiles ? allFiles : currentFolderFiles;
 
-  console.log('🔍 Debug - showFilesDirectly:', {
-    showFilesDirectly,
-    filteringByFiles,
-    insideFolderWithFiles,
-    finalFilteredFoldersLength: finalFilteredFolders.length,
-    currentFolderFilesLength: currentFolderFiles.length,
-    allFilesLength: allFiles.length,
-    currentFolder: currentFolder?.name,
-    currentFilterType: currentFilters.type
-  });
-
   const {
     selectedRows,
     selectedCount,
@@ -779,7 +768,6 @@ export const FoldersManager: React.FC = () => {
         onUploadSuccess={() => {
           // Refresh folders to show new files
           refreshFolders();
-          console.log('Files uploaded successfully!');
         }}
       />
 

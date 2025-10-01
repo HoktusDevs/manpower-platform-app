@@ -54,8 +54,28 @@ export const useFileUpload = (): UseFileUploadReturn => {
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        let errorMessage = 'Error al subir el archivo';
+
+        // Handle specific HTTP errors
+        if (response.status === 413) {
+          errorMessage = 'Archivo demasiado grande. El servidor rechazó la carga.';
+        } else if (response.status === 400) {
+          errorMessage = 'Solicitud inválida. Verifica el formato del archivo.';
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage = 'No autorizado. Verifica tus permisos.';
+        } else if (response.status === 500) {
+          errorMessage = 'Error del servidor. Inténtalo más tarde.';
+        } else {
+          // Try to get error message from response
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || `Error HTTP: ${response.status}`;
+          } catch {
+            errorMessage = `Error HTTP: ${response.status}`;
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -68,7 +88,18 @@ export const useFileUpload = (): UseFileUploadReturn => {
 
     } catch (error) {
       console.error('Upload error for file:', file.name, error);
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+
+      // Handle network errors and other exceptions
+      let errorMessage = 'Error desconocido';
+
+      if (error instanceof Error) {
+        // Check if it's a network error (CORS, connection failed, etc.)
+        if (error.message === 'Failed to fetch') {
+          errorMessage = 'Error de red. Verifica tu conexión o configuración de CORS.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
 
       // Update progress to error
       setProgress(prev => prev.map((p, i) =>

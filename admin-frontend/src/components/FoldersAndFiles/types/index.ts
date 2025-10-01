@@ -117,6 +117,7 @@ export interface FolderRowProps {
   documentCount?: number;
   isExpanded?: boolean;
   indentLevel?: number;
+  menuRef?: React.RefObject<HTMLDivElement | null>;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;

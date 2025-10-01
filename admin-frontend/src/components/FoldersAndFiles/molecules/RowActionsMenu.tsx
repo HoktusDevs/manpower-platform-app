@@ -6,7 +6,8 @@ interface RowActionsMenuProps {
   show: boolean;
   folderId: string;
   onAction: (folderId: string, action: FolderAction) => void;
-  buttonRef?: React.RefObject<HTMLButtonElement>;
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
+  menuRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -19,20 +20,20 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({
   show,
   folderId,
   onAction,
-  buttonRef
+  buttonRef,
+  menuRef
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const menuRef = useRef<HTMLDivElement>(null);
+  const internalMenuRef = useRef<HTMLDivElement>(null);
+  const actualMenuRef = menuRef || internalMenuRef;
 
   useEffect(() => {
     if (show && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
 
-      console.log('Button rect:', rect);
-
       setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 192 // 192px = w-48
+        top: rect.bottom + 4, // No need for scrollY with fixed positioning
+        left: rect.right - 192 // 192px = w-48, no need for scrollX with fixed positioning
       });
     }
   }, [show, buttonRef]);
@@ -45,8 +46,8 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({
 
   const menuContent = (
     <div
-      ref={menuRef}
-      className="absolute w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"
+      ref={actualMenuRef}
+      className="fixed w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`

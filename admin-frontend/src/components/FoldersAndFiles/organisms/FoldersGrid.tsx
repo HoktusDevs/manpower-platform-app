@@ -70,23 +70,20 @@ export const FoldersGrid: React.FC<FoldersGridProps> = ({
           return (
             <div key={folder.id} className="space-y-2">
               {/* Folder Card */}
-              <div 
-                ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
-              >
-                <FolderGridItem
-                  folder={folder}
-                  isSelected={selectedRows.has(folder.id)}
-                  showActionsMenu={showRowActionsMenu === folder.id}
-                  subfolderCount={getSubfolders(folder.id).length}
-                  documentCount={folder.files?.length || 0}
-                  isExpanded={isExpanded}
-                  onSelect={onSelectRow}
-                  onAction={onRowAction}
-                  onToggleActionsMenu={onToggleRowActionsMenu}
-                  onToggleExpanded={handleToggleExpanded}
-                  onNavigateToFolder={onNavigateToFolder}
-                />
-              </div>
+              <FolderGridItem
+                folder={folder}
+                isSelected={selectedRows.has(folder.id)}
+                showActionsMenu={showRowActionsMenu === folder.id}
+                subfolderCount={getSubfolders(folder.id).length}
+                documentCount={folder.files?.length || 0}
+                isExpanded={isExpanded}
+                menuRef={showRowActionsMenu === folder.id ? rowActionsMenuRef : undefined}
+                onSelect={onSelectRow}
+                onAction={onRowAction}
+                onToggleActionsMenu={onToggleRowActionsMenu}
+                onToggleExpanded={handleToggleExpanded}
+                onNavigateToFolder={onNavigateToFolder}
+              />
 
               {/* Expanded Files */}
               {isExpanded && hasFiles && (

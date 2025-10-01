@@ -10,6 +10,9 @@ interface FileUploadModalProps {
   onUploadSuccess?: () => void;
 }
 
+// Maximum file size: 10MB (configurable based on your API limits)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
 export const FileUploadModal: React.FC<FileUploadModalProps> = ({
   isOpen,
   onClose,
@@ -20,6 +23,7 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadFiles, uploading, progress, errors } = useFileUpload();
 
@@ -59,7 +63,31 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
   };
 
   const handleFiles = (files: File[]) => {
-    setSelectedFiles(prev => [...prev, ...files]);
+    // Clear previous validation errors
+    setValidationErrors([]);
+
+    // Validate file sizes
+    const validFiles: File[] = [];
+    const newErrors: string[] = [];
+
+    files.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
+        newErrors.push(`${file.name}: Archivo demasiado grande (${sizeMB}MB). Máximo permitido: ${maxSizeMB}MB`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    // Update state
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+
+    if (newErrors.length > 0) {
+      setValidationErrors(newErrors);
+    }
   };
 
   const removeFile = (index: number) => {
@@ -94,6 +122,7 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
   const handleClose = () => {
     setSelectedFiles([]);
+    setValidationErrors([]);
     setIsDragging(false);
     onClose();
   };
@@ -171,6 +200,10 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
                 : 'Arrastra y suelta archivos aquí, o haz clic para seleccionar'}
             </p>
 
+            <p className="mt-2 text-xs text-gray-500">
+              Tamaño máximo por archivo: {(MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)}MB
+            </p>
+
             <button
               type="button"
               className="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -225,7 +258,19 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
             </div>
           )}
 
-          {/* Error Messages */}
+          {/* Validation Error Messages */}
+          {validationErrors.length > 0 && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <h4 className="text-sm font-medium text-yellow-900 mb-2">Archivos rechazados:</h4>
+              <ul className="text-xs text-yellow-700 space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Upload Error Messages */}
           {errors.length > 0 && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <h4 className="text-sm font-medium text-red-900 mb-2">Errores durante la carga:</h4>

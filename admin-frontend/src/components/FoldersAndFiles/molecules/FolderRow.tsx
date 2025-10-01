@@ -19,6 +19,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   documentCount = 0,
   isExpanded = false,
   indentLevel = 0,
+  menuRef,
   onSelect,
   onAction,
   onToggleActionsMenu,
@@ -209,6 +210,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
                 folderId={folder.id}
                 onAction={onAction}
                 buttonRef={buttonRef}
+                menuRef={menuRef}
               />
             </div>
           </div>

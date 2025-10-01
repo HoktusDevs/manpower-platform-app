@@ -70,25 +70,22 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
 
     // Main folder row
     elements.push(
-      <div
+      <FolderRow
         key={folder.id}
-        ref={showRowActionsMenu === folder.id ? rowActionsMenuRef : null}
-      >
-        <FolderRow
-          folder={folder}
-          isSelected={selectedRows.has(folder.id)}
-          showActionsMenu={showRowActionsMenu === folder.id}
-          isExpanded={isExpanded}
-          subfolderCount={subfolders.length}
-          documentCount={folder.files?.length || 0}
-          indentLevel={level}
-          onSelect={onSelectRow}
-          onAction={onRowAction}
-          onToggleActionsMenu={onToggleRowActionsMenu}
-          onToggleExpanded={handleToggleExpanded}
-          onNavigateToFolder={onNavigateToFolder}
-        />
-      </div>
+        folder={folder}
+        isSelected={selectedRows.has(folder.id)}
+        showActionsMenu={showRowActionsMenu === folder.id}
+        isExpanded={isExpanded}
+        subfolderCount={subfolders.length}
+        documentCount={folder.files?.length || 0}
+        indentLevel={level}
+        menuRef={showRowActionsMenu === folder.id ? rowActionsMenuRef : undefined}
+        onSelect={onSelectRow}
+        onAction={onRowAction}
+        onToggleActionsMenu={onToggleRowActionsMenu}
+        onToggleExpanded={handleToggleExpanded}
+        onNavigateToFolder={onNavigateToFolder}
+      />
     );
 
     // Expanded subfolders
@@ -101,7 +98,7 @@ export const FoldersTable: React.FC<FoldersTableProps> = ({
     // Expanded files
     if (isExpanded && folder.files && folder.files.length > 0) {
       folder.files.forEach((file, index) => {
-        const isLastFile = index === folder.files.length - 1;
+        const isLastFile = index === (folder.files?.length ?? 0) - 1;
         elements.push(
           <div
             key={`file-${file.documentId}`}

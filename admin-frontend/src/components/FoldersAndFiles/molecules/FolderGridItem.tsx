@@ -1,3 +1,4 @@
+import React from 'react';
 import { Checkbox, FolderIcon, TypeBadge, RowActionsButton } from '../atoms';
 import { RowActionsMenu } from './RowActionsMenu';
 import type { FolderRow, FolderAction } from '../types';
@@ -9,6 +10,7 @@ interface FolderGridItemProps {
   subfolderCount: number;
   documentCount?: number;
   isExpanded?: boolean;
+  menuRef?: React.RefObject<HTMLDivElement | null>;
   onSelect: (folderId: string) => void;
   onAction: (folderId: string, action: FolderAction) => void;
   onToggleActionsMenu: (folderId: string | null) => void;
@@ -28,12 +30,15 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
   subfolderCount,
   documentCount = 0,
   isExpanded = false,
+  menuRef,
   onSelect,
   onAction,
   onToggleActionsMenu,
   onToggleExpanded,
   onNavigateToFolder
 }) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
   const handleSelect = (): void => {
     onSelect(folder.id);
   };
@@ -74,11 +79,13 @@ export const FolderGridItem: React.FC<FolderGridItemProps> = ({
       {/* Actions Menu Button */}
       <div className="absolute top-2 right-2 z-10">
         <div className="relative">
-          <RowActionsButton onClick={handleToggleActionsMenu} />
+          <RowActionsButton ref={buttonRef} onClick={handleToggleActionsMenu} />
           <RowActionsMenu
             show={showActionsMenu}
             folderId={folder.id}
             onAction={onAction}
+            buttonRef={buttonRef}
+            menuRef={menuRef}
           />
         </div>
       </div>
