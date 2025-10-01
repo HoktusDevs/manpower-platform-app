@@ -50,7 +50,6 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
               <h3 className="font-medium">
                 {selectedConv?.participantName || 'WhatsApp Business'}
               </h3>
-              <p className="text-sm text-green-100">En línea</p>
             </div>
           </div>
         </div>

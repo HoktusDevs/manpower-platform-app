@@ -300,7 +300,7 @@ export const TestWhatsappPage = () => {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Test WhatsApp</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Mensaje Masivo</h1>
           <p className="text-gray-600">
             Prueba la funcionalidad de envío de mensajes por WhatsApp usando los endpoints reales
           </p>
