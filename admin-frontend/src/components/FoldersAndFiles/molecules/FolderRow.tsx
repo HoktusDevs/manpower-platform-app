@@ -1,3 +1,4 @@
+import React from 'react';
 import { Checkbox, FolderIcon, TypeBadge, RowActionsButton } from '../atoms';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useFoldersContext } from '../context/FoldersContext';
@@ -24,6 +25,8 @@ export const FolderRow: React.FC<FolderRowProps> = ({
   onToggleExpanded,
   onNavigateToFolder
 }) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
   // Get optimistic states from context
   const { optimistic, folders } = useFoldersContext();
 
@@ -196,6 +199,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
             {/* Row Actions */}
             <div className="relative">
               <RowActionsButton
+                ref={buttonRef}
                 onClick={handleToggleActionsMenu}
                 disabled={isInOptimisticState}
               />
@@ -204,6 +208,7 @@ export const FolderRow: React.FC<FolderRowProps> = ({
                 show={showActionsMenu && !isInOptimisticState}
                 folderId={folder.id}
                 onAction={onAction}
+                buttonRef={buttonRef}
               />
             </div>
           </div>

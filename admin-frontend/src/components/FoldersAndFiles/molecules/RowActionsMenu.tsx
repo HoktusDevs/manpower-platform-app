@@ -21,15 +21,18 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({
   onAction,
   buttonRef
 }) => {
-  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (show && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+
+      console.log('Button rect:', rect);
+
       setPosition({
-        top: rect.bottom + window.scrollY + 8,
-        right: window.innerWidth - rect.right + window.scrollX
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.right + window.scrollX - 192 // 192px = w-48
       });
     }
   }, [show, buttonRef]);
@@ -43,10 +46,10 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({
   const menuContent = (
     <div
       ref={menuRef}
-      className="fixed w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"
+      className="absolute w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"
       style={{
         top: `${position.top}px`,
-        right: `${position.right}px`
+        left: `${position.left}px`
       }}
     >
       <div className="py-1">
