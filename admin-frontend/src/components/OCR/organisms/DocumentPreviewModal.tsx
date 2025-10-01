@@ -182,11 +182,84 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   onClose,
   onManualDecision,
 }) => {
+  const [observationText, setObservationText] = useState('');
+  const [isUpdatingObservation, setIsUpdatingObservation] = useState(false);
+  const [hasObservationChanges, setHasObservationChanges] = useState(false);
+
+  // Inicializar el texto de observación cuando cambia el documento
+  useEffect(() => {
+    if (document?.observations && document.observations.length > 0) {
+      const firstObs = document.observations.find(obs => {
+        const observation = obs as { message?: string };
+        return !observation.message?.includes('Documento no cumple con los criterios de calidad');
+      });
+      if (firstObs) {
+        const observation = firstObs as { razon_interna?: string; razon?: string; message?: string };
+        const text = observation.razon_interna || observation.razon || observation.message || '';
+        setObservationText(text);
+        setHasObservationChanges(false);
+      }
+    } else {
+      setObservationText('');
+      setHasObservationChanges(false);
+    }
+  }, [document]);
+
   if (!isOpen || !document) return null;
 
   const handleManualDecision = (decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW' | 'PENDING') => {
     if (onManualDecision && document.id) {
       onManualDecision(document.id, decision);
+    }
+  };
+
+  const handleObservationChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setObservationText(e.target.value);
+    // Comparar con el texto original
+    const originalObs = document.observations?.find(obs => {
+      const observation = obs as { message?: string };
+      return !observation.message?.includes('Documento no cumple con los criterios de calidad');
+    });
+    if (originalObs) {
+      const observation = originalObs as { razon_interna?: string; razon?: string; message?: string };
+      const originalText = observation.razon_interna || observation.razon || observation.message || '';
+      setHasObservationChanges(e.target.value !== originalText);
+    } else {
+      setHasObservationChanges(e.target.value !== '');
+    }
+  };
+
+  const handleUpdateObservation = async () => {
+    if (!hasObservationChanges || !document.id) return;
+
+    setIsUpdatingObservation(true);
+    try {
+      const response = await fetch(`https://lp5u5gdahh.execute-api.us-east-1.amazonaws.com/dev/upload`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentId: document.id,
+          explanation: observationText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update observation');
+      }
+
+      // Esperar un poco para que se propague la actualización
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Resetear el estado de cambios
+      setHasObservationChanges(false);
+
+      console.log('✅ Observación actualizada exitosamente');
+    } catch (error) {
+      console.error('❌ Error actualizando observación:', error);
+    } finally {
+      setIsUpdatingObservation(false);
     }
   };
 
@@ -346,21 +419,33 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 <div>
                   <h4 className="text-md font-medium text-gray-900 mb-3">Observaciones</h4>
                   <div className="space-y-3">
-                    {document.observations
-                      .filter(obs => {
-                        const observation = obs as { message?: string };
-                        return !observation.message?.includes('Documento no cumple con los criterios de calidad');
-                      })
-                      .map((obs, index) => {
-                        const observation = obs as { razon_interna?: string; razon?: string; message?: string };
-                        return (
-                          <div key={index} className="mb-2">
-                            <p className="text-sm text-gray-700">
-                              {observation.razon_interna || observation.razon || observation.message}
-                            </p>
-                          </div>
-                        );
-                      })}
+                    <textarea
+                      value={observationText}
+                      onChange={handleObservationChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[80px]"
+                      placeholder="Ingrese observaciones..."
+                    />
+
+                    {/* Botón Actualizar Observación */}
+                    {hasObservationChanges && (
+                      <button
+                        onClick={handleUpdateObservation}
+                        disabled={isUpdatingObservation}
+                        className={`px-3 py-1 text-white text-xs rounded-md transition-colors flex items-center gap-2 ${
+                          isUpdatingObservation
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        {isUpdatingObservation && (
+                          <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        )}
+                        {isUpdatingObservation ? 'Actualizando...' : 'Actualizar observación'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
