@@ -65,38 +65,36 @@ export class ApplicationService {
             // Obtener datos del job para conseguir el folderId
             const jobData = await this.dynamoService.getJobData(jobId);
             if (jobData && jobData.folderId && userEmail) {
-              // Buscar la carpeta del cargo específico
-              const jobFolderId = await this.dynamoService.getJobFolderId(jobData.folderId, jobData.title, jobData.companyName, jobData.location);
-              
-              if (jobFolderId) {
-                const folderResult = await this.foldersServiceClient.createApplicantFolder(
-                  userId, // Enviar el userId del postulante para que folders-service busque su nombre
-                  jobFolderId, // Usar la carpeta del cargo específico
-                  jobData.createdBy, // Usar el createdBy del job (admin)
-                  applicationId,
-                  {
-                    applicantEmail: userEmail,
-                    jobTitle: jobData.title,
-                    companyName: jobData.companyName,
-                    location: jobData.location,
-                    appliedAt: new Date().toISOString(),
-                    applicationStatus: 'PENDING'
-                  }
-                );
+              // El folderId del job YA ES la carpeta del cargo (no necesita búsqueda adicional)
+              const jobFolderId = jobData.folderId;
 
-                if (folderResult.success) {
-                  console.log(`Carpeta del postulante creada exitosamente para userId: ${userId}`);
-                } else {
-                  console.warn(`Error creando carpeta del postulante: ${folderResult.message}`);
+              console.log(`📁 Creating applicant folder under job folder: ${jobFolderId} (${jobData.title})`);
+
+              const folderResult = await this.foldersServiceClient.createApplicantFolder(
+                userId, // Enviar el userId del postulante para que folders-service busque su nombre
+                jobFolderId, // Usar la carpeta del cargo directamente
+                jobData.createdBy, // Usar el createdBy del job (admin)
+                applicationId,
+                {
+                  applicantEmail: userEmail,
+                  jobTitle: jobData.title,
+                  companyName: jobData.companyName,
+                  location: jobData.location,
+                  appliedAt: new Date().toISOString(),
+                  applicationStatus: 'PENDING'
                 }
+              );
+
+              if (folderResult.success) {
+                console.log(`✅ Carpeta del postulante creada exitosamente para userId: ${userId}`);
               } else {
-                console.warn(`No se pudo encontrar la carpeta del cargo para el job ${jobId}`);
+                console.warn(`⚠️ Error creando carpeta del postulante: ${folderResult.message}`);
               }
             } else {
-              console.warn(`No se pudo crear carpeta del postulante: jobData=${!!jobData}, folderId=${jobData?.folderId}, userEmail=${userEmail}`);
+              console.warn(`⚠️ No se pudo crear carpeta del postulante: jobData=${!!jobData}, folderId=${jobData?.folderId}, userEmail=${userEmail}`);
             }
           } catch (folderError) {
-            console.error(`Error creando carpeta del postulante para job ${jobId}:`, folderError);
+            console.error(`❌ Error creando carpeta del postulante para job ${jobId}:`, folderError);
             // No fallar la aplicación por error en la carpeta
           }
 
