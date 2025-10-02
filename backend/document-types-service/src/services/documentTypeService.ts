@@ -188,7 +188,10 @@ export class DocumentTypeService {
       const createdTypes: any[] = [];
       const errors: string[] = [];
 
-      for (const documentName of input.documents) {
+      // Eliminar duplicados del input
+      const uniqueDocuments = [...new Set(input.documents)];
+
+      for (const documentName of uniqueDocuments) {
         try {
           // Check if document type already exists
           const existing = await this.dynamoService.findDocumentTypeByName(documentName);
@@ -223,7 +226,7 @@ export class DocumentTypeService {
 
       return {
         success: true,
-        message: `Processed ${input.documents.length} documents. Created ${createdTypes.filter(t => !t.wasExisting).length} new types, updated ${createdTypes.filter(t => t.wasExisting).length} existing types.`,
+        message: `Processed ${uniqueDocuments.length} unique documents. Created ${createdTypes.filter(t => !t.wasExisting).length} new types, updated ${createdTypes.filter(t => t.wasExisting).length} existing types.`,
         documentTypes: createdTypes,
       };
     } catch (error) {

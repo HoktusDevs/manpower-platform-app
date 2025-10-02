@@ -378,6 +378,10 @@ export const JobPostingsManagementPage: React.FC = () => {
             setShowCreateModal(false);
             setEditingJob(undefined);
             resetModalState();
+            // Pequeño delay para asegurar que React Query termine de refrescar
+            setTimeout(() => {
+              // Trigger re-render si es necesario
+            }, 100);
           }}
           context="jobs-management"
           editingJob={editingJob}

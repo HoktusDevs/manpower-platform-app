@@ -70,7 +70,7 @@ export class DocumentTypesServiceClient {
         };
       }
 
-      const result = await response.json();
+      const result = await response.json() as DocumentTypesResponse;
       return result;
     } catch (error) {
       console.error('Error calling document types service:', error);
@@ -101,7 +101,7 @@ export class DocumentTypesServiceClient {
         };
       }
 
-      const result = await response.json();
+      const result = await response.json() as DocumentTypesResponse;
       return result;
     } catch (error) {
       console.error('Error calling document types service:', error);
@@ -132,7 +132,7 @@ export class DocumentTypesServiceClient {
         };
       }
 
-      const result = await response.json();
+      const result = await response.json() as DocumentTypesResponse;
       return result;
     } catch (error) {
       console.error('Error calling document types service:', error);
@@ -167,13 +167,50 @@ export class DocumentTypesServiceClient {
         };
       }
 
-      const result = await response.json();
+      const result = await response.json() as { existing: string[]; new: string[] };
       return result;
     } catch (error) {
       console.error('Error checking existing document types:', error);
       return {
         existing: [],
         new: documentNames
+      };
+    }
+  }
+
+  /**
+   * Increment usage count for existing document types
+   */
+  async incrementUsageForDocuments(documentNames: string[]): Promise<DocumentTypesResponse> {
+    try {
+      // Use the createFromJobDocuments endpoint which handles both new and existing documents
+      // For existing documents, it will increment the usage count
+      const response = await fetch(`${this.baseUrl}/document-types/from-job`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documents: documentNames,
+          createdBy: 'system' // System-triggered usage increment
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Document Types Service error:', response.status, response.statusText);
+        return {
+          success: false,
+          message: 'Failed to increment usage count',
+        };
+      }
+
+      const result = await response.json() as DocumentTypesResponse;
+      return result;
+    } catch (error) {
+      console.error('Error incrementing usage count:', error);
+      return {
+        success: false,
+        message: 'Failed to increment usage count',
       };
     }
   }

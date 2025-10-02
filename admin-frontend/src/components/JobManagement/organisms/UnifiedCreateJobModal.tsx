@@ -9,6 +9,7 @@ import { CompanySelector } from '../../CompanySelector';
 import { DocumentTypeAutocomplete } from '../../DocumentTypeAutocomplete';
 import { useCreateJobWithFolder, useCreateStandaloneFolder } from '../../../services/unifiedJobFolderService';
 import { useFoldersContext } from '../../FoldersAndFiles';
+import { useUpdateJob } from '../../../hooks/useUnifiedJobs';
 import type { JobPosting } from '../../../services/jobsService';
 
 interface UnifiedCreateJobModalProps {
@@ -49,6 +50,33 @@ interface JobFieldSpec {
   required?: boolean;
   options?: string[];
 }
+
+// Mapeo de valores del backend (inglés) a valores del frontend (español)
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  'FULL_TIME': 'Tiempo Completo',
+  'PART_TIME': 'Medio Tiempo',
+  'CONTRACT': 'Contrato',
+  'FREELANCE': 'Freelance',
+  'INTERNSHIP': 'Práctica',
+  'TEMPORARY': 'Temporal'
+};
+
+const EXPERIENCE_LEVEL_MAP: Record<string, string> = {
+  'ENTRY_LEVEL': 'Junior',
+  'MID_LEVEL': 'Semi-Senior',
+  'SENIOR_LEVEL': 'Senior',
+  'EXECUTIVE': 'Ejecutivo',
+  'INTERNSHIP': 'Práctica'
+};
+
+// Mapeo inverso: español a inglés para enviar al backend
+const EMPLOYMENT_TYPE_REVERSE_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(EMPLOYMENT_TYPE_MAP).map(([k, v]) => [v, k])
+);
+
+const EXPERIENCE_LEVEL_REVERSE_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(EXPERIENCE_LEVEL_MAP).map(([k, v]) => [v, k])
+);
 
 const AVAILABLE_JOB_FIELDS: JobFieldSpec[] = [
   {
@@ -110,6 +138,7 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   const isEditMode = !!editingJob;
   const { showSuccess, showError } = useToast();
   const createJobWithFolderMutation = useCreateJobWithFolder();
+  const updateJobMutation = useUpdateJob();
   const createStandaloneFolderMutation = useCreateStandaloneFolder();
   const { folders } = useFoldersContext();
 
@@ -156,6 +185,81 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
         status: editingJob.status || 'PUBLISHED'
       });
       setRequiredDocuments(editingJob.requiredDocuments || []);
+
+      // Detectar campos adicionales configurados y marcarlos como seleccionados
+      const detectedFields = new Set<string>();
+      const detectedFieldValues: Record<string, unknown> = {};
+
+      // Verificar ubicación detallada (si location tiene formato especial con paréntesis)
+      if (editingJob.location && editingJob.location.includes('(')) {
+        detectedFields.add('location');
+        // Extraer tipo y dirección del formato "dirección (tipo)"
+        const match = editingJob.location.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match) {
+          detectedFieldValues.location = {
+            address: match[1].trim(),
+            type: match[2].trim()
+          };
+        }
+      }
+
+      // Marcar campos configurados basándonos en si tienen valores
+      // Estos campos siempre están en el job, así que los marcamos si se configuraron explícitamente
+      // Para determinar si fueron configurados, asumimos que si están presentes, fueron seleccionados
+
+      // Tipo de empleo - siempre se considera configurado si existe
+      if (editingJob.employmentType) {
+        detectedFields.add('employment_type');
+        // Mapear valor del backend (inglés) a español para el selector
+        detectedFieldValues.employment_type = EMPLOYMENT_TYPE_MAP[editingJob.employmentType] || editingJob.employmentType;
+      }
+
+      // Nivel de experiencia - siempre se considera configurado si existe
+      if (editingJob.experienceLevel) {
+        detectedFields.add('experience');
+        // Mapear valor del backend (inglés) a español para el selector
+        detectedFieldValues.experience = EXPERIENCE_LEVEL_MAP[editingJob.experienceLevel] || editingJob.experienceLevel;
+      }
+
+      // Rango salarial - parsear si viene como string "min - max"
+      if (editingJob.salary && editingJob.salary.trim() !== '') {
+        detectedFields.add('salary');
+        // Intentar parsear si viene como "50000 - 80000"
+        const salaryMatch = editingJob.salary.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (salaryMatch) {
+          detectedFieldValues.salary = {
+            min: salaryMatch[1],
+            max: salaryMatch[2]
+          };
+        } else {
+          // Si no matchea el patrón, guardar como string
+          detectedFieldValues.salary = editingJob.salary;
+        }
+      }
+
+      // Horario de trabajo - parsear si viene como "Lunes, Martes | 9:00 - 18:00"
+      if (editingJob.schedule && editingJob.schedule.trim() !== '') {
+        detectedFields.add('schedule');
+        // Intentar parsear si viene como "días | horario"
+        const scheduleMatch = editingJob.schedule.match(/^(.+?)\s*\|\s*(.+)$/);
+        if (scheduleMatch) {
+          const days = scheduleMatch[1].split(',').map(d => d.trim());
+          const schedule = scheduleMatch[2].trim();
+          detectedFieldValues.schedule = { days, schedule };
+        } else {
+          // Si no matchea el patrón, guardar como string
+          detectedFieldValues.schedule = editingJob.schedule;
+        }
+      }
+
+      // Beneficios adicionales
+      if (editingJob.benefits && editingJob.benefits.trim() !== '') {
+        detectedFields.add('benefits');
+        detectedFieldValues.benefits = editingJob.benefits;
+      }
+
+      setSelectedFields(detectedFields);
+      setFieldValues(detectedFieldValues);
     } else if (isOpen && preselectedCompany) {
       setJobData(prev => ({ ...prev, companyName: preselectedCompany }));
     }
@@ -228,9 +332,12 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
       const newDocuments = value
         .split(',')
         .map(doc => doc.trim())
-        .filter(doc => doc.length > 0);
+        .filter(doc => doc.length > 0)
+        .filter(doc => !requiredDocuments.includes(doc)); // Evitar duplicados
 
-      setRequiredDocuments(prev => [...prev, ...newDocuments]);
+      if (newDocuments.length > 0) {
+        setRequiredDocuments(prev => [...prev, ...newDocuments]);
+      }
       setDocumentInput('');
     }
   };
@@ -244,7 +351,12 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   const handleDocumentKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && documentInput.trim()) {
       e.preventDefault();
-      setRequiredDocuments(prev => [...prev, documentInput.trim()]);
+      const trimmedInput = documentInput.trim();
+
+      // Evitar duplicados
+      if (!requiredDocuments.includes(trimmedInput)) {
+        setRequiredDocuments(prev => [...prev, trimmedInput]);
+      }
       setDocumentInput('');
     }
   };
@@ -258,9 +370,9 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
     }
   };
 
-  // Handle job creation
+  // Handle job creation or update
   const handleCreateJob = async () => {
-    if (createJobWithFolderMutation.isPending) {
+    if (createJobWithFolderMutation.isPending || updateJobMutation.isPending) {
       return;
     }
 
@@ -279,6 +391,84 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
         }
       }
 
+      // Mapear employmentType y experienceLevel de español a inglés (si vienen de fieldValues)
+      let finalEmploymentType = jobData.employmentType;
+      if (fieldValues.employment_type && typeof fieldValues.employment_type === 'string') {
+        finalEmploymentType = (EMPLOYMENT_TYPE_REVERSE_MAP[fieldValues.employment_type] || fieldValues.employment_type) as JobPosting['employmentType'];
+      }
+
+      let finalExperienceLevel = jobData.experienceLevel;
+      if (fieldValues.experience && typeof fieldValues.experience === 'string') {
+        finalExperienceLevel = (EXPERIENCE_LEVEL_REVERSE_MAP[fieldValues.experience] || fieldValues.experience) as JobPosting['experienceLevel'];
+      }
+
+      // Procesar salary (puede ser objeto {min, max} o string)
+      let finalSalary = jobData.salary;
+      if (fieldValues.salary) {
+        if (typeof fieldValues.salary === 'object' && 'min' in fieldValues.salary && 'max' in fieldValues.salary) {
+          const salaryObj = fieldValues.salary as { min?: string; max?: string };
+          finalSalary = `${salaryObj.min || ''} - ${salaryObj.max || ''}`.trim();
+        } else if (typeof fieldValues.salary === 'string') {
+          finalSalary = fieldValues.salary;
+        }
+      }
+
+      // Procesar schedule (puede ser objeto {days, schedule} o string)
+      let finalSchedule = jobData.schedule;
+      if (fieldValues.schedule) {
+        if (typeof fieldValues.schedule === 'object' && 'days' in fieldValues.schedule) {
+          const scheduleObj = fieldValues.schedule as { days?: string[]; schedule?: string };
+          const daysStr = scheduleObj.days?.join(', ') || '';
+          const timeStr = scheduleObj.schedule || '';
+          finalSchedule = `${daysStr}${daysStr && timeStr ? ' | ' : ''}${timeStr}`.trim();
+        } else if (typeof fieldValues.schedule === 'string') {
+          finalSchedule = fieldValues.schedule;
+        }
+      }
+
+      // Benefits permanece simple
+      const finalBenefits = (fieldValues.benefits && typeof fieldValues.benefits === 'string') ? fieldValues.benefits : jobData.benefits;
+
+      // Si estamos en modo edición, actualizar el job
+      if (isEditMode && editingJob) {
+        const updateInput = {
+          title: jobData.title.trim(),
+          description: jobData.description.trim(),
+          companyName: jobData.companyName.trim(),
+          requirements: jobData.requirements.trim(),
+          salary: finalSalary,
+          location: finalLocation || 'Por definir',
+          employmentType: finalEmploymentType,
+          experienceLevel: finalExperienceLevel,
+          benefits: finalBenefits,
+          schedule: finalSchedule,
+          expiresAt: jobData.expiresAt ? new Date(jobData.expiresAt).toISOString() : undefined,
+          requiredDocuments: requiredDocuments,
+          status: jobData.status,
+        };
+
+        console.log('🔄 Actualizando job:', editingJob.jobId, updateInput);
+
+        const updatedJob = await updateJobMutation.mutateAsync({
+          jobId: editingJob.jobId,
+          input: updateInput
+        });
+
+        showSuccess(
+          'Job actualizado',
+          `El empleo "${jobData.title}" se actualizó exitosamente`
+        );
+
+        // Esperar un momento para que React Query invalide y refresque las queries
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        onSuccess?.();
+        onClose();
+        resetModalState();
+        return;
+      }
+
+      // Modo creación (código original)
       // Determinar parentFolderId
       let parentFolderId: string | undefined;
 
@@ -339,12 +529,12 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
           description: jobData.description.trim(),
           companyName: jobData.companyName.trim(),
           requirements: jobData.requirements.trim(),
-          salary: jobData.salary,
+          salary: finalSalary,
           location: finalLocation || 'Por definir',
-          employmentType: jobData.employmentType,
-          experienceLevel: jobData.experienceLevel,
-          benefits: jobData.benefits,
-          schedule: jobData.schedule,
+          employmentType: finalEmploymentType,
+          experienceLevel: finalExperienceLevel,
+          benefits: finalBenefits,
+          schedule: finalSchedule,
           expiresAt: jobData.expiresAt ? new Date(jobData.expiresAt).toISOString() : undefined,
           requiredDocuments: requiredDocuments,
         },
@@ -368,10 +558,10 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
         showError('Error al crear empleo', result.message);
       }
     } catch (error) {
-      console.error('Error creating job with folder:', error);
+      console.error('Error creating/updating job:', error);
       showError(
-        'Error al crear empleo',
-        error instanceof Error ? error.message : 'No se pudo crear el empleo y su carpeta'
+        isEditMode ? 'Error al actualizar empleo' : 'Error al crear empleo',
+        error instanceof Error ? error.message : `No se pudo ${isEditMode ? 'actualizar' : 'crear'} el empleo`
       );
     }
   };
@@ -805,25 +995,25 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
                 onClose();
                 resetModalState();
               }}
-              disabled={createJobWithFolderMutation.isPending}
+              disabled={createJobWithFolderMutation.isPending || updateJobMutation.isPending}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               onClick={handleCreateJob}
-              disabled={createJobWithFolderMutation.isPending}
+              disabled={createJobWithFolderMutation.isPending || updateJobMutation.isPending}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {createJobWithFolderMutation.isPending && (
+              {(createJobWithFolderMutation.isPending || updateJobMutation.isPending) && (
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               )}
-              {createJobWithFolderMutation.isPending
+              {(createJobWithFolderMutation.isPending || updateJobMutation.isPending)
                 ? (isEditMode ? 'Actualizando...' : 'Creando...')
-                : (isEditMode ? 'Actualizar Empleo y Carpeta' : 'Crear Empleo y Carpeta')
+                : (isEditMode ? 'Actualizar Empleo' : 'Crear Empleo y Carpeta')
               }
             </button>
           </div>

@@ -69,8 +69,8 @@ export class JobService {
           const documentTypesPromise = this.documentTypesClient.checkExistingDocumentTypes(input.requiredDocuments);
           
           // Race between document types processing and timeout
-          const checkResult = await Promise.race([documentTypesPromise, timeoutPromise]);
-          
+          const checkResult = await Promise.race([documentTypesPromise, timeoutPromise]) as { existing: string[]; new: string[] };
+
           if (checkResult.new && checkResult.new.length > 0) {
             console.log(`Creating ${checkResult.new.length} new document types:`, checkResult.new);
             // Only create new document types
@@ -78,18 +78,23 @@ export class JobService {
               checkResult.new,
               userId
             );
-            
+
             if (documentTypesResult.success) {
               console.log('New document types created successfully:', documentTypesResult.message);
             } else {
               console.warn('Failed to create new document types:', documentTypesResult.message);
             }
           }
-          
+
           if (checkResult.existing && checkResult.existing.length > 0) {
             console.log(`Found ${checkResult.existing.length} existing document types:`, checkResult.existing);
-            // TODO: Increment usage count for existing types
-            // This could be implemented as a separate endpoint or batch operation
+            // Increment usage count for existing types
+            const incrementResult = await this.documentTypesClient.incrementUsageForDocuments(checkResult.existing);
+            if (incrementResult.success) {
+              console.log('Usage count incremented for existing document types');
+            } else {
+              console.warn('Failed to increment usage count:', incrementResult.message);
+            }
           }
           
         } catch (error) {
@@ -155,13 +160,16 @@ export class JobService {
         }
 
         const jobModel = new JobModel(existingJob);
-        try {
-          jobModel.updateStatus(updates.status);
-        } catch (error) {
-          return {
-            success: false,
-            message: (error as Error).message,
-          };
+        // Solo actualizar status si es diferente al actual
+        if (existingJob.status !== updates.status) {
+          try {
+            jobModel.updateStatus(updates.status);
+          } catch (error) {
+            return {
+              success: false,
+              message: (error as Error).message,
+            };
+          }
         }
       }
 
@@ -199,7 +207,13 @@ export class JobService {
           
           if (checkResult.existing.length > 0) {
             console.log(`Found ${checkResult.existing.length} existing document types:`, checkResult.existing);
-            // TODO: Increment usage count for existing types
+            // Increment usage count for existing types
+            const incrementResult = await this.documentTypesClient.incrementUsageForDocuments(checkResult.existing);
+            if (incrementResult.success) {
+              console.log('Usage count incremented for existing document types');
+            } else {
+              console.warn('Failed to increment usage count:', incrementResult.message);
+            }
           }
           
         } catch (error) {

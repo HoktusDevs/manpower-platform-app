@@ -90,29 +90,35 @@ export class DynamoService {
     const expressionAttributeValues: { [key: string]: any } = {
       ':isActive': true
     };
+    const expressionAttributeNames: { [key: string]: string } = {};
 
     // Search by name
     if (searchInput.query) {
       filterExpressions.push('contains(#name, :query)');
       expressionAttributeValues[':query'] = searchInput.query;
+      expressionAttributeNames['#name'] = 'name';
     }
 
     // Filter by category
     if (searchInput.category) {
       filterExpressions.push('#category = :category');
       expressionAttributeValues[':category'] = searchInput.category;
+      expressionAttributeNames['#category'] = 'category';
     }
 
-    const command = new ScanCommand({
+    const scanParams: any = {
       TableName: this.tableName,
       FilterExpression: filterExpressions.join(' AND '),
-      ExpressionAttributeNames: {
-        '#name': 'name',
-        '#category': 'category'
-      },
       ExpressionAttributeValues: expressionAttributeValues,
       Limit: searchInput.limit || 50
-    });
+    };
+
+    // Only include ExpressionAttributeNames if there are any
+    if (Object.keys(expressionAttributeNames).length > 0) {
+      scanParams.ExpressionAttributeNames = expressionAttributeNames;
+    }
+
+    const command = new ScanCommand(scanParams);
 
     const result = await this.client.send(command);
     let documentTypes = (result.Items as DocumentType[]) || [];
