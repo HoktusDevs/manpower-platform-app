@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../../core-ui/useToast';
+import { CustomSelect, type SelectOption } from '../../../core-ui/CustomSelect';
 import {
   validateJobPostingBasic,
   formatZodErrors
@@ -933,17 +934,20 @@ const renderFieldSpecification = (fieldSpec: JobFieldSpec, value: unknown, onCha
       );
 
     case 'select':
+      const selectOptions: SelectOption[] = [
+        ...(fieldSpec.options?.map(option => ({
+          value: option,
+          label: option
+        })) || [])
+      ];
+
       return (
-        <select
+        <CustomSelect
           value={(value as string) || ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Selecciona una opción</option>
-          {fieldSpec.options?.map(option => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+          options={selectOptions}
+          onChange={(newValue) => onChange(newValue)}
+          placeholder="Selecciona una opción"
+        />
       );
 
     case 'range':
@@ -973,20 +977,22 @@ const renderFieldSpecification = (fieldSpec: JobFieldSpec, value: unknown, onCha
       );
 
     case 'location':
+      const locationOptions: SelectOption[] = [
+        { value: 'remote', label: '100% Remoto' },
+        { value: 'office', label: 'Presencial' },
+        { value: 'hybrid', label: 'Híbrido' }
+      ];
+
       return (
         <div className="space-y-4">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Tipo de Ubicación</label>
-            <select
+            <CustomSelect
               value={(value as { type?: string; address?: string })?.type || ''}
-              onChange={(e) => onChange({ ...(value as object), type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Selecciona tipo</option>
-              <option value="remote">100% Remoto</option>
-              <option value="office">Presencial</option>
-              <option value="hybrid">Híbrido</option>
-            </select>
+              options={locationOptions}
+              onChange={(newValue) => onChange({ ...(value as object), type: newValue })}
+              placeholder="Selecciona tipo"
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Dirección Específica</label>
