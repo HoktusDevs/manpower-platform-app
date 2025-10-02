@@ -170,24 +170,6 @@ export const JobSearchPage = () => {
     });
   };
 
-  const handleDebugAllJobs = async () => {
-    try {
-      console.log('Debug: Obteniendo todos los jobs...');
-      const response = await jobsService.getAllJobs();
-      console.log('Debug: Respuesta de todos los jobs:', response);
-      
-      if (response.success && response.jobs) {
-        setJobPostings(response.jobs);
-        setError(null);
-        console.log(`Debug: Cargados ${response.jobs.length} jobs totales`);
-      } else {
-        setError(`Debug: Error obteniendo todos los jobs: ${response.message}`);
-      }
-    } catch (err) {
-      console.error('Debug: Error obteniendo todos los jobs:', err);
-      setError(`Debug: Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
-    }
-  };
 
   // Mostrar loading
   if (loading) {
@@ -235,20 +217,12 @@ export const JobSearchPage = () => {
                 </svg>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar empleos</h3>
                 <p className="text-gray-600 mb-4">{error}</p>
-                <div className="space-x-3">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  >
-                    Reintentar
-                  </button>
-                  <button
-                    onClick={handleDebugAllJobs}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Debug: Cargar Todos los Jobs
-                  </button>
-                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  Reintentar
+                </button>
               </div>
             </div>
           </div>
