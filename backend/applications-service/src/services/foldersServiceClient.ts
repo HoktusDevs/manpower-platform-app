@@ -89,6 +89,77 @@ export class FoldersServiceClient {
     }
   }
 
+  // Delete folder by application ID and job folder
+  async deleteFolderByApplicationId(applicationId: string, jobFolderId: string, adminUserId: string): Promise<FolderServiceResponse> {
+    try {
+      console.log(`FoldersServiceClient: Searching for applicant folder in job folder "${jobFolderId}" with applicationId "${applicationId}"`);
+
+      // Get all folders in the job folder
+      const listResponse = await fetch(`${this.baseUrl}/folders?parentId=${jobFolderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': adminUserId,
+        },
+      });
+
+      if (!listResponse.ok) {
+        console.warn('FoldersServiceClient: Could not list folders:', listResponse.statusText);
+        return {
+          success: true, // Non-blocking - folder may not exist
+          message: 'Could not list folders in job folder',
+        };
+      }
+
+      const listResult = await listResponse.json() as any;
+      const folders = listResult.folders || [];
+
+      // Find folder with matching applicationId in metadata
+      const targetFolder = folders.find((folder: any) =>
+        folder.metadata?.applicationId === applicationId
+      );
+
+      if (!targetFolder) {
+        console.warn(`FoldersServiceClient: No folder found for applicationId "${applicationId}"`);
+        return {
+          success: true, // Not an error - folder may not exist
+          message: 'No folder found for this application',
+        };
+      }
+
+      // Delete the folder
+      const folderId = targetFolder.folderId;
+      console.log(`FoldersServiceClient: Deleting folder ${folderId} (${targetFolder.name}) for applicationId "${applicationId}"`);
+
+      const deleteResponse = await fetch(`${this.baseUrl}/folders/${folderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': adminUserId,
+        },
+      });
+
+      const deleteResult = await deleteResponse.json() as any;
+
+      if (!deleteResponse.ok) {
+        console.error('FoldersServiceClient: Error deleting folder:', deleteResult);
+        return {
+          success: false,
+          message: deleteResult.message || 'Failed to delete application folder',
+        };
+      }
+
+      console.log(`FoldersServiceClient: Folder ${folderId} deleted successfully`);
+      return deleteResult;
+    } catch (error) {
+      console.error('FoldersServiceClient: Error deleting folder by applicationId:', error);
+      return {
+        success: false,
+        message: 'Network error when deleting application folder',
+      };
+    }
+  }
+
   // Health check for folders-service
   async checkFoldersServiceHealth(): Promise<boolean> {
     try {

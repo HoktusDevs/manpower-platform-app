@@ -208,7 +208,7 @@ export class ApplicationService {
     try {
       // Verificar que la aplicación existe
       const application = await this.dynamoService.getApplication(applicationId);
-      
+
       if (!application) {
         return {
           success: false,
@@ -224,14 +224,50 @@ export class ApplicationService {
         };
       }
 
-      // Eliminar aplicación
+      // Obtener datos del job para encontrar el admin userId (createdBy)
+      let adminUserId = userId; // Default to current user
+      try {
+        const jobData = await this.dynamoService.getJobData(application.jobId);
+        if (jobData && jobData.createdBy) {
+          adminUserId = jobData.createdBy;
+        }
+      } catch (error) {
+        console.warn('Could not get job data for admin userId, using current user:', error);
+      }
+
+      // Eliminar aplicación de la base de datos
       const deleted = await this.dynamoService.deleteApplication(applicationId);
-      
+
       if (!deleted) {
         return {
           success: false,
           message: 'Error al eliminar la aplicación',
         };
+      }
+
+      // Intentar eliminar la carpeta del postulante (non-blocking)
+      try {
+        const jobData = await this.dynamoService.getJobData(application.jobId);
+
+        if (jobData && jobData.folderId) {
+          console.log(`🗑️ Attempting to delete folder for application: ${applicationId}`);
+          const folderResult = await this.foldersServiceClient.deleteFolderByApplicationId(
+            applicationId,
+            jobData.folderId, // Pass the job folder ID
+            adminUserId || 'system'
+          );
+
+          if (folderResult.success) {
+            console.log(`✅ Folder deleted successfully for application: ${applicationId}`);
+          } else {
+            console.warn(`⚠️ Could not delete folder for application ${applicationId}: ${folderResult.message}`);
+          }
+        } else {
+          console.warn(`⚠️ Could not delete folder: jobData not found or missing folderId for application ${applicationId}`);
+        }
+      } catch (folderError) {
+        console.error(`❌ Error deleting folder for application ${applicationId}:`, folderError);
+        // Don't fail the application deletion if folder deletion fails
       }
 
       return {

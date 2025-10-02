@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Application } from '../types';
 import { applicationsService } from '../services/applicationsService';
 import { JobDetailsModal } from '../components/JobDetailsModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export const ApplicationsPage = () => {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -9,6 +10,23 @@ export const ApplicationsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+    isLoading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger',
+    isLoading: false
+  });
 
   // Cargar aplicaciones al montar el componente
   useEffect(() => {
@@ -44,23 +62,68 @@ export const ApplicationsPage = () => {
     });
   };
 
-  const handleDeleteApplication = async (applicationId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta aplicación?')) {
-      return;
-    }
+  // Helper function to show confirmation modal
+  const showConfirmModal = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    variant: 'danger' | 'warning' | 'info' = 'danger'
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      variant,
+      isLoading: false
+    });
+  };
 
-    try {
-      const response = await applicationsService.deleteApplication(applicationId);
-      
-      if (response.success) {
-        setApplications(prev => prev.filter(app => app.applicationId !== applicationId));
-      } else {
-        alert('Error al eliminar la aplicación: ' + response.message);
-      }
-    } catch (err) {
-      console.error('Error deleting application:', err);
-      alert('Error al eliminar la aplicación');
-    }
+  // Helper function to close confirmation modal
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Set modal loading state
+  const setModalLoading = (loading: boolean) => {
+    setConfirmModal(prev => ({ ...prev, isLoading: loading }));
+  };
+
+  // Show error modal
+  const showErrorModal = (title: string, message: string) => {
+    showConfirmModal(
+      title,
+      message,
+      () => closeConfirmModal(),
+      'danger'
+    );
+  };
+
+  const handleDeleteApplication = async (applicationId: string) => {
+    showConfirmModal(
+      'Eliminar aplicación',
+      '¿Estás seguro de que quieres eliminar esta aplicación?',
+      async () => {
+        setModalLoading(true);
+
+        try {
+          const response = await applicationsService.deleteApplication(applicationId);
+
+          if (response.success) {
+            setApplications(prev => prev.filter(app => app.applicationId !== applicationId));
+            closeConfirmModal();
+          } else {
+            closeConfirmModal();
+            showErrorModal('Error al eliminar', response.message || 'No se pudo eliminar la aplicación');
+          }
+        } catch (err) {
+          console.error('Error deleting application:', err);
+          closeConfirmModal();
+          showErrorModal('Error al eliminar', 'Error de conexión al eliminar la aplicación');
+        }
+      },
+      'danger'
+    );
   };
 
   const handleCardClick = (application: Application) => {
@@ -238,6 +301,17 @@ export const ApplicationsPage = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         application={selectedApplication}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirmModal}
+        isLoading={confirmModal.isLoading}
       />
     </div>
   );
