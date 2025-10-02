@@ -340,7 +340,13 @@ export const JobSearchPage = () => {
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-gray-600">
-                            <span className="font-medium">{job.companyName}</span>
+                            {/* Información de recepción de postulaciones */}
+                            <span className="font-medium">
+                              {job.expiresAt
+                                ? `Recepción de postulaciones: desde ${new Date(job.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} hasta ${new Date(job.expiresAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                                : `Creado el ${new Date(job.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                              }
+                            </span>
                             <span>•</span>
                             <span>{job.location}</span>
                             <span>•</span>
@@ -369,15 +375,6 @@ export const JobSearchPage = () => {
                           {job.schedule && (
                             <p className="text-sm text-purple-600 line-clamp-2">
                               <span className="font-medium">Horario:</span> {job.schedule}
-                            </p>
-                          )}
-                          {job.expiresAt && (
-                            <p className="text-sm text-orange-600 line-clamp-2">
-                              <span className="font-medium">Expira:</span> {new Date(job.expiresAt).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
                             </p>
                           )}
                           {job.requiredDocuments && job.requiredDocuments.length > 0 && (
