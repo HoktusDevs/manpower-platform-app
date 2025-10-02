@@ -3,6 +3,7 @@ import { UniversalTableManager } from '../../components/UniversalTable';
 import type { TableColumn, TableAction, BulkAction } from '../../components/UniversalTable';
 import { useApplications } from '../../hooks/useApplications';
 import type { Application } from '../../services/applicationsApiService';
+import { ApplicantDetailModal } from '../../components/ApplicantDetailModal';
 
 const getStatusColor = (status: Application['status']) => {
   switch (status) {
@@ -43,6 +44,8 @@ export const ApplicationsManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'accordion'>('table');
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -124,8 +127,8 @@ export const ApplicationsManagementPage: React.FC = () => {
       show: (app) => app.status !== 'APPROVED' && app.status !== 'HIRED'
     },
     {
-      key: 'review',
-      label: 'En Revisión',
+      key: 'view',
+      label: 'Ver Detalles',
       variant: 'secondary',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,11 +136,10 @@ export const ApplicationsManagementPage: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       ),
-      onClick: async (app) => {
-        await updateApplicationStatus(app.applicationId, 'IN_REVIEW');
-        await fetchAllApplications(); // Refresh list
-      },
-      show: (app) => app.status === 'PENDING'
+      onClick: (app) => {
+        setSelectedApplication(app);
+        setIsModalOpen(true);
+      }
     },
     {
       key: 'interview',
@@ -314,6 +316,18 @@ export const ApplicationsManagementPage: React.FC = () => {
         onSelectionChange={setSelectedItems}
         getItemId={(app) => app.applicationId}
       />
+
+      {/* Modal de Detalles del Candidato */}
+      {selectedApplication && (
+        <ApplicantDetailModal
+          application={selectedApplication}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedApplication(null);
+          }}
+        />
+      )}
     </div>
   );
 };
