@@ -168,9 +168,9 @@ export const useCreateFolder = (onSuccess?: () => void, onError?: (error: Error)
       onError?.(error instanceof Error ? error : new Error('Unknown error'));
     },
     onSettled: () => {
-      // Invalidate all folder queries and job queries
+      // Invalidate all folder queries
       queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.jobs });
+      // Note: Jobs are NOT invalidated when creating folders to avoid unnecessary refetches
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -220,7 +220,7 @@ export const useUpdateFolder = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.jobs });
+      // Note: Jobs are NOT invalidated when updating folders to avoid unnecessary refetches
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -298,7 +298,7 @@ export const useDeleteFolder = () => {
         );
       }
 
-      return { previousFolders, previousJobs };
+      return { previousFolders, previousJobs, wasCargoFolder: folderToDelete?.type === 'Cargo' };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousFolders) {
@@ -312,9 +312,12 @@ export const useDeleteFolder = () => {
         });
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      // Only invalidate jobs if we deleted a "Cargo" folder (which may have an associated job)
+      if (context?.wasCargoFolder) {
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      }
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -393,7 +396,7 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
         );
       }
 
-      return { previousFolders, previousJobs };
+      return { previousFolders, previousJobs, hasCargoFolders: cargoFolderNames.length > 0 };
     },
     onSuccess: () => {
       onSuccess?.();
@@ -411,9 +414,12 @@ export const useDeleteFolders = (onSuccess?: () => void, onError?: (error: Error
       }
       onError?.(error instanceof Error ? error : new Error('Unknown error'));
     },
-    onSettled: () => {
+    onSettled: (_data, _error, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      // Only invalidate jobs if we deleted "Cargo" folders (which may have associated jobs)
+      if (context?.hasCargoFolders) {
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      }
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),

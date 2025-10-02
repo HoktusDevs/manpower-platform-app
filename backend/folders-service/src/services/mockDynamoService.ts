@@ -60,6 +60,13 @@ export class MockDynamoService {
       .filter(folder => !folder.parentId && folder.userId === userId && folder.isActive);
   }
 
+  async getFolderByUniqueKey(uniqueKey: string): Promise<Folder | null> {
+    console.log('MockDynamoService: getFolderByUniqueKey called');
+    const folder = Array.from(this.folders.values())
+      .find(f => f.uniqueKey === uniqueKey && f.isActive);
+    return folder || null;
+  }
+
   async queryFolders(query: FolderQuery): Promise<{ folders: Folder[], nextToken?: string }> {
     console.log('MockDynamoService: queryFolders called');
     let filteredFolders = Array.from(this.folders.values())

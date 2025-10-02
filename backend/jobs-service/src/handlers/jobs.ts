@@ -106,8 +106,9 @@ export const createJob: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    // Validate for special characters that could cause issues
-    const specialCharRegex = /[<>{}[\]\\|`~!@#$%^&*()_+=\-]/;
+    // Validate for special characters that could cause security issues (XSS, injection)
+    // Allow most common characters including: - _ @ . , : ; ' " ( ) and Spanish characters
+    const specialCharRegex = /[<>{}[\]\\|`]/;
     const fieldsToValidate = [
       { value: input.title, name: 'title' },
       { value: input.companyName, name: 'companyName' },
@@ -121,7 +122,7 @@ export const createJob: APIGatewayProxyHandler = async (event) => {
       if (field.value && specialCharRegex.test(field.value)) {
         return createResponse(400, {
           success: false,
-          message: `Field '${field.name}' contains invalid special characters. Please remove characters like < > { } [ ] \\ | \` ~ ! @ # $ % ^ & * ( ) _ + = -`,
+          message: `Field '${field.name}' contains invalid special characters. Please remove characters like < > { } [ ] \\ | \``,
         });
       }
     }

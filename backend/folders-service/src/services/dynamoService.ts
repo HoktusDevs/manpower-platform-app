@@ -5,7 +5,8 @@ import {
   GetCommand,
   UpdateCommand,
   DeleteCommand,
-  ScanCommand
+  ScanCommand,
+  QueryCommand
 } from '@aws-sdk/lib-dynamodb';
 import { Folder, FolderModel } from '../models/Folder';
 import { FolderQuery } from '../types';
@@ -200,6 +201,34 @@ export class DynamoService {
 
     const result = await this.client.send(command);
     return result.Items as Folder[] || [];
+  }
+
+  /**
+   * Query folder by uniqueKey using GSI for efficient duplicate detection
+   * uniqueKey format: userId#name#type#parentId (name is lowercased)
+   */
+  async getFolderByUniqueKey(uniqueKey: string): Promise<Folder | null> {
+    await this.ensureTableExists();
+
+    try {
+      const command = new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'UniqueKeyIndex',
+        KeyConditionExpression: 'uniqueKey = :uniqueKey',
+        FilterExpression: 'isActive = :isActive',
+        ExpressionAttributeValues: {
+          ':uniqueKey': uniqueKey,
+          ':isActive': true,
+        },
+        Limit: 1
+      });
+
+      const result = await this.client.send(command);
+      return result.Items && result.Items.length > 0 ? result.Items[0] as Folder : null;
+    } catch (error) {
+      console.error('Error querying folder by uniqueKey:', error);
+      return null;
+    }
   }
 
   async queryFolders(query: FolderQuery): Promise<{ folders: Folder[], nextToken?: string }> {

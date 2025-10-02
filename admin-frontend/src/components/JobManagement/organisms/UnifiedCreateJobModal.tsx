@@ -6,7 +6,8 @@ import {
 } from '../../../schemas/jobPostingSchema';
 import { CompanySelector } from '../../CompanySelector';
 import { DocumentTypeAutocomplete } from '../../DocumentTypeAutocomplete';
-import { useCreateJobWithFolder } from '../../../services/unifiedJobFolderService';
+import { useCreateJobWithFolder, useCreateStandaloneFolder } from '../../../services/unifiedJobFolderService';
+import { useFoldersContext } from '../../FoldersAndFiles';
 import type { JobPosting } from '../../../services/jobsService';
 
 interface UnifiedCreateJobModalProps {
@@ -105,6 +106,8 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
 }) => {
   const { showSuccess, showError } = useToast();
   const createJobWithFolderMutation = useCreateJobWithFolder();
+  const createStandaloneFolderMutation = useCreateStandaloneFolder();
+  const { folders } = useFoldersContext();
 
   // Estados del modal
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -256,6 +259,59 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
         }
       }
 
+      // Determinar parentFolderId
+      let parentFolderId: string | undefined;
+
+      if (context === 'folders-management') {
+        // Desde folders management, usar el folder seleccionado
+        parentFolderId = selectedFolderId;
+      } else {
+        // Desde jobs management
+        if (selectedCompanyFolderId) {
+          // Si hay una carpeta de empresa seleccionada, usarla
+          parentFolderId = selectedCompanyFolderId;
+        } else {
+          // Si escribieron manualmente, buscar o crear carpeta de empresa
+          const companyName = jobData.companyName.trim();
+
+          if (!companyName) {
+            console.warn('⚠️ Nombre de empresa vacío, creando en raíz');
+          } else {
+            // Buscar carpeta de empresa existente (case-insensitive, solo tipo "Empresa" en raíz)
+            const existingCompanyFolder = folders.find(
+              f => f.name.toLowerCase() === companyName.toLowerCase() &&
+                   f.type === 'Empresa' &&
+                   !f.parentId
+            );
+
+            if (existingCompanyFolder) {
+              console.log('✅ Carpeta de empresa encontrada:', existingCompanyFolder.id);
+              parentFolderId = existingCompanyFolder.id;
+            } else {
+              // Crear carpeta de empresa automáticamente
+              console.log('📁 Creando carpeta de empresa automáticamente:', companyName);
+              try {
+                const companyFolderResult = await createStandaloneFolderMutation.mutateAsync({
+                  name: companyName,
+                  type: 'Empresa',
+                  parentId: undefined
+                });
+
+                if (companyFolderResult.success && companyFolderResult.folder) {
+                  parentFolderId = companyFolderResult.folder.folderId;
+                  console.log('✅ Carpeta de empresa creada:', parentFolderId);
+                } else {
+                  console.warn('⚠️ No se pudo crear carpeta de empresa, usando raíz');
+                }
+              } catch (error) {
+                console.error('❌ Error creando carpeta de empresa:', error);
+                // Continuar sin parentId (se creará en raíz)
+              }
+            }
+          }
+        }
+      }
+
       // Preparar input para el servicio unificado
       const input = {
         job: {
@@ -272,7 +328,7 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
           expiresAt: jobData.expiresAt ? new Date(jobData.expiresAt).toISOString() : undefined,
           requiredDocuments: requiredDocuments,
         },
-        parentFolderId: context === 'folders-management' ? selectedFolderId : selectedCompanyFolderId,
+        parentFolderId: parentFolderId,
         skipFolderCreation: false, // Siempre crear carpeta
       };
 

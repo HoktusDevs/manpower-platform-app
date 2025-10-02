@@ -17,6 +17,10 @@
     {
       "AttributeName": "createdAt",
       "AttributeType": "S"
+    },
+    {
+      "AttributeName": "uniqueKey",
+      "AttributeType": "S"
     }
   ],
   "KeySchema": [
@@ -56,6 +60,18 @@
         {
           "AttributeName": "createdAt",
           "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "UniqueKeyIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "uniqueKey",
+          "KeyType": "HASH"
         }
       ],
       "Projection": {

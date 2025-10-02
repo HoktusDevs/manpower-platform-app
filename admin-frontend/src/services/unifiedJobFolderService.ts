@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { JobPosting, CreateJobInput } from './jobsService';
 import type { Folder, CreateFolderInput, UpdateFolderInput } from './foldersApiService';
+import { FOLDERS_QUERY_KEYS } from '../hooks/useUnifiedFolders';
 
 // Unified types
 export interface JobWithFolder extends JobPosting {
@@ -31,12 +32,14 @@ export interface UnifiedMutationResult {
 }
 
 // Query keys factory for consistent cache management
+// IMPORTANT: Using shared FOLDERS_QUERY_KEYS for cache synchronization
 export const UNIFIED_QUERY_KEYS = {
   all: ['unified'] as const,
   jobs: () => [...UNIFIED_QUERY_KEYS.all, 'jobs'] as const,
   jobsList: (params?: unknown) => [...UNIFIED_QUERY_KEYS.jobs(), params ?? {}] as const,
-  folders: () => [...UNIFIED_QUERY_KEYS.all, 'folders'] as const,
-  foldersList: (filters?: unknown) => [...UNIFIED_QUERY_KEYS.folders(), filters] as const,
+  // Use shared folders keys for cache synchronization
+  folders: () => FOLDERS_QUERY_KEYS.all,
+  foldersList: () => FOLDERS_QUERY_KEYS.lists(), // Use lists() without params for general queries
   jobFolder: (jobId: string) => [...UNIFIED_QUERY_KEYS.all, 'job-folder', jobId] as const,
 };
 
@@ -446,8 +449,8 @@ export function useCreateStandaloneFolder() {
       }
     },
     onSettled: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+      // Invalidate folders - invalidating 'all' cascades to all child queries
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
   });
 }
@@ -533,9 +536,12 @@ export function useCreateJobWithFolder() {
       }
     },
     onSettled: () => {
-      // Invalidate and refetch
+      // Invalidate jobs (both unified and legacy keys)
       queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.jobs() });
-      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+      // Invalidate folders - invalidating 'all' cascades to all child queries
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
   });
 }
@@ -594,7 +600,9 @@ export function useUpdateJobWithFolder() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.jobs() });
-      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.lists() });
     },
   });
 }
@@ -640,7 +648,8 @@ export function useDeleteJobWithFolder() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.jobs() });
-      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
   });
 }
@@ -684,7 +693,8 @@ export function useDeleteFolderWithJobs() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.jobs() });
-      queryClient.invalidateQueries({ queryKey: UNIFIED_QUERY_KEYS.folders() });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: FOLDERS_QUERY_KEYS.all });
     },
   });
 }

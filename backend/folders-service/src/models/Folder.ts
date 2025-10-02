@@ -4,6 +4,7 @@ export interface Folder {
   name: string;
   type: string;
   parentId?: string;
+  uniqueKey?: string; // Composite key: userId#name#type#parentId for duplicate detection
   metadata?: { [key: string]: any };
   isActive: boolean;
   createdAt: string;
@@ -17,6 +18,7 @@ export class FolderModel {
   public name: string;
   public type: string;
   public parentId?: string;
+  public uniqueKey?: string;
   public metadata?: { [key: string]: any };
   public isActive: boolean;
   public createdAt: string;
@@ -34,6 +36,21 @@ export class FolderModel {
     this.createdAt = data.createdAt || new Date().toISOString();
     this.updatedAt = data.updatedAt || new Date().toISOString();
     this.childrenCount = data.childrenCount || 0;
+
+    // Generate uniqueKey for duplicate detection (case-insensitive name)
+    this.uniqueKey = this.generateUniqueKey(
+      this.userId,
+      this.name,
+      this.type,
+      this.parentId
+    );
+  }
+
+  private generateUniqueKey(userId: string, name: string, type: string, parentId?: string): string {
+    // Normalize name to lowercase for case-insensitive comparison
+    const normalizedName = name.toLowerCase().trim();
+    const normalizedParentId = parentId || 'ROOT';
+    return `${userId}#${normalizedName}#${type}#${normalizedParentId}`;
   }
 
   // Get full hierarchy path (for breadcrumbs)
@@ -85,6 +102,7 @@ export class FolderModel {
       name: this.name,
       type: this.type,
       parentId: this.parentId,
+      uniqueKey: this.uniqueKey,
       metadata: this.metadata,
       isActive: this.isActive,
       createdAt: this.createdAt,

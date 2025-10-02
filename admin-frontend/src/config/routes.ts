@@ -5,6 +5,8 @@ import { TestWhatsappPage } from '../pages/admin/TestWhatsappPage';
 import { TestOCRPage } from '../pages/admin/TestOCRPage';
 import { MessagingPage } from '../pages/admin/MessagingPage';
 import { SettingsPage } from '../pages/admin/SettingsPage';
+import { ApplicationsManagementPage } from '../pages/admin/ApplicationsManagementPage';
+import { JobPostingsManagementPage } from '../pages/admin/JobPostingsManagementPage';
 
 export interface RouteConfig {
   path: string;
@@ -63,6 +65,20 @@ export const adminRoutes: RouteConfig[] = [
     requireAuth: true,
     requiredRole: 'admin',
     title: 'Configuración'
+  },
+  {
+    path: 'applications',
+    element: ApplicationsManagementPage,
+    requireAuth: true,
+    requiredRole: 'admin',
+    title: 'Gestión de Postulaciones'
+  },
+  {
+    path: 'job-postings',
+    element: JobPostingsManagementPage,
+    requireAuth: true,
+    requiredRole: 'admin',
+    title: 'Gestión de Ofertas'
   }
 ];
 

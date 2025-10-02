@@ -3,7 +3,7 @@
  * Provides state and operations for application management
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { applicationsApiService, type Application, type ApplicationStats } from '../services/applicationsApiService';
 
 export const useApplications = () => {
@@ -15,7 +15,7 @@ export const useApplications = () => {
   /**
    * Fetch all applications (ADMIN)
    */
-  const fetchAllApplications = async () => {
+  const fetchAllApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -25,7 +25,7 @@ export const useApplications = () => {
       console.log('Applications response:', response, 'type:', typeof response);
 
       // Extraer applications del objeto de respuesta
-      let applicationsArray = [];
+      let applicationsArray: Application[] = [];
       if (Array.isArray(response)) {
         applicationsArray = response;
       } else if (response && (response as Record<string, unknown>).data && Array.isArray(((response as Record<string, unknown>).data as Record<string, unknown>).applications)) {
@@ -33,9 +33,9 @@ export const useApplications = () => {
       } else if (response && Array.isArray((response as Record<string, unknown>).applications)) {
         applicationsArray = (response as Record<string, unknown>).applications as Application[];
       }
-      
+
       setApplications(applicationsArray);
-      } catch {
+    } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch applications';
       setError(errorMessage);
       // Si es error de autenticación, mostrar mensaje específico
@@ -45,7 +45,7 @@ export const useApplications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   /**
    * Fetch my applications (USER)
@@ -57,10 +57,10 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getMyApplications();
       setApplications(data);
-      } catch {
+    } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch my applications';
       setError(errorMessage);
-      } finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -72,10 +72,10 @@ export const useApplications = () => {
     try {
       const data = await applicationsApiService.getApplicationStats();
       setStats(data);
-      } catch {
-        // Silently handle stats fetch errors - not critical for main functionality
-        console.warn('Failed to fetch application stats');
-      }
+    } catch {
+      // Silently handle stats fetch errors - not critical for main functionality
+      console.warn('Failed to fetch application stats');
+    }
   };
 
   /**
@@ -140,11 +140,11 @@ export const useApplications = () => {
       const success = await applicationsApiService.deleteMyApplication(applicationId);
       
       if (success) {
-        setApplications(prev => 
+        setApplications(prev =>
           prev.filter(app => app.applicationId !== applicationId)
         );
-        }
-      
+      }
+
       return success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete application';

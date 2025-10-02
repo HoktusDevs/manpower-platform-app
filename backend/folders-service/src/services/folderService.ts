@@ -27,6 +27,27 @@ export class FolderService {
 
   async createFolder(input: CreateFolderInput, userId: string): Promise<FolderResponse> {
     try {
+      // Generate uniqueKey for duplicate detection (efficient GSI query)
+      const normalizedName = (input.name || '').toLowerCase().trim();
+      const normalizedParentId = input.parentId || 'ROOT';
+      const uniqueKey = `${userId}#${normalizedName}#${input.type}#${normalizedParentId}`;
+
+      // Check for duplicate using GSI (O(1) instead of O(n) scan)
+      const duplicateFolder = await this.dynamoService.getFolderByUniqueKey(uniqueKey);
+
+      if (duplicateFolder) {
+        console.log(`⚠️ Duplicate folder detected: ${input.name} (${input.type}) under parent ${input.parentId}`);
+        // Return existing folder instead of creating duplicate (idempotent operation)
+        return {
+          success: true,
+          message: 'Folder already exists, returning existing folder',
+          folder: {
+            ...duplicateFolder,
+            path: await this.buildFolderPath(duplicateFolder),
+          },
+        };
+      }
+
       const folderId = uuidv4();
       const folderModel = new FolderModel({
         folderId,
@@ -71,15 +92,14 @@ export class FolderService {
     try {
       // This is for internal system calls (e.g., from applications-service)
       // No authorization check needed
-      const folderId = uuidv4();
-      
+
       let folderName = input.name;
-      
+
       // Si se proporciona applicantUserId, buscar el usuario y usar su nombre
       if (input.applicantUserId && !input.name) {
         console.log(`FolderService: Looking up applicant user with ID: ${input.applicantUserId}`);
         const userResult = await this.userService.getUserById(input.applicantUserId);
-        
+
         if (userResult.success && userResult.user) {
           folderName = this.userService.generateFolderName(userResult.user);
           console.log(`FolderService: Using user name for folder: ${folderName}`);
@@ -88,7 +108,7 @@ export class FolderService {
           folderName = `Postulante-${input.applicantUserId}`;
         }
       }
-      
+
       // Validar que tenemos un nombre para la carpeta
       if (!folderName) {
         return {
@@ -97,6 +117,29 @@ export class FolderService {
         };
       }
 
+      // Generate uniqueKey for duplicate detection (efficient GSI query)
+      const folderType = input.type || 'Postulante';
+      const normalizedName = folderName.toLowerCase().trim();
+      const normalizedParentId = input.parentId || 'ROOT';
+      const uniqueKey = `${systemUserId}#${normalizedName}#${folderType}#${normalizedParentId}`;
+
+      // Check for duplicate using GSI (O(1) instead of O(n) scan)
+      const duplicateFolder = await this.dynamoService.getFolderByUniqueKey(uniqueKey);
+
+      if (duplicateFolder) {
+        console.log(`⚠️ Duplicate system folder detected: ${folderName} (${folderType}) under parent ${input.parentId}`);
+        // Return existing folder instead of creating duplicate (idempotent operation)
+        return {
+          success: true,
+          message: 'System folder already exists, returning existing folder',
+          folder: {
+            ...duplicateFolder,
+            path: await this.buildFolderPath(duplicateFolder),
+          },
+        };
+      }
+
+      const folderId = uuidv4();
       const folderModel = new FolderModel({
         folderId,
         userId: systemUserId,
@@ -338,7 +381,7 @@ export class FolderService {
         while (currentParent) {
           depth++;
           const parentFolder = await this.dynamoService.getFolder(currentParent, userId);
-          currentParent = parentFolder?.parentId || null;
+          currentParent = parentFolder?.parentId || undefined;
         }
         return depth;
       };
