@@ -19,6 +19,7 @@ interface UnifiedCreateJobModalProps {
   context?: 'jobs-management' | 'folders-management';
   selectedFolderId?: string; // Para contexto de carpetas
   parentFolderPath?: string; // Para mostrar árbol desde carpeta específica
+  editingJob?: JobPosting; // Job data for edit mode
 }
 
 // Tipos locales para compatibilidad con la UI
@@ -102,8 +103,10 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   preselectedCompany = '',
   context = 'jobs-management',
   selectedFolderId,
-  parentFolderPath
+  parentFolderPath,
+  editingJob
 }) => {
+  const isEditMode = !!editingJob;
   const { showSuccess, showError } = useToast();
   const createJobWithFolderMutation = useCreateJobWithFolder();
   const createStandaloneFolderMutation = useCreateStandaloneFolder();
@@ -134,12 +137,28 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
   const [documentInput, setDocumentInput] = useState('');
   const [selectedCompanyFolderId, setSelectedCompanyFolderId] = useState<string | undefined>(selectedFolderId);
 
-  // Sincronizar con props
+  // Cargar datos del job en modo edición
   useEffect(() => {
-    if (isOpen && preselectedCompany) {
+    if (isOpen && editingJob) {
+      setJobData({
+        title: editingJob.title || '',
+        description: editingJob.description || '',
+        companyName: editingJob.companyName || '',
+        requirements: editingJob.requirements || '',
+        salary: editingJob.salary || '',
+        location: editingJob.location || '',
+        employmentType: editingJob.employmentType || 'FULL_TIME',
+        experienceLevel: editingJob.experienceLevel || 'ENTRY_LEVEL',
+        benefits: editingJob.benefits || '',
+        schedule: editingJob.schedule || '',
+        expiresAt: editingJob.expiresAt || '',
+        status: editingJob.status || 'PUBLISHED'
+      });
+      setRequiredDocuments(editingJob.requiredDocuments || []);
+    } else if (isOpen && preselectedCompany) {
       setJobData(prev => ({ ...prev, companyName: preselectedCompany }));
     }
-  }, [isOpen, preselectedCompany]);
+  }, [isOpen, preselectedCompany, editingJob]);
 
   // Validación de campos
   const validateAndShowErrors = () => {
@@ -365,7 +384,7 @@ export const UnifiedCreateJobModal: React.FC<UnifiedCreateJobModalProps> = ({
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900">
-              Crear Nueva Oferta de Trabajo
+              {isEditMode ? 'Actualizar Oferta de Trabajo' : 'Crear Nueva Oferta de Trabajo'}
             </h3>
             <button
               onClick={() => {

@@ -42,6 +42,7 @@ export const JobPostingsManagementPage: React.FC = () => {
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobPosting | undefined>(undefined);
 
   // Filter job postings by search term
   const filteredJobPostings = jobPostings.filter(job =>
@@ -118,8 +119,7 @@ export const JobPostingsManagementPage: React.FC = () => {
   const handleEditJob = (jobId: string) => {
     const job = jobPostings.find(j => j.jobId === jobId);
     if (job) {
-      // Job editing will be handled by UnifiedCreateJobModal in the future
-      console.log('Edit job:', job);
+      setEditingJob(job);
       setShowCreateModal(true);
     } else {
       showError('Error', 'No se encontró la oferta de trabajo');
@@ -371,13 +371,16 @@ export const JobPostingsManagementPage: React.FC = () => {
           isOpen={showCreateModal}
           onClose={() => {
             setShowCreateModal(false);
+            setEditingJob(undefined);
             resetModalState();
           }}
           onSuccess={() => {
             setShowCreateModal(false);
+            setEditingJob(undefined);
             resetModalState();
           }}
           context="jobs-management"
+          editingJob={editingJob}
         />
 
         {/* Confirmation Modal */}
