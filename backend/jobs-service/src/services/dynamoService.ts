@@ -222,10 +222,19 @@ export class DynamoService {
   }
 
   async getPublishedJobs(limit?: number, nextToken?: string): Promise<{ jobs: Job[], nextToken?: string }> {
-    // Simple scan without filters for now
+    // Filter only PUBLISHED and active jobs
     const command = new ScanCommand({
       TableName: this.tableName,
+      FilterExpression: '#status = :published AND isActive = :isActive',
+      ExpressionAttributeNames: {
+        '#status': 'status'
+      },
+      ExpressionAttributeValues: {
+        ':published': 'PUBLISHED',
+        ':isActive': true
+      },
       Limit: limit,
+      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
     });
 
     const result = await this.client.send(command);

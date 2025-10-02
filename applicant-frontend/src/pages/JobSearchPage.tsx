@@ -16,23 +16,30 @@ export const JobSearchPage = () => {
 
   // Cargar jobs al montar el componente
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const loadJobs = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Primero verificar la salud del servicio
         console.log('Verificando salud del jobs-service...');
         const isHealthy = await jobsService.checkHealth();
-        
+
+        if (!isMounted) return; // Exit if component unmounted
+
         if (!isHealthy) {
           setError('El servicio de empleos no está disponible. Por favor intenta más tarde.');
           return;
         }
-        
+
         console.log('Servicio saludable, obteniendo todos los empleos...');
         const response = await jobsService.getAllJobs();
-        
+
+        if (!isMounted) return; // Exit if component unmounted
+
         if (response.success) {
           if (response.jobs && response.jobs.length > 0) {
             setJobPostings(response.jobs);
@@ -48,28 +55,41 @@ export const JobSearchPage = () => {
           setError(response.message || 'Error al cargar empleos');
         }
       } catch (err) {
+        if (!isMounted) return; // Exit if component unmounted
         console.error('Error loading jobs:', err);
         setError(`Error de conexión al cargar empleos: ${err instanceof Error ? err.message : 'Error desconocido'}`);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadJobs();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   // Verificar aplicaciones existentes cuando cambian los jobs
   useEffect(() => {
+    let isMounted = true;
+
     const checkExistingApplications = async () => {
       if (jobPostings.length === 0) return;
 
       try {
         setCheckingApplications(true);
         console.log('Verificando aplicaciones existentes para', jobPostings.length, 'jobs');
-        
-        
+
         // Obtener todas las aplicaciones del usuario
         const response = await applicationsService.getMyApplications();
+
+        if (!isMounted) return; // Exit if component unmounted
+
         if (response.success && response.applications) {
           const appliedJobsSet = new Set(response.applications.map(app => app.jobId));
           setAppliedJobs(appliedJobsSet);
@@ -77,13 +97,21 @@ export const JobSearchPage = () => {
           console.log(`Aplicaciones existentes: ${appliedJobsSet.size} de ${jobPostings.length}`);
         }
       } catch (error) {
+        if (!isMounted) return; // Exit if component unmounted
         console.error('Error verificando aplicaciones existentes:', error);
       } finally {
-        setCheckingApplications(false);
+        if (isMounted) {
+          setCheckingApplications(false);
+        }
       }
     };
 
     checkExistingApplications();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [jobPostings]);
 
   const filteredJobPostings = jobPostings.filter((job) => {
