@@ -12,7 +12,6 @@ export const AplicarPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
-  const [checkingApplications, setCheckingApplications] = useState(false);
   const [jobsLoaded, setJobsLoaded] = useState(false);
 
   // Cargar jobs al montar el componente (solo una vez)
@@ -78,11 +77,10 @@ export const AplicarPage = () => {
   useEffect(() => {
     const checkExistingApplications = async () => {
       if (filteredJobPostings.length === 0) return;
-      
+
       try {
-        setCheckingApplications(true);
         const appliedJobsSet = new Set<string>();
-        
+
         // Solo verificar aplicaciones para jobs que se están mostrando
         for (const job of filteredJobPostings) {
           try {
@@ -94,12 +92,10 @@ export const AplicarPage = () => {
             console.warn(`Error verificando aplicación para job ${job.jobId}:`, error);
           }
         }
-        
+
         setAppliedJobs(appliedJobsSet);
       } catch (error) {
         console.error('Error verificando aplicaciones existentes:', error);
-      } finally {
-        setCheckingApplications(false);
       }
     };
 
@@ -208,12 +204,6 @@ export const AplicarPage = () => {
           </div>
 
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-            {checkingApplications && (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600">Verificando aplicaciones existentes...</p>
-              </div>
-            )}
             {filteredJobPostings.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { userService } from '../services/userService';
-import { applicationsService } from '../services/applicationsService';
+import { useUserProfile, useCreateApplications } from '../hooks';
 import { s3Service } from '../services/s3Service';
 import { DocumentUpload } from '../components/DocumentUpload';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
@@ -11,6 +10,9 @@ export const CompletarAplicacionesPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { data: userProfile } = useUserProfile();
+  const createApplications = useCreateApplications();
+
   const [selectedJobs, setSelectedJobs] = useState<JobPosting[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('puestos');
   const [applicationData, setApplicationData] = useState<UserApplicationData>({
@@ -35,55 +37,28 @@ export const CompletarAplicacionesPage = () => {
     }
   }, [location.state]);
 
-  // Cargar datos completos del usuario desde el backend
+  // Pre-llenar formulario con datos del usuario cuando se carguen
   useEffect(() => {
-    const loadUserProfile = async () => {
-      try {
-        console.log('🔍 Cargando perfil completo del usuario...');
-        
-        const response = await userService.getProfile();
-        
-        if (response.success && response.user) {
-          console.log('✅ Perfil del usuario cargado:', response.user);
-          
-          // Pre-llenar formulario con todos los datos del usuario
-          setApplicationData(prev => ({
-            ...prev,
-            nombre: response.user!.nombre || '',
-            rut: response.user!.rut || '',
-            email: response.user!.email || '',
-            telefono: response.user!.telefono || '',
-            direccion: response.user!.direccion || '',
-            educacion: response.user!.experienciaLaboral || response.user!.educacionNivel || '',
-          }));
-        } else {
-          console.log('⚠️ No se pudieron cargar los datos del perfil:', response.message);
-          
-          // Fallback: usar datos básicos del useAuth
-          if (user) {
-            setApplicationData(prev => ({
-              ...prev,
-              nombre: user.fullName || user.email?.split('@')[0] || '',
-              email: user.email || '',
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error cargando perfil del usuario:', error);
-        
-        // Fallback: usar datos básicos del useAuth
-        if (user) {
-          setApplicationData(prev => ({
-            ...prev,
-            nombre: user.fullName || user.email?.split('@')[0] || '',
-            email: user.email || '',
-          }));
-        }
-      }
-    };
-
-    loadUserProfile();
-  }, [user]);
+    if (userProfile) {
+      console.log('✅ Perfil del usuario cargado:', userProfile);
+      setApplicationData(prev => ({
+        ...prev,
+        nombre: userProfile.nombre || '',
+        rut: userProfile.rut || '',
+        email: userProfile.email || '',
+        telefono: userProfile.telefono || '',
+        direccion: userProfile.direccion || '',
+        educacion: userProfile.experienciaLaboral || userProfile.educacionNivel || '',
+      }));
+    } else if (user) {
+      // Fallback: usar datos básicos del useAuth
+      setApplicationData(prev => ({
+        ...prev,
+        nombre: user.fullName || user.email?.split('@')[0] || '',
+        email: user.email || '',
+      }));
+    }
+  }, [userProfile, user]);
 
   const handleInputChange = (field: keyof UserApplicationData, value: string): void => {
     setApplicationData(prev => ({ ...prev, [field]: value }));
@@ -186,7 +161,7 @@ export const CompletarAplicacionesPage = () => {
 
       // Crear aplicaciones primero (esto crea las carpetas del postulante)
       console.log('📝 Creando aplicaciones en el backend...');
-      const response = await applicationsService.createApplications({
+      const response = await createApplications.mutateAsync({
         jobIds: selectedJobs.map(job => job.jobId),
         description: `Aplicación de ${applicationData.nombre} (${applicationData.email})`,
         documents: []

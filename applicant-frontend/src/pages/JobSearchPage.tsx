@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { JobPosting } from '../types';
 import { jobsService } from '../services/jobsService';
-import { applicationsService } from '../services/applicationsService';
+import { useApplications } from '../hooks';
 
 export const JobSearchPage = () => {
   const navigate = useNavigate();
+  const { data: applications = [] } = useApplications();
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
-  const [checkingApplications, setCheckingApplications] = useState(false);
 
   // Cargar jobs al montar el componente
   useEffect(() => {
@@ -74,45 +74,15 @@ export const JobSearchPage = () => {
     };
   }, []);
 
-  // Verificar aplicaciones existentes cuando cambian los jobs
+  // Actualizar aplicaciones existentes cuando cambian
   useEffect(() => {
-    let isMounted = true;
-
-    const checkExistingApplications = async () => {
-      if (jobPostings.length === 0) return;
-
-      try {
-        setCheckingApplications(true);
-        console.log('Verificando aplicaciones existentes para', jobPostings.length, 'jobs');
-
-        // Obtener todas las aplicaciones del usuario
-        const response = await applicationsService.getMyApplications();
-
-        if (!isMounted) return; // Exit if component unmounted
-
-        if (response.success && response.applications) {
-          const appliedJobsSet = new Set(response.applications.map(app => app.jobId));
-          setAppliedJobs(appliedJobsSet);
-          console.log('Jobs ya aplicados:', Array.from(appliedJobsSet));
-          console.log(`Aplicaciones existentes: ${appliedJobsSet.size} de ${jobPostings.length}`);
-        }
-      } catch (error) {
-        if (!isMounted) return; // Exit if component unmounted
-        console.error('Error verificando aplicaciones existentes:', error);
-      } finally {
-        if (isMounted) {
-          setCheckingApplications(false);
-        }
-      }
-    };
-
-    checkExistingApplications();
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-    };
-  }, [jobPostings]);
+    if (applications.length > 0) {
+      const appliedJobsSet = new Set(applications.map(app => app.jobId));
+      setAppliedJobs(appliedJobsSet);
+      console.log('Jobs ya aplicados:', Array.from(appliedJobsSet));
+      console.log(`Aplicaciones existentes: ${appliedJobsSet.size}`);
+    }
+  }, [applications]);
 
   const filteredJobPostings = jobPostings.filter((job) => {
     // Solo mostrar jobs si hay un término de búsqueda
@@ -256,12 +226,6 @@ export const JobSearchPage = () => {
           </div>
 
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-            {checkingApplications && (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600">Verificando aplicaciones existentes...</p>
-              </div>
-            )}
             {filteredJobPostings.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">

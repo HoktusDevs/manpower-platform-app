@@ -31,6 +31,13 @@ export interface ApplicationResponse {
   nextToken?: string;
 }
 
+export interface ApplicationExistsResponse {
+  success: boolean;
+  exists: boolean;
+  applicationId?: string;
+  message?: string;
+}
+
 class ApplicationsService {
   private baseUrl: string;
 
@@ -136,6 +143,26 @@ class ApplicationsService {
       return {
         success: false,
         message: axiosError.response?.data?.message || 'Error de conexión al actualizar aplicación',
+      };
+    }
+  }
+
+  /**
+   * Verificar si existe una aplicación para un trabajo
+   */
+  async checkApplicationExists(jobId: string): Promise<ApplicationExistsResponse> {
+    try {
+      const { data } = await apiClient.get<ApplicationExistsResponse>(
+        `${this.baseUrl}/applications/check/${jobId}`
+      );
+      return data;
+    } catch (error) {
+      console.error('ApplicationsService: Error verificando aplicación:', error);
+      const axiosError = error as AxiosError<ApplicationExistsResponse>;
+      return {
+        success: false,
+        exists: false,
+        message: axiosError.response?.data?.message || 'Error de conexión al verificar aplicación',
       };
     }
   }

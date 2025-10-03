@@ -1,4 +1,6 @@
 import { cognitoAuthService } from './cognitoAuthService';
+import { apiClient } from '../lib/axios';
+import { AxiosError } from 'axios';
 
 export interface S3UploadResult {
   success: boolean;
@@ -49,24 +51,14 @@ class S3Service {
       console.log('📤 Generating S3 presigned URL for:', fileName);
 
       // Endpoint simple que solo genera presigned URL de S3
-      const response = await fetch(`${this.fileUploadServiceUrl}/generate-presigned-url`, {
-        method: 'POST',
+      const { data } = await apiClient.post(`${this.fileUploadServiceUrl}/generate-presigned-url`, {
+        s3Key,
+        fileType,
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          s3Key,
-          fileType,
-        }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       if (!data.presignedUrl) {
         throw new Error('Respuesta inválida del servidor');
@@ -84,9 +76,10 @@ class S3Service {
       };
     } catch (error) {
       console.error('S3Service: Error getting presigned URL:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error generando URL de subida',
+        error: axiosError.response?.data?.message || (error instanceof Error ? error.message : 'Error generando URL de subida'),
       };
     }
   }
@@ -156,23 +149,13 @@ class S3Service {
 
       console.log('📥 Requesting download URL from backend:', fileUrl);
 
-      const response = await fetch(`${this.fileUploadServiceUrl}/download-url`, {
-        method: 'POST',
+      const { data } = await apiClient.post(`${this.fileUploadServiceUrl}/download-url`, {
+        fileUrl,
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          fileUrl,
-        }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       if (!data.presignedUrl) {
         throw new Error('Respuesta inválida del servidor');
@@ -187,9 +170,10 @@ class S3Service {
       };
     } catch (error) {
       console.error('S3Service: Error getting download URL:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error generando URL de descarga',
+        error: axiosError.response?.data?.message || (error instanceof Error ? error.message : 'Error generando URL de descarga'),
       };
     }
   }
@@ -209,21 +193,14 @@ class S3Service {
 
       console.log('🗑️ Requesting file deletion from backend:', fileUrl);
 
-      const response = await fetch(`${this.fileUploadServiceUrl}/delete-file`, {
-        method: 'DELETE',
+      await apiClient.delete(`${this.fileUploadServiceUrl}/delete-file`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
+        data: {
           fileUrl,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
-      }
 
       console.log('✅ Archivo eliminado exitosamente');
 
@@ -232,9 +209,10 @@ class S3Service {
       };
     } catch (error) {
       console.error('S3Service: Error deleting file:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error eliminando archivo',
+        error: axiosError.response?.data?.message || (error instanceof Error ? error.message : 'Error eliminando archivo'),
       };
     }
   }
@@ -302,20 +280,11 @@ class S3Service {
       if (fileType) formData.append('fileType', fileType || file.type);
 
       // Subir a file-upload-service endpoint /upload
-      const response = await fetch(`${this.fileUploadServiceUrl}/upload`, {
-        method: 'POST',
+      const { data } = await apiClient.post(`${this.fileUploadServiceUrl}/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: formData,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       if (!data.success || !data.file) {
         throw new Error('Respuesta inválida del servidor');
@@ -330,9 +299,10 @@ class S3Service {
       };
     } catch (error) {
       console.error('S3Service: Error uploading file to folder:', error);
+      const axiosError = error as AxiosError<{ message?: string }>;
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error subiendo archivo',
+        error: axiosError.response?.data?.message || (error instanceof Error ? error.message : 'Error subiendo archivo'),
       };
     }
   }

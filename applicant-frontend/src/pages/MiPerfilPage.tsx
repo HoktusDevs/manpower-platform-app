@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { PostulanteHeader } from '../components/PostulanteHeader';
 import type { UserProfileData } from '../types';
-import { userService } from '../services/userService';
+import { useUserProfile, useUpdateProfile } from '../hooks';
 
 export const MiPerfilPage = () => {
+  const { data: userProfile, isLoading: loading } = useUserProfile();
+  const updateProfile = useUpdateProfile();
+
   const [profileData, setProfileData] = useState<UserProfileData>({
     nombre: '',
     apellido: '',
@@ -17,48 +20,16 @@ export const MiPerfilPage = () => {
     habilidades: ''
   });
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Cargar datos del perfil al montar el componente
+  // Sincronizar datos cuando se carguen del servidor
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await userService.getProfile();
-        
-        if (response.success && response.user) {
-          setProfileData(response.user);
-        } else {
-          // Si no hay datos del usuario, usar valores por defecto
-          setProfileData({
-            nombre: '',
-            apellido: '',
-            rut: '',
-            email: '',
-            telefono: '',
-            direccion: '',
-            fechaNacimiento: '',
-            educacionNivel: '',
-            experienciaLaboral: '',
-            habilidades: ''
-          });
-        }
-      } catch (err) {
-        console.error('Error loading profile:', err);
-        setError('Error al cargar el perfil');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, []);
+    if (userProfile) {
+      setProfileData(userProfile);
+    }
+  }, [userProfile]);
 
   const handleInputChange = (field: keyof UserProfileData, value: string): void => {
     setProfileData(prev => ({
@@ -71,24 +42,15 @@ export const MiPerfilPage = () => {
 
   const handleSaveProfile = async (): Promise<void> => {
     try {
-      setSaving(true);
       setError(null);
       setSuccess(false);
 
-      const response = await userService.updateProfile(profileData);
-      
-      if (response.success) {
-        setSuccess(true);
-        setIsEditing(false);
-      } else {
-        setError(response.message || 'Error al guardar el perfil');
-      }
-
+      await updateProfile.mutateAsync(profileData);
+      setSuccess(true);
+      setIsEditing(false);
     } catch (err) {
       console.error('Error guardando perfil:', err);
-      setError('No se pudieron guardar los cambios. Por favor intenta de nuevo.');
-    } finally {
-      setSaving(false);
+      setError((err as Error).message || 'No se pudieron guardar los cambios. Por favor intenta de nuevo.');
     }
   };
 
@@ -96,8 +58,10 @@ export const MiPerfilPage = () => {
     setIsEditing(false);
     setError(null);
     setSuccess(false);
-    // Recargar datos originales
-    window.location.reload();
+    // Restaurar datos originales
+    if (userProfile) {
+      setProfileData(userProfile);
+    }
   };
 
   const FieldSkeleton = () => (
@@ -151,14 +115,14 @@ export const MiPerfilPage = () => {
                     </button>
                     <button
                       onClick={handleSaveProfile}
-                      disabled={saving}
+                      disabled={updateProfile.isPending}
                       className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        saving
+                        updateProfile.isPending
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
                       }`}
                     >
-                      {saving ? 'Guardando...' : 'Guardar Cambios'}
+                      {updateProfile.isPending ? 'Guardando...' : 'Guardar Cambios'}
                     </button>
                   </>
                 ) : (

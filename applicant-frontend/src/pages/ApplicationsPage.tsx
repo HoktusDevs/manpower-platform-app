@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Application } from '../types';
-import { applicationsService } from '../services/applicationsService';
+import { useApplications, useDeleteApplication } from '../hooks';
 import { JobDetailsModal } from '../components/JobDetailsModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export const ApplicationsPage = () => {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: applications = [], isLoading: loading, error: queryError } = useApplications();
+  const deleteApplication = useDeleteApplication();
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -17,8 +16,8 @@ export const ApplicationsPage = () => {
     title: string;
     message: string;
     onConfirm: () => void;
-    variant?: 'danger' | 'warning' | 'info';
-    isLoading?: boolean;
+    variant: 'danger' | 'warning' | 'info';
+    isLoading: boolean;
   }>({
     isOpen: false,
     title: '',
@@ -28,30 +27,7 @@ export const ApplicationsPage = () => {
     isLoading: false
   });
 
-  // Cargar aplicaciones al montar el componente
-  useEffect(() => {
-    const loadApplications = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await applicationsService.getMyApplications();
-        
-        if (response.success && response.applications) {
-          setApplications(response.applications);
-        } else {
-          setError(response.message || 'Error al cargar aplicaciones');
-        }
-      } catch (err) {
-        console.error('Error loading applications:', err);
-        setError('Error de conexión al cargar aplicaciones');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadApplications();
-  }, []);
+  const error = queryError ? (queryError as Error).message : null;
 
 
   const formatDate = (dateString: string) => {
@@ -107,19 +83,12 @@ export const ApplicationsPage = () => {
         setModalLoading(true);
 
         try {
-          const response = await applicationsService.deleteApplication(applicationId);
-
-          if (response.success) {
-            setApplications(prev => prev.filter(app => app.applicationId !== applicationId));
-            closeConfirmModal();
-          } else {
-            closeConfirmModal();
-            showErrorModal('Error al eliminar', response.message || 'No se pudo eliminar la aplicación');
-          }
+          await deleteApplication.mutateAsync(applicationId);
+          closeConfirmModal();
         } catch (err) {
           console.error('Error deleting application:', err);
           closeConfirmModal();
-          showErrorModal('Error al eliminar', 'Error de conexión al eliminar la aplicación');
+          showErrorModal('Error al eliminar', (err as Error).message || 'Error de conexión al eliminar la aplicación');
         }
       },
       'danger'
