@@ -13,9 +13,14 @@ import { useEffect, useState } from 'react';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: true, // Refetch al volver a la ventana
+      retry: 2, // Reintentar 2 veces en caso de error
+      staleTime: 2 * 60 * 1000, // 2 minutos - balance entre performance y freshness
+      gcTime: 5 * 60 * 1000, // 5 minutos garbage collection (antes cacheTime en v4)
+      refetchOnMount: 'always', // Siempre refetch al montar componente
+    },
+    mutations: {
+      retry: 1, // Reintentar mutaciones 1 vez
     },
   },
 });

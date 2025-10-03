@@ -1,18 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { JobPosting } from '../types';
 import { jobsService } from '../services/jobsService';
-import { applicationsService } from '../services/applicationsService';
+import { useApplications } from '../hooks';
 
 export const AplicarPage = () => {
   const navigate = useNavigate();
+  const { data: applications = [] } = useApplications();
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
   const [jobsLoaded, setJobsLoaded] = useState(false);
+
+  // Calcular jobs aplicados desde las aplicaciones
+  const appliedJobs = useMemo(() => {
+    return new Set(applications.map(app => app.jobId));
+  }, [applications]);
 
   // Cargar jobs al montar el componente (solo una vez)
   useEffect(() => {
@@ -73,42 +78,6 @@ export const AplicarPage = () => {
     );
   });
 
-  // Verificar aplicaciones existentes solo cuando se muestren jobs filtrados
-  useEffect(() => {
-    const checkExistingApplications = async () => {
-      if (filteredJobPostings.length === 0) return;
-
-      try {
-        const appliedJobsSet = new Set<string>();
-
-        // Solo verificar aplicaciones para jobs que se están mostrando
-        for (const job of filteredJobPostings) {
-          try {
-            const response = await applicationsService.checkApplicationExists(job.jobId);
-            if (response.exists && response.applicationId) {
-              appliedJobsSet.add(job.jobId);
-            }
-          } catch (error) {
-            console.warn(`Error verificando aplicación para job ${job.jobId}:`, error);
-          }
-        }
-
-        setAppliedJobs(appliedJobsSet);
-      } catch (error) {
-        console.error('Error verificando aplicaciones existentes:', error);
-      }
-    };
-
-    // Solo verificar cuando hay jobs filtrados y hay un término de búsqueda
-    // Usar un debounce para evitar llamadas excesivas
-    const timeoutId = setTimeout(() => {
-      if (searchTerm.trim() && filteredJobPostings.length > 0) {
-        checkExistingApplications();
-      }
-    }, 500); // Esperar 500ms después del último cambio
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, filteredJobPostings]);
 
   const handleJobSelection = (jobId: string) => {
     // No permitir seleccionar jobs ya postulados

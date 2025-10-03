@@ -11,10 +11,14 @@ export function useApplications() {
     queryFn: async () => {
       const response = await applicationsService.getMyApplications();
       if (!response.success) {
-        throw new Error(response.message);
+        const error: any = new Error(response.message || 'Error al obtener aplicaciones');
+        error.response = { data: { message: response.message } };
+        throw error;
       }
       return response.applications || [];
     },
+    retry: 2, // Reintentar hasta 2 veces
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 }
 

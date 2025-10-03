@@ -10,10 +10,14 @@ export function useUserProfile() {
     queryFn: async () => {
       const response = await userService.getProfile();
       if (!response.success) {
-        throw new Error(response.message);
+        const error: any = new Error(response.message || 'Error al obtener perfil');
+        error.response = { data: { message: response.message } };
+        throw error;
       }
       return response.user;
     },
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutos - el perfil cambia menos
   });
 }
 

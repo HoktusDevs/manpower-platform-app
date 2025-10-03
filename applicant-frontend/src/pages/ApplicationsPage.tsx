@@ -27,7 +27,10 @@ export const ApplicationsPage = () => {
     isLoading: false
   });
 
-  const error = queryError ? (queryError as Error).message : null;
+  // Mejorar extracción de mensaje de error
+  const error = queryError
+    ? (queryError as any)?.response?.data?.message || (queryError as Error).message || 'Error desconocido'
+    : null;
 
 
   const formatDate = (dateString: string) => {
