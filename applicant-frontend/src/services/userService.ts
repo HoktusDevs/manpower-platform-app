@@ -38,7 +38,8 @@ class UserService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'https://nlzwqpjj3i.execute-api.us-east-1.amazonaws.com/dev';
+    // auth-service maneja el perfil de usuario en /auth/profile
+    this.baseUrl = 'https://7pptifb3zk.execute-api.us-east-1.amazonaws.com/dev';
   }
 
   /**
@@ -56,7 +57,8 @@ class UserService {
       }
 
       // Usar el ID token en el header Authorization
-      const { data } = await apiClient.get<any>(`${this.baseUrl}/users/me`, {
+      // auth-service expone el perfil en /auth/profile
+      const { data } = await apiClient.get<any>(`${this.baseUrl}/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${idToken}`,
         },
@@ -103,8 +105,10 @@ class UserService {
    */
   async updateProfile(profileData: Partial<UserProfileData>): Promise<UserResponse> {
     try {
+      // auth-service no tiene endpoint de actualización de perfil todavía
+      // TODO: Implementar endpoint PUT /auth/profile en auth-service
       const { data } = await apiClient.put<UserResponse>(
-        `${this.baseUrl}/users/me`,
+        `${this.baseUrl}/auth/profile`,
         profileData
       );
       return data;

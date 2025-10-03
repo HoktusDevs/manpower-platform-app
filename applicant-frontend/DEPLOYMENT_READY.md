@@ -68,12 +68,14 @@ El frontend actualmente usa URLs hardcodeadas:
 // applications-service
 https://b1lbhzwg97.execute-api.us-east-1.amazonaws.com/dev
 
-// users-service
-https://nlzwqpjj3i.execute-api.us-east-1.amazonaws.com/dev
+// auth-service (para perfil de usuario - /auth/profile)
+https://7pptifb3zk.execute-api.us-east-1.amazonaws.com/dev
 
 // file-upload-service
 https://lp5u5gdahh.execute-api.us-east-1.amazonaws.com/dev
 ```
+
+**Nota**: No existe un users-service separado. El perfil de usuario se maneja en auth-service mediante `/auth/profile`.
 
 **Recomendación Futura**: Mover a variables de entorno (`.env`) para facilitar cambios entre dev/prod.
 
@@ -114,21 +116,35 @@ cd applicant-frontend
 npm run build
 ```
 
-### 2. Deploy a S3
+### 2. Deploy a S3 + CloudFront
 ```bash
-# Subir contenido de dist/ a tu bucket S3
-aws s3 sync dist/ s3://your-bucket-name/ --delete
+# Subir contenido de dist/ a S3
+aws s3 sync dist/ s3://manpower-applicant-frontend-dev/ --delete
 
-# Invalidar cache de CloudFront (si lo usas)
+# Invalidar cache de CloudFront
 aws cloudfront create-invalidation \
-  --distribution-id YOUR_DIST_ID \
+  --distribution-id E2OW45KYYH2WYM \
   --paths "/*"
 ```
 
-### 3. Verificar
-1. Abrir URL de producción
+**One-liner completo:**
+```bash
+npm run build && \
+aws s3 sync dist/ s3://manpower-applicant-frontend-dev/ --delete && \
+aws cloudfront create-invalidation --distribution-id E2OW45KYYH2WYM --paths "/*"
+```
+
+### 3. URLs de Acceso
+- **CloudFront (HTTPS)**: https://d35vn6jxat3bme.cloudfront.net
+- **S3 Direct (HTTP)**: http://manpower-applicant-frontend-dev.s3-website-us-east-1.amazonaws.com
+
+### 4. Verificar
+1. Abrir URL de CloudFront
 2. Verificar en Console que no hay errores
-3. Probar flujo crítico: Login → Aplicar → Ver Aplicaciones
+3. Verificar que HTTP redirige a HTTPS
+4. Probar flujo crítico: Login → Aplicar → Ver Aplicaciones
+
+**Ver más detalles**: `CLOUDFRONT_INFO.md`
 
 ---
 
