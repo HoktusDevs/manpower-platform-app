@@ -1,0 +1,16 @@
+{
+  "name": "manpower-cleanup-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "cleanup:dry-run": "tsx cleanup-orphaned-data.ts",
+    "cleanup:execute": "tsx cleanup-orphaned-data.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
