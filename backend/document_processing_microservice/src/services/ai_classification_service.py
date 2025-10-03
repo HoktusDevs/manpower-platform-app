@@ -96,33 +96,75 @@ Responde en formato JSON con:
         """Construye el prompt para extracción de datos según el tipo de documento."""
         extraction_schemas = {
             "Cédula de Identidad CL (Frontal)": {
-                "fields": ["nombre", "apellido_paterno", "apellido_materno", "rut", "fecha_nacimiento", "nacionalidad"],
-                "description": "cédula de identidad chilena"
+                "fields": ["nombre", "apellido_paterno", "apellido_materno", "rut", "fecha_nacimiento", "nacionalidad", "sexo"],
+                "description": "cédula de identidad chilena (frontal)",
+                "format_instructions": """
+- nombre: Primer nombre del titular
+- apellido_paterno: Apellido paterno del titular
+- apellido_materno: Apellido materno del titular
+- rut: RUT completo con formato XX.XXX.XXX-X
+- fecha_nacimiento: Fecha en formato YYYY-MM-DD
+- nacionalidad: Nacionalidad del titular (ej: "CHILENA")
+- sexo: M o F
+"""
+            },
+            "Cédula de Identidad CL (Reverso)": {
+                "fields": ["rut", "fecha_emision", "fecha_vencimiento", "numero_documento"],
+                "description": "cédula de identidad chilena (reverso)",
+                "format_instructions": """
+- rut: RUT completo con formato XX.XXX.XXX-X
+- fecha_emision: Fecha de emisión en formato YYYY-MM-DD
+- fecha_vencimiento: Fecha de vencimiento en formato YYYY-MM-DD
+- numero_documento: Número del documento
+"""
             },
             "Licencia de Conducir CL": {
-                "fields": ["nombre_completo", "rut", "fecha_vencimiento", "categoria", "direccion"],
-                "description": "licencia de conducir chilena"
+                "fields": ["nombre_completo", "rut", "fecha_vencimiento", "categoria", "direccion", "fecha_emision"],
+                "description": "licencia de conducir chilena",
+                "format_instructions": """
+- nombre_completo: Nombre completo del titular
+- rut: RUT completo con formato XX.XXX.XXX-X
+- fecha_vencimiento: Fecha de vencimiento en formato YYYY-MM-DD
+- categoria: Categoría de licencia (ej: "B")
+- direccion: Dirección del titular
+- fecha_emision: Fecha de emisión en formato YYYY-MM-DD
+"""
+            },
+            "Pasaporte": {
+                "fields": ["nombre_completo", "numero_pasaporte", "nacionalidad", "fecha_nacimiento", "fecha_vencimiento", "sexo"],
+                "description": "pasaporte",
+                "format_instructions": """
+- nombre_completo: Nombre completo del titular
+- numero_pasaporte: Número del pasaporte
+- nacionalidad: Nacionalidad (ej: "CHILE")
+- fecha_nacimiento: Fecha de nacimiento en formato YYYY-MM-DD
+- fecha_vencimiento: Fecha de vencimiento en formato YYYY-MM-DD
+- sexo: M o F
+"""
             }
         }
-        
+
         schema = extraction_schemas.get(document_type, {
             "fields": ["informacion_general"],
-            "description": "documento"
+            "description": "documento",
+            "format_instructions": "Extrae toda la información visible"
         })
-        
+
         return f"""
 Extrae la información estructurada del siguiente texto de una {schema['description']}.
 
-Campos a extraer: {', '.join(schema['fields'])}
+IMPORTANTE: Extrae EXACTAMENTE como aparece en el documento, sin modificar el formato.
+
+Campos a extraer:
+{schema.get('format_instructions', ', '.join(schema['fields']))}
 
 Texto del documento:
-{text[:2000]}...
+{text[:3000]}
 
-Responde en formato JSON con los campos extraídos:
+Responde SOLO en formato JSON válido con los campos extraídos. Si un campo no está presente, usa null:
 {{
-    "nombre": "valor_extraido",
-    "fecha_vencimiento": "YYYY-MM-DD",
-    "otros_campos": "valores"
+    "campo1": "valor_extraido",
+    "campo2": "valor_extraido"
 }}
 """
     

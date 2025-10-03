@@ -151,6 +151,97 @@ const parseMultipartWithBusboy = (event: APIGatewayProxyEvent): Promise<NewParse
 /**
  * Find folder by ID using folders API
  */
+/**
+ * Infer expected document type from filename
+ */
+const inferDocumentType = (fileName: string): string | undefined => {
+  const lowerName = fileName.toLowerCase();
+
+  // Map common document names to types
+  if (lowerName.includes('cedula') || lowerName.includes('cédula') || lowerName.includes('carnet') || lowerName.includes('ci')) {
+    if (lowerName.includes('frente') || lowerName.includes('frontal') || lowerName.includes('front')) {
+      return 'Cédula de Identidad CL (Frontal)';
+    } else if (lowerName.includes('reverso') || lowerName.includes('trasera') || lowerName.includes('back')) {
+      return 'Cédula de Identidad CL (Reverso)';
+    }
+    return 'Cédula de Identidad CL (Frontal)'; // Default to frontal
+  }
+
+  if (lowerName.includes('licencia') || lowerName.includes('conducir')) {
+    return 'Licencia de Conducir CL';
+  }
+
+  if (lowerName.includes('pasaporte') || lowerName.includes('passport')) {
+    return 'Pasaporte';
+  }
+
+  if (lowerName.includes('nacimiento') || lowerName.includes('birth')) {
+    return 'Certificado de Nacimiento';
+  }
+
+  if (lowerName.includes('antecedentes')) {
+    return 'Certificado de Antecedentes';
+  }
+
+  if (lowerName.includes('cv') || lowerName.includes('curriculum')) {
+    return 'Curriculum Vitae';
+  }
+
+  // Return undefined if type cannot be inferred
+  return undefined;
+};
+
+/**
+ * Get applicant metadata from applications service
+ */
+const getApplicantMetadata = async (applicationId: string): Promise<any | null> => {
+  try {
+    console.log(`🔍 Fetching applicant metadata for application: ${applicationId}`);
+
+    const applicationsApiUrl = process.env.APPLICATIONS_API_URL || 'https://b1lbhzwg97.execute-api.us-east-1.amazonaws.com/dev';
+
+    const response = await fetch(`${applicationsApiUrl}/applications/${applicationId}`);
+
+    if (!response.ok) {
+      console.error(`❌ Applications API returned ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json() as any;
+    const application = data.application;
+
+    if (!application) {
+      console.error(`❌ Application not found: ${applicationId}`);
+      return null;
+    }
+
+    // Get user info from users service
+    const usersApiUrl = process.env.USERS_API_URL || 'https://nlzwqpjj3i.execute-api.us-east-1.amazonaws.com/dev';
+    const userResponse = await fetch(`${usersApiUrl}/users/${application.userId}`);
+
+    if (!userResponse.ok) {
+      console.warn(`⚠️ Could not fetch user data for ${application.userId}`);
+      return null;
+    }
+
+    const userData = await userResponse.json() as any;
+    const user = userData.user;
+
+    return {
+      applicationId: application.applicationId,
+      userId: application.userId,
+      jobId: application.jobId,
+      nombre: user?.nombre || user?.fullName || '',
+      rut: user?.rut || '',
+      email: user?.email || '',
+      telefono: user?.telefono || ''
+    };
+  } catch (error) {
+    console.error('❌ Error fetching applicant metadata:', error);
+    return null;
+  }
+};
+
 const findFolderById = async (folderId: string): Promise<any | null> => {
   try {
     console.log(`🔍 Searching for folder with ID: "${folderId}"`);
@@ -898,6 +989,19 @@ export const uploadHandler: APIGatewayProxyHandler = async (
 
     console.log(`✅ Target folder found: ${folder.name} (${folder.folderId})`);
 
+    // Get applicant metadata if this is a Postulante folder
+    let applicantMetadata: any = null;
+    if (folder.type === 'Postulante' && folder.metadata?.applicationId) {
+      applicantMetadata = await getApplicantMetadata(folder.metadata.applicationId);
+      if (applicantMetadata) {
+        console.log(`📋 Applicant metadata retrieved:`, {
+          nombre: applicantMetadata.nombre,
+          rut: applicantMetadata.rut,
+          email: applicantMetadata.email
+        });
+      }
+    }
+
     // Upload file directly to S3
     const { fileUrl, s3Key } = await uploadToS3(actualFileName, file.data, actualFileType);
 
@@ -923,6 +1027,22 @@ export const uploadHandler: APIGatewayProxyHandler = async (
       s3Bucket: S3_BUCKET,
       s3Key,
       fileUrl,
+
+      // Applicant metadata for OCR validation (if available)
+      ...(applicantMetadata && {
+        applicantData: {
+          nombre: applicantMetadata.nombre,
+          rut: applicantMetadata.rut,
+          email: applicantMetadata.email,
+          telefono: applicantMetadata.telefono,
+          applicationId: applicantMetadata.applicationId,
+          userId: applicantMetadata.userId,
+          jobId: applicantMetadata.jobId
+        }
+      }),
+
+      // Expected document type from filename (if it matches a pattern)
+      expectedDocumentType: inferDocumentType(actualFileName),
 
       // Status and processing - default to PENDING for user review
       status: 'completed',

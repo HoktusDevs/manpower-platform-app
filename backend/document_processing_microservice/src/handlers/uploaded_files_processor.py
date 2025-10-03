@@ -14,6 +14,7 @@ import boto3
 
 from src.services.document_processing_pipeline import DocumentProcessingPipeline
 from src.services.websocket_service import WebSocketService
+from src.services.document_content_validator import DocumentContentValidator
 
 # Configurar logging
 logger = logging.getLogger()
@@ -22,6 +23,7 @@ logger.setLevel(logging.INFO)
 # Inicializar servicios
 pipeline = DocumentProcessingPipeline()
 websocket_service = WebSocketService()
+content_validator = DocumentContentValidator()
 dynamodb = boto3.resource('dynamodb')
 
 # Stage dinámico
@@ -111,6 +113,29 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
                 # Convertir resultado a dict
                 result_dict = result.model_dump()
+
+                # Validar contenido si hay datos del aplicante disponibles
+                applicant_data = document_data.get('applicantData')
+                expected_doc_type = document_data.get('expectedDocumentType')
+
+                if applicant_data and result_dict['processing_status'] == 'COMPLETED':
+                    logger.info(f"🔍 Validando contenido del documento con datos del postulante...")
+
+                    # Ejecutar validación de contenido
+                    validation_decision, validation_observations = content_validator.validate_document_content(
+                        extracted_data=result_dict.get('data_structure', {}),
+                        applicant_data=applicant_data,
+                        expected_document_type=expected_doc_type,
+                        document_type=result_dict.get('document_type', '')
+                    )
+
+                    # Actualizar decisión final y observaciones
+                    result_dict['final_decision'] = validation_decision
+                    result_dict['observations'] = validation_observations
+
+                    logger.info(f"✅ Validación de contenido completada: {validation_decision}")
+                else:
+                    logger.info("⚠️ No hay datos del postulante para validación, usando decisión del pipeline")
 
                 # Convertir floats a Decimal para DynamoDB
                 if 'total_processing_cost_usd' in result_dict:
