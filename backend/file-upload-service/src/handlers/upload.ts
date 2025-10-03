@@ -992,6 +992,72 @@ export const uploadHandler: APIGatewayProxyHandler = async (
 };
 
 /**
+ * Generate simple presigned URL for S3 upload
+ * This is a minimal endpoint that only generates presigned URLs
+ */
+export const generatePresignedUrlHandler: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  console.log('🔗 Generate presigned URL request received');
+
+  try {
+    // Handle OPTIONS request for CORS
+    if (event.httpMethod === 'OPTIONS') {
+      return createResponse(200, { message: 'OK' });
+    }
+
+    if (!event.body) {
+      return createResponse(400, {
+        success: false,
+        message: 'Request body is required'
+      });
+    }
+
+    const { s3Key, fileType } = JSON.parse(event.body);
+
+    // Validate required fields
+    if (!s3Key || !fileType) {
+      return createResponse(400, {
+        success: false,
+        message: 'Missing required fields: s3Key, fileType'
+      });
+    }
+
+    console.log('📝 Generating presigned URL for:', s3Key);
+
+    // Generate presigned URL for upload
+    const command = new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: s3Key,
+      ContentType: fileType,
+      ContentDisposition: 'inline',
+      CacheControl: 'max-age=31536000',
+    });
+
+    const presignedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600 // 1 hour
+    });
+
+    console.log('✅ Presigned URL generated successfully');
+
+    return createResponse(200, {
+      success: true,
+      presignedUrl,
+      s3Key,
+      expiresIn: 3600
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating presigned URL:', error);
+    return createResponse(500, {
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
  * Health check handler
  */
 export const healthCheckHandler: APIGatewayProxyHandler = async (): Promise<APIGatewayProxyResult> => {

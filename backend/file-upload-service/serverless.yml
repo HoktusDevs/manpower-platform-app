@@ -149,6 +149,22 @@ functions:
               - Authorization
             allowCredentials: false
 
+  # Generate Presigned URL (Simple endpoint for frontend)
+  generatePresignedUrl:
+    handler: src/handlers/upload.generatePresignedUrlHandler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /generate-presigned-url
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
   # Health Check
   healthCheck:
     handler: src/handlers/upload.healthCheckHandler

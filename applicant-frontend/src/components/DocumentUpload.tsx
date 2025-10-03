@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { filesService } from '../services/filesService';
+import { s3Service } from '../services/s3Service';
 import { ocrService } from '../services/ocrService';
 
 interface DocumentUploadProps {
@@ -67,54 +67,30 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const handleFileUpload = async (file: File) => {
     try {
-      setIsUploading(true);
       setUploadError(null);
-      setUploadProgress(0);
 
-      // Subir archivo a S3 y guardar en DynamoDB
-      const uploadResult = await filesService.uploadDocument({
-        file,
-        userId,
-        documentType: documentName,
-        jobId,
-        ...(applicationId && { applicationId }),
-      });
-
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Error subiendo archivo');
+      // Validar archivo antes de guardarlo
+      if (!s3Service.validateFileType(file)) {
+        throw new Error('Tipo de archivo no permitido. Solo se permiten PDF, DOC, DOCX, JPG, PNG');
       }
 
-      setDocumentId(uploadResult.documentId!);
-      setUploadProgress(100);
-
-      // Procesar con OCR
-      const ocrResult = await ocrService.processDocument({
-        documentId: uploadResult.documentId!,
-        fileUrl: uploadResult.fileUrl!,
-        fileName: file.name,
-        userId,
-        jobId,
-        ...(applicationId && { applicationId }),
-      });
-
-      if (ocrResult.success) {
-        setOcrStatus('processing');
-      } else {
-        console.warn('OCR processing failed:', ocrResult.error);
-        setOcrStatus('failed');
+      if (!s3Service.validateFileSize(file)) {
+        throw new Error('El archivo es demasiado grande. Máximo 10MB');
       }
 
-      // Notificar al componente padre
-      onFileUpload(file, uploadResult.documentId);
-      onUploadComplete?.(uploadResult.documentId!, uploadResult.fileUrl!);
+      // Solo guardar el archivo localmente, NO subir aún
+      // La subida se hará cuando se presione "Enviar Aplicaciones"
+      console.log(`📎 Archivo seleccionado: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+
+      // Notificar al componente padre que se seleccionó un archivo
+      // NO pasamos documentId porque aún no se ha subido
+      onFileUpload(file);
 
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Error selecting file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setUploadError(errorMessage);
       onUploadError?.(errorMessage);
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -125,10 +101,6 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   };
 
   const handleRemove = () => {
-    if (documentId) {
-      // Eliminar documento del backend
-      filesService.deleteDocument(documentId);
-    }
     setDocumentId(null);
     setOcrStatus('pending');
     setUploadError(null);
