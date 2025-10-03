@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import boto3
+from botocore.exceptions import ClientError
 
 from src.services.document_processing_pipeline import DocumentProcessingPipeline
 from src.services.websocket_service import WebSocketService
@@ -25,10 +26,12 @@ pipeline = DocumentProcessingPipeline()
 websocket_service = WebSocketService()
 content_validator = DocumentContentValidator()
 dynamodb = boto3.resource('dynamodb')
+s3_client = boto3.client('s3')
 
 # Stage dinámico
 stage = os.getenv('STAGE', 'dev')
 results_table = dynamodb.Table(f'document-processing-results-{stage}')
+S3_BUCKET = os.getenv('S3_BUCKET', f'manpower-documents-{stage}')
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -137,6 +140,51 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 else:
                     logger.info("⚠️ No hay datos del postulante para validación, usando decisión del pipeline")
 
+                # Si el documento fue APROBADO, renombrar el archivo
+                if result_dict.get('final_decision') == 'APPROVED' and applicant_data and expected_doc_type:
+                    try:
+                        logger.info("📝 Documento aprobado, procediendo a renombrar archivo...")
+
+                        # Generar nombre estandarizado
+                        applicant_name = applicant_data.get('nombre', 'Unknown')
+                        original_filename = document_data.get('fileName', '')
+                        original_s3_key = document_data.get('s3Key', '')
+
+                        new_filename = generate_standardized_filename(
+                            document_type=expected_doc_type,
+                            applicant_name=applicant_name,
+                            original_filename=original_filename
+                        )
+
+                        logger.info(f"🔄 Renombrando: {original_filename} → {new_filename}")
+
+                        # Renombrar archivo en S3
+                        new_s3_key = rename_s3_file(original_s3_key, new_filename)
+
+                        # Construir nueva URL del archivo
+                        new_file_url = f"https://{S3_BUCKET}.s3.us-east-1.amazonaws.com/{new_s3_key}"
+
+                        # Actualizar nombre en DynamoDB
+                        source_document_id = document_data.get('id') or document_data.get('fileId')
+                        if source_document_id:
+                            update_document_filename(
+                                document_id=source_document_id,
+                                new_filename=new_filename,
+                                new_s3_key=new_s3_key,
+                                new_file_url=new_file_url
+                            )
+
+                            # Actualizar document_data para que se use el nuevo nombre en los siguientes pasos
+                            document_data['fileName'] = new_filename
+                            document_data['s3Key'] = new_s3_key
+                            document_data['fileUrl'] = new_file_url
+
+                        logger.info(f"✅ Archivo renombrado exitosamente a: {new_filename}")
+
+                    except Exception as rename_error:
+                        logger.error(f"❌ Error renombrando archivo (no crítico): {rename_error}")
+                        # No detener el procesamiento si falla el renombrado
+
                 # Convertir floats a Decimal para DynamoDB
                 if 'total_processing_cost_usd' in result_dict:
                     result_dict['total_processing_cost_usd'] = Decimal(str(result_dict['total_processing_cost_usd']))
@@ -179,6 +227,123 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'error': str(e)
             })
         }
+
+
+def generate_standardized_filename(
+    document_type: str,
+    applicant_name: str,
+    original_filename: str
+) -> str:
+    """
+    Genera un nombre estandarizado para el archivo aprobado.
+
+    Args:
+        document_type: Tipo de documento (ej: "Certificado AFP")
+        applicant_name: Nombre del postulante (ej: "Ricardo González")
+        original_filename: Nombre original del archivo
+
+    Returns:
+        str: Nombre estandarizado (ej: "Certificado-AFP-Ricardo-González.pdf")
+    """
+    # Obtener extensión del archivo original
+    extension = ''
+    if '.' in original_filename:
+        extension = original_filename.rsplit('.', 1)[1]
+
+    # Normalizar tipo de documento (reemplazar espacios con guiones)
+    normalized_doc_type = document_type.replace(' ', '-')
+
+    # Normalizar nombre del postulante (reemplazar espacios con guiones)
+    # Extraer solo el primer nombre si tiene múltiples nombres
+    first_name = applicant_name.split()[0] if applicant_name else 'Unknown'
+    normalized_name = first_name.replace(' ', '-')
+
+    # Construir nombre final
+    if extension:
+        return f"{normalized_doc_type}-{normalized_name}.{extension}"
+    else:
+        return f"{normalized_doc_type}-{normalized_name}"
+
+
+def rename_s3_file(old_s3_key: str, new_filename: str) -> str:
+    """
+    Renombra un archivo en S3 copiándolo con el nuevo nombre y eliminando el original.
+
+    Args:
+        old_s3_key: Clave S3 original del archivo
+        new_filename: Nuevo nombre del archivo
+
+    Returns:
+        str: Nueva clave S3 del archivo
+    """
+    try:
+        # Extraer el directorio del s3_key original
+        if '/' in old_s3_key:
+            directory = '/'.join(old_s3_key.split('/')[:-1])
+            new_s3_key = f"{directory}/{new_filename}"
+        else:
+            new_s3_key = new_filename
+
+        logger.info(f"🔄 Renombrando archivo S3: {old_s3_key} → {new_s3_key}")
+
+        # Copiar archivo con nuevo nombre
+        copy_source = {'Bucket': S3_BUCKET, 'Key': old_s3_key}
+        s3_client.copy_object(
+            CopySource=copy_source,
+            Bucket=S3_BUCKET,
+            Key=new_s3_key
+        )
+
+        # Eliminar archivo original
+        s3_client.delete_object(Bucket=S3_BUCKET, Key=old_s3_key)
+
+        logger.info(f"✅ Archivo renombrado exitosamente en S3")
+        return new_s3_key
+
+    except ClientError as e:
+        logger.error(f"❌ Error renombrando archivo en S3: {e}")
+        raise
+
+
+def update_document_filename(
+    document_id: str,
+    new_filename: str,
+    new_s3_key: str,
+    new_file_url: str
+) -> None:
+    """
+    Actualiza el nombre del archivo en la tabla de documentos.
+
+    Args:
+        document_id: ID del documento
+        new_filename: Nuevo nombre del archivo
+        new_s3_key: Nueva clave S3
+        new_file_url: Nueva URL del archivo
+    """
+    try:
+        documents_table = dynamodb.Table(f'manpower-documents-{stage}')
+
+        documents_table.update_item(
+            Key={'id': document_id},
+            UpdateExpression=(
+                'SET fileName = :filename, '
+                's3Key = :s3_key, '
+                'fileUrl = :file_url, '
+                'originalName = :original_name'
+            ),
+            ExpressionAttributeValues={
+                ':filename': new_filename,
+                ':s3_key': new_s3_key,
+                ':file_url': new_file_url,
+                ':original_name': new_filename
+            }
+        )
+
+        logger.info(f"✅ Nombre de archivo actualizado en DynamoDB: {new_filename}")
+
+    except Exception as e:
+        logger.error(f"❌ Error actualizando nombre en DynamoDB: {e}")
+        # No hacer raise - el procesamiento fue exitoso, solo falló la actualización del nombre
 
 
 def parse_dynamodb_item(item: Dict[str, Any]) -> Dict[str, Any]:
