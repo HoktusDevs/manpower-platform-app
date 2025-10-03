@@ -283,6 +283,7 @@ class S3Service {
       const { data } = await apiClient.post(`${this.fileUploadServiceUrl}/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/form-data',
         },
       });
 
