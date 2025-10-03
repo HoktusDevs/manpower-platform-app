@@ -272,6 +272,70 @@ class S3Service {
     const extension = originalName.split('.').pop();
     return `${userId}_${documentType}_${timestamp}_${randomString}.${extension}`;
   }
+
+  /**
+   * Subir archivo completo al file-upload-service con folderId
+   * Esto sube el archivo a S3 y lo registra en files-service automáticamente
+   */
+  async uploadFileToFolder(
+    file: File,
+    folderId: string,
+    fileName?: string,
+    fileType?: string
+  ): Promise<{ success: boolean; fileUrl?: string; documentId?: string; error?: string }> {
+    try {
+      const accessToken = cognitoAuthService.getAccessToken();
+      if (!accessToken) {
+        return {
+          success: false,
+          error: 'No hay token de acceso disponible',
+        };
+      }
+
+      console.log(`📤 Subiendo archivo ${file.name} a carpeta ${folderId}...`);
+
+      // Crear FormData para multipart upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folderId', folderId);
+      if (fileName) formData.append('fileName', fileName);
+      if (fileType) formData.append('fileType', fileType || file.type);
+
+      // Subir a file-upload-service endpoint /upload
+      const response = await fetch(`${this.fileUploadServiceUrl}/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.file) {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      console.log('✅ Archivo subido exitosamente a carpeta');
+
+      return {
+        success: true,
+        fileUrl: data.file.fileUrl,
+        documentId: data.file.documentId,
+      };
+    } catch (error) {
+      console.error('S3Service: Error uploading file to folder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error subiendo archivo',
+      };
+    }
+  }
 }
 
 export const s3Service = new S3Service();

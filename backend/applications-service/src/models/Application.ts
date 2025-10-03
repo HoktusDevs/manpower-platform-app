@@ -7,6 +7,7 @@ export interface Application {
   createdAt: string;
   updatedAt: string;
   documents?: string[]; // Array of document URLs
+  applicantFolderId?: string; // ID of the applicant's folder in folders-service
 }
 
 export interface ApplicationModel {

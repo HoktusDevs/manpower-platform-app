@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import { applicationsService } from '../services/applicationsService';
-import { filesService } from '../services/filesService';
+import { s3Service } from '../services/s3Service';
 import { DocumentUpload } from '../components/DocumentUpload';
 import type { JobPosting, UserApplicationData, TabType } from '../types';
 
@@ -22,7 +22,6 @@ export const CompletarAplicacionesPage = () => {
     educacion: ''
   });
   const [documentFiles, setDocumentFiles] = useState<{ [jobId: string]: { [documentName: string]: File } }>({});
-  const [documentIds, setDocumentIds] = useState<{ [jobId: string]: { [documentName: string]: string } }>({});
   const [saving, setSaving] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -99,16 +98,6 @@ export const CompletarAplicacionesPage = () => {
         [documentName]: file
       }
     }));
-
-    if (documentId) {
-      setDocumentIds(prev => ({
-        ...prev,
-        [jobId]: {
-          ...prev[jobId],
-          [documentName]: documentId
-        }
-      }));
-    }
   };
 
   const handleDocumentRemove = (jobId: string, documentName: string) => {
@@ -118,15 +107,6 @@ export const CompletarAplicacionesPage = () => {
       return {
         ...prev,
         [jobId]: newFiles
-      };
-    });
-
-    setDocumentIds(prev => {
-      const newIds = { ...prev[jobId] };
-      delete newIds[documentName];
-      return {
-        ...prev,
-        [jobId]: newIds
       };
     });
   };
@@ -186,10 +166,16 @@ export const CompletarAplicacionesPage = () => {
         return;
       }
 
-      console.log('Enviando aplicaciones para jobs:', selectedJobs.map(job => job.jobId));
+      if (!user?.sub) {
+        setError('No se pudo identificar al usuario');
+        return;
+      }
+
+      const userId = user.sub;
+      console.log('📤 Enviando aplicaciones para jobs:', selectedJobs.map(job => job.jobId));
 
       // Validar que todos los documentos requeridos estén subidos
-      const missingDocuments = selectedJobs.flatMap(job => 
+      const missingDocuments = selectedJobs.flatMap(job =>
         getMissingDocuments(job).map(docName => `${job.title}: ${docName}`)
       );
 
@@ -198,34 +184,64 @@ export const CompletarAplicacionesPage = () => {
         return;
       }
 
-      // Enviar aplicaciones al backend
+      // Crear aplicaciones primero (esto crea las carpetas del postulante)
+      console.log('📝 Creando aplicaciones en el backend...');
       const response = await applicationsService.createApplications({
         jobIds: selectedJobs.map(job => job.jobId),
         description: `Aplicación de ${applicationData.nombre} (${applicationData.email})`,
-        documents: [] // Los documentos ya están asociados individualmente
+        documents: []
       });
 
-      if (response.success) {
-        // Asociar documentos con las aplicaciones creadas
-        if (response.applications) {
-          for (const application of response.applications) {
-            const jobDocuments = documentIds[application.jobId] || {};
-            for (const [, documentId] of Object.entries(jobDocuments)) {
-              await filesService.associateDocumentWithApplication(documentId, application.applicationId);
-            }
-          }
+      if (!response.success || !response.applications) {
+        setError(response.message || 'Error al crear aplicaciones');
+        return;
+      }
+
+      console.log(`✅ ${response.applications.length} aplicaciones creadas exitosamente`);
+
+      // Subir documentos a S3 y registrarlos en files-service dentro de la carpeta del postulante
+      console.log('📤 Subiendo documentos a S3...');
+
+      for (const application of response.applications) {
+        if (!application.applicantFolderId) {
+          console.warn(`⚠️ No applicantFolderId for application ${application.applicationId}, skipping documents`);
+          continue;
         }
 
-        setSuccessMessage(`¡Aplicaciones enviadas exitosamente con documentos! Se crearon ${response.applications?.length || 0} aplicaciones.`);
-        setShowSuccessToast(true);
-        
-        // Redirigir a Mis Aplicaciones después de 2 segundos
-        setTimeout(() => {
-          navigate('/mis-aplicaciones');
-        }, 2000);
-      } else {
-        setError(response.message || 'Error al enviar aplicaciones');
+        const jobDocuments = documentFiles[application.jobId] || {};
+
+        for (const [documentName, file] of Object.entries(jobDocuments)) {
+          try {
+            console.log(`📎 Subiendo ${documentName} para job ${application.jobId} en carpeta ${application.applicantFolderId}...`);
+
+            // Subir archivo al file-upload-service con folderId
+            // Esto sube a S3 y registra en files-service automáticamente
+            const uploadResult = await s3Service.uploadFileToFolder(
+              file,
+              application.applicantFolderId,
+              file.name,
+              file.type
+            );
+
+            if (uploadResult.success) {
+              console.log(`✅ Documento ${documentName} subido exitosamente`);
+            } else {
+              console.warn(`⚠️ Error subiendo ${documentName}:`, uploadResult.error);
+            }
+          } catch (uploadError) {
+            console.error(`❌ Error subiendo ${documentName}:`, uploadError);
+            // Continuar con los demás documentos aunque uno falle
+          }
+        }
       }
+
+      setSuccessMessage(`¡Aplicaciones enviadas exitosamente! Se crearon ${response.applications.length} aplicaciones con sus documentos.`);
+      setShowSuccessToast(true);
+
+      // Redirigir a Mis Aplicaciones después de 2 segundos
+      setTimeout(() => {
+        navigate('/mis-aplicaciones');
+      }, 2000);
 
     } catch (err) {
       console.error('Error submitting applications:', err);

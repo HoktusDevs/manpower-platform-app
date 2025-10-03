@@ -29,6 +29,7 @@ export interface Application {
   createdAt: string;
   updatedAt: string;
   documents?: string[];
+  applicantFolderId?: string; // ID of the applicant's folder in folders-service
   // Enriched fields from job
   jobTitle?: string;
   title?: string; // alias for jobTitle

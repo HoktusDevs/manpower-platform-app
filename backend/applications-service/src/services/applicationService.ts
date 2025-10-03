@@ -58,9 +58,9 @@ export class ApplicationService {
 
           // Crear aplicación en la base de datos
           const createdApplication = await this.dynamoService.createApplication(applicationModel);
-          createdApplications.push(createdApplication);
 
-          // Crear carpeta del postulante en folders-service
+          // Crear carpeta del postulante en folders-service y agregar folderId a la aplicación
+          let applicantFolderId: string | undefined;
           try {
             // Obtener datos del job para conseguir el folderId
             const jobData = await this.dynamoService.getJobData(jobId);
@@ -85,8 +85,9 @@ export class ApplicationService {
                 }
               );
 
-              if (folderResult.success) {
-                console.log(`✅ Carpeta del postulante creada exitosamente para userId: ${userId}`);
+              if (folderResult.success && folderResult.folder?.folderId) {
+                applicantFolderId = folderResult.folder.folderId;
+                console.log(`✅ Carpeta del postulante creada exitosamente: ${applicantFolderId}`);
               } else {
                 console.warn(`⚠️ Error creando carpeta del postulante: ${folderResult.message}`);
               }
@@ -97,6 +98,12 @@ export class ApplicationService {
             console.error(`❌ Error creando carpeta del postulante para job ${jobId}:`, folderError);
             // No fallar la aplicación por error en la carpeta
           }
+
+          // Agregar folderId a la aplicación antes de pushear
+          createdApplications.push({
+            ...createdApplication,
+            applicantFolderId
+          });
 
         } catch (error) {
           console.error(`Error creating application for job ${jobId}:`, error);
