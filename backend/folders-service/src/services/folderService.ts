@@ -406,6 +406,28 @@ export class FolderService {
 
       for (const id of sortedFolderIds) {
         try {
+          // Delete all files in this folder before deleting the folder
+          try {
+            const filesResult = await this.fileService.getFilesByFolder(id, userId);
+            if (filesResult.success && filesResult.files && filesResult.files.length > 0) {
+              console.log(`🗑️ Deleting ${filesResult.files.length} files from folder ${id}`);
+
+              for (const file of filesResult.files) {
+                try {
+                  await this.fileService.deleteFile(file.documentId, userId);
+                  console.log(`✅ Deleted file: ${file.fileName}`);
+                } catch (fileError) {
+                  console.error(`❌ Error deleting file ${file.documentId}:`, fileError);
+                  // Continue deleting other files
+                }
+              }
+            }
+          } catch (filesError) {
+            console.warn(`⚠️ Could not delete files from folder ${id}:`, filesError);
+            // Continue with folder deletion even if file deletion fails
+          }
+
+          // Now delete/deactivate the folder
           await this.dynamoService.updateFolder(id, userId, { isActive: false });
           deletedFolders.push(id);
         } catch (error) {
