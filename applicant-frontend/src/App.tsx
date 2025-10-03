@@ -1,13 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PostulanteLayout } from './components/PostulanteLayout';
-import { JobSearchPage } from './pages/JobSearchPage';
-import { ApplicationsPage } from './pages/ApplicationsPage';
-import { CompletarAplicacionesPage } from './pages/CompletarAplicacionesPage';
-import { MiPerfilPage } from './pages/MiPerfilPage';
-import { AplicarPage } from './pages/AplicarPage';
 import { RedirectToLogin } from './components/RedirectToLogin';
-import { useEffect, useState } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { useEffect, useState, lazy, Suspense } from 'react';
+
+// Lazy load pages para code splitting
+const JobSearchPage = lazy(() => import('./pages/JobSearchPage').then(m => ({ default: m.JobSearchPage })));
+const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })));
+const CompletarAplicacionesPage = lazy(() => import('./pages/CompletarAplicacionesPage').then(m => ({ default: m.CompletarAplicacionesPage })));
+const MiPerfilPage = lazy(() => import('./pages/MiPerfilPage').then(m => ({ default: m.MiPerfilPage })));
+const AplicarPage = lazy(() => import('./pages/AplicarPage').then(m => ({ default: m.AplicarPage })));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -79,66 +82,80 @@ function AppContent() {
     );
   }
 
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <PostulanteLayout>
-            <Navigate to="/buscar-empleos" replace />
-          </PostulanteLayout>
-        }
-      />
-      <Route
-        path="/buscar-empleos"
-        element={
-          <PostulanteLayout>
-            <JobSearchPage />
-          </PostulanteLayout>
-        }
-      />
-      <Route
-        path="/mis-aplicaciones"
-        element={
-          <PostulanteLayout>
-            <ApplicationsPage />
-          </PostulanteLayout>
-        }
-      />
-      <Route
-        path="/completar-aplicaciones"
-        element={
-          <PostulanteLayout>
-            <CompletarAplicacionesPage />
-          </PostulanteLayout>
-        }
-      />
-      <Route
-        path="/perfil"
-        element={
-          <PostulanteLayout>
-            <MiPerfilPage />
-          </PostulanteLayout>
-        }
-      />
-      <Route
-        path="/aplicar"
-        element={<AplicarPage />}
-      />
+  // Loading component para Suspense
+  const PageLoader = () => (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Cargando página...</p>
+      </div>
+    </div>
+  );
 
-      {/* Catch-all route - redirect to auth-frontend login */}
-      <Route path="*" element={<RedirectToLogin />} />
-    </Routes>
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <PostulanteLayout>
+              <Navigate to="/buscar-empleos" replace />
+            </PostulanteLayout>
+          }
+        />
+        <Route
+          path="/buscar-empleos"
+          element={
+            <PostulanteLayout>
+              <JobSearchPage />
+            </PostulanteLayout>
+          }
+        />
+        <Route
+          path="/mis-aplicaciones"
+          element={
+            <PostulanteLayout>
+              <ApplicationsPage />
+            </PostulanteLayout>
+          }
+        />
+        <Route
+          path="/completar-aplicaciones"
+          element={
+            <PostulanteLayout>
+              <CompletarAplicacionesPage />
+            </PostulanteLayout>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <PostulanteLayout>
+              <MiPerfilPage />
+            </PostulanteLayout>
+          }
+        />
+        <Route
+          path="/aplicar"
+          element={<AplicarPage />}
+        />
+
+        {/* Catch-all route - redirect to auth-frontend login */}
+        <Route path="*" element={<RedirectToLogin />} />
+      </Routes>
+    </Suspense>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AppContent />
-      </Router>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AppContent />
+        </Router>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
