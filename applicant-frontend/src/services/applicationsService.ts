@@ -57,7 +57,7 @@ class ApplicationsService {
     try {
       const params = nextToken ? { nextToken } : {};
       const { data } = await apiClient.get<ApplicationResponse>(
-        `${this.baseUrl}/applications/my-applications`,
+        `${this.baseUrl}/applications/my`,
         { params }
       );
       return data;

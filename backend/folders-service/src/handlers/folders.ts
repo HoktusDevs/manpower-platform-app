@@ -147,11 +147,15 @@ export const createFolderInternal: APIGatewayProxyHandler = async (event) => {
 // Get all folders
 export const getAllFolders: APIGatewayProxyHandler = async (event) => {
   try {
-    const { userId } = extractUserFromEvent(event);
+    // Support x-user-id header for inter-service calls
+    const userIdFromHeader = event.headers?.['x-user-id'] || event.headers?.['X-User-Id'];
+    const { userId } = userIdFromHeader ? { userId: userIdFromHeader } : extractUserFromEvent(event);
+
     const limit = event.queryStringParameters?.limit ? parseInt(event.queryStringParameters.limit) : undefined;
     const nextToken = event.queryStringParameters?.nextToken;
+    const parentId = event.queryStringParameters?.parentId;
 
-    const result = await folderService.getAllFolders(userId, limit, nextToken);
+    const result = await folderService.getAllFolders(userId, limit, nextToken, parentId);
 
     return createResponse(200, result);
   } catch (error) {

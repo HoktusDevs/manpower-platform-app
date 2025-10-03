@@ -169,21 +169,24 @@ export class DynamoService {
     };
   }
 
-  async getFoldersByParent(parentId: string, userId: string, limit?: number): Promise<Folder[]> {
+  async getFoldersByParent(parentId: string, limit?: number, nextToken?: string): Promise<{ folders: Folder[]; nextToken?: string }> {
     // For local development without GSIs, we'll use scan
     const command = new ScanCommand({
       TableName: this.tableName,
-      FilterExpression: 'parentId = :parentId AND userId = :userId AND isActive = :isActive',
+      FilterExpression: 'parentId = :parentId AND isActive = :isActive',
       ExpressionAttributeValues: {
         ':parentId': parentId,
-        ':userId': userId,
         ':isActive': true,
       },
       Limit: limit,
+      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
     });
 
     const result = await this.client.send(command);
-    return result.Items as Folder[] || [];
+    return {
+      folders: result.Items as Folder[] || [],
+      nextToken: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64') : undefined,
+    };
   }
 
   async getRootFolders(userId: string): Promise<Folder[]> {

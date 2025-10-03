@@ -116,7 +116,10 @@ export const deleteApplication: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const result = await applicationService.deleteApplication(applicationId);
+    // Extract user from token to pass userId for folder deletion
+    const user = extractUserFromEvent(event);
+
+    const result = await applicationService.deleteApplication(applicationId, user.userId);
 
     if (!result.success) {
       return createResponse(404, result);

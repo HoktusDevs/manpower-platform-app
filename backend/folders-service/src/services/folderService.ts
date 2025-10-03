@@ -200,9 +200,16 @@ export class FolderService {
     }
   }
 
-  async getAllFolders(userId: string, limit?: number, nextToken?: string): Promise<FolderResponse> {
+  async getAllFolders(userId: string, limit?: number, nextToken?: string, parentId?: string): Promise<FolderResponse> {
     try {
-      const result = await this.dynamoService.getFoldersByUser(userId, limit, nextToken);
+      let result;
+
+      // If parentId is provided, query by parent
+      if (parentId) {
+        result = await this.dynamoService.getFoldersByParent(parentId, limit, nextToken);
+      } else {
+        result = await this.dynamoService.getFoldersByUser(userId, limit, nextToken);
+      }
 
       const foldersWithPath = await Promise.all(
         result.folders.map(async (folder) => {
