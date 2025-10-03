@@ -1,3 +1,6 @@
+import { apiClient } from '../lib/axios';
+import { AxiosError } from 'axios';
+
 /**
  * User Service para applicant-frontend
  * Servicio para gestionar datos de usuario y perfil
@@ -35,16 +38,16 @@ class UserService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'https://7pptifb3zk.execute-api.us-east-1.amazonaws.com/dev';
+    this.baseUrl = 'https://nlzwqpjj3i.execute-api.us-east-1.amazonaws.com/dev';
   }
 
   /**
-   * Obtener perfil del usuario actual desde auth-service
+   * Obtener perfil del usuario actual desde users-service
    */
   async getProfile(): Promise<UserResponse> {
     try {
       const idToken = localStorage.getItem('cognito_id_token');
-      
+
       if (!idToken) {
         return {
           success: false,
@@ -52,36 +55,26 @@ class UserService {
         };
       }
 
-      const response = await fetch(`${this.baseUrl}/auth/profile`, {
-        method: 'GET',
+      // Usar el ID token en el header Authorization
+      const { data } = await apiClient.get<any>(`${this.baseUrl}/users/me`, {
         headers: {
           'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
         },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || 'Error al obtener perfil del usuario',
-        };
-      }
-
       if (data.success && data.user) {
-        // Mapear datos del auth-service a UserProfileData
+        // Mapear datos del users-service a UserProfileData
         const userProfile: UserProfileData = {
-          nombre: data.user.fullName || data.user.email?.split('@')[0] || '',
-          apellido: '', // No disponible en auth-service
+          nombre: data.user.nombre || data.user.fullName || data.user.email?.split('@')[0] || '',
+          apellido: data.user.apellido || '',
           rut: data.user.rut || '',
           email: data.user.email || '',
-          telefono: data.user.phone || '',
-          direccion: data.user.address || '',
-          fechaNacimiento: data.user.dateOfBirth || '',
-          educacionNivel: data.user.educationLevel || '',
-          experienciaLaboral: data.user.workExperience || '',
-          habilidades: data.user.skills || '',
+          telefono: data.user.telefono || data.user.phone || '',
+          direccion: data.user.direccion || data.user.address || '',
+          fechaNacimiento: data.user.fechaNacimiento || data.user.dateOfBirth || '',
+          educacionNivel: data.user.educacionNivel || data.user.educationLevel || '',
+          experienciaLaboral: data.user.experienciaLaboral || data.user.workExperience || '',
+          habilidades: data.user.habilidades || data.user.skills || '',
         };
 
         return {
@@ -97,9 +90,10 @@ class UserService {
       };
     } catch (error) {
       console.error('UserService: Error obteniendo perfil:', error);
+      const axiosError = error as AxiosError<UserResponse>;
       return {
         success: false,
-        message: `Error al obtener perfil del usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        message: axiosError.response?.data?.message || 'Error al obtener perfil del usuario',
       };
     }
   }
@@ -107,19 +101,19 @@ class UserService {
   /**
    * Actualizar perfil del usuario
    */
-  async updateProfile(profileData: UserProfileData): Promise<UserResponse> {
+  async updateProfile(profileData: Partial<UserProfileData>): Promise<UserResponse> {
     try {
-      console.log('UserService: Servicio de usuario no implementado', profileData);
-      
-      return {
-        success: false,
-        message: 'Servicio de usuario no está disponible. Por favor, implemente el user-service backend.',
-      };
+      const { data } = await apiClient.put<UserResponse>(
+        `${this.baseUrl}/users/me`,
+        profileData
+      );
+      return data;
     } catch (error) {
       console.error('UserService: Error actualizando perfil:', error);
+      const axiosError = error as AxiosError<UserResponse>;
       return {
         success: false,
-        message: `Error al actualizar perfil del usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        message: axiosError.response?.data?.message || 'Error al actualizar perfil del usuario',
       };
     }
   }
@@ -129,8 +123,8 @@ class UserService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      console.log('UserService: Servicio de usuario no implementado');
-      return false;
+      await apiClient.get(`${this.baseUrl}/health`);
+      return true;
     } catch (error) {
       console.error('UserService: Error verificando salud del servicio:', error);
       return false;

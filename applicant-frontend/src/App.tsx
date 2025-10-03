@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PostulanteLayout } from './components/PostulanteLayout';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { ApplicationsPage } from './pages/ApplicationsPage';
@@ -7,6 +8,17 @@ import { MiPerfilPage } from './pages/MiPerfilPage';
 import { AplicarPage } from './pages/AplicarPage';
 import { RedirectToLogin } from './components/RedirectToLogin';
 import { useEffect, useState } from 'react';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function AppContent() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
@@ -117,9 +129,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AppContent />
+      </Router>
+    </QueryClientProvider>
   );
 }
 

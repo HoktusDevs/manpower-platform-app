@@ -1,3 +1,6 @@
+import { apiClient } from '../lib/axios';
+import { AxiosError } from 'axios';
+
 export interface CreateApplicationRequest {
   jobIds: string[];
   description?: string;
@@ -13,6 +16,7 @@ export interface Application {
   createdAt: string;
   updatedAt: string;
   documents?: string[];
+  applicantFolderId?: string;
   // Campos enriquecidos del job
   jobTitle?: string;
   companyName?: string;
@@ -31,7 +35,7 @@ class ApplicationsService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'https://8lmunkvdd5.execute-api.us-east-1.amazonaws.com/dev';
+    this.baseUrl = 'https://b1lbhzwg97.execute-api.us-east-1.amazonaws.com/dev';
   }
 
   /**
@@ -39,39 +43,17 @@ class ApplicationsService {
    */
   async createApplications(request: CreateApplicationRequest): Promise<ApplicationResponse> {
     try {
-      const accessToken = localStorage.getItem('cognito_access_token');
-      
-      if (!accessToken) {
-        return {
-          success: false,
-          message: 'No hay token de acceso disponible',
-        };
-      }
-
-      const response = await fetch(`${this.baseUrl}/applications`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || 'Error al crear aplicaciones',
-        };
-      }
-
+      const { data } = await apiClient.post<ApplicationResponse>(
+        `${this.baseUrl}/applications`,
+        request
+      );
       return data;
     } catch (error) {
       console.error('ApplicationsService: Error creando aplicaciones:', error);
+      const axiosError = error as AxiosError<ApplicationResponse>;
       return {
         success: false,
-        message: 'Error de conexión al crear aplicaciones',
+        message: axiosError.response?.data?.message || 'Error de conexión al crear aplicaciones',
       };
     }
   }
@@ -79,40 +61,39 @@ class ApplicationsService {
   /**
    * Obtener mis aplicaciones
    */
-  async getMyApplications(): Promise<ApplicationResponse> {
+  async getMyApplications(nextToken?: string): Promise<ApplicationResponse> {
     try {
-      const accessToken = localStorage.getItem('cognito_access_token');
-      
-      if (!accessToken) {
-        return {
-          success: false,
-          message: 'No hay token de acceso disponible',
-        };
-      }
-
-      const response = await fetch(`${this.baseUrl}/applications/my`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || 'Error al obtener aplicaciones',
-        };
-      }
-
+      const params = nextToken ? { nextToken } : {};
+      const { data } = await apiClient.get<ApplicationResponse>(
+        `${this.baseUrl}/applications/my-applications`,
+        { params }
+      );
       return data;
     } catch (error) {
       console.error('ApplicationsService: Error obteniendo aplicaciones:', error);
+      const axiosError = error as AxiosError<ApplicationResponse>;
       return {
         success: false,
-        message: 'Error de conexión al obtener aplicaciones',
+        message: axiosError.response?.data?.message || 'Error de conexión al obtener aplicaciones',
+      };
+    }
+  }
+
+  /**
+   * Obtener una aplicación por ID
+   */
+  async getApplication(applicationId: string): Promise<ApplicationResponse> {
+    try {
+      const { data } = await apiClient.get<ApplicationResponse>(
+        `${this.baseUrl}/applications/${applicationId}`
+      );
+      return data;
+    } catch (error) {
+      console.error('ApplicationsService: Error obteniendo aplicación:', error);
+      const axiosError = error as AxiosError<ApplicationResponse>;
+      return {
+        success: false,
+        message: axiosError.response?.data?.message || 'Error de conexión al obtener aplicación',
       };
     }
   }
@@ -122,67 +103,40 @@ class ApplicationsService {
    */
   async deleteApplication(applicationId: string): Promise<ApplicationResponse> {
     try {
-      const accessToken = localStorage.getItem('cognito_access_token');
-      
-      if (!accessToken) {
-        return {
-          success: false,
-          message: 'No hay token de acceso disponible',
-        };
-      }
-
-      const response = await fetch(`${this.baseUrl}/applications/${applicationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || 'Error al eliminar aplicación',
-        };
-      }
-
+      const { data} = await apiClient.delete<ApplicationResponse>(
+        `${this.baseUrl}/applications/${applicationId}`
+      );
       return data;
     } catch (error) {
       console.error('ApplicationsService: Error eliminando aplicación:', error);
+      const axiosError = error as AxiosError<ApplicationResponse>;
       return {
         success: false,
-        message: 'Error de conexión al eliminar aplicación',
+        message: axiosError.response?.data?.message || 'Error de conexión al eliminar aplicación',
       };
     }
   }
 
   /**
-   * Verificar si el usuario ya aplicó a un trabajo específico
+   * Actualizar una aplicación
    */
-  async checkApplicationExists(jobId: string): Promise<{ exists: boolean; applicationId?: string }> {
+  async updateApplication(
+    applicationId: string,
+    updates: Partial<Application>
+  ): Promise<ApplicationResponse> {
     try {
-      // Simular verificación desde localStorage
-      const storedApplications = localStorage.getItem('user_applications');
-      if (!storedApplications) {
-        return { exists: false };
-      }
-
-      const applications: Application[] = JSON.parse(storedApplications);
-      const existingApplication = applications.find(app => app.jobId === jobId);
-
-      if (existingApplication) {
-        return {
-          exists: true,
-          applicationId: existingApplication.applicationId
-        };
-      } else {
-        return { exists: false };
-      }
+      const { data } = await apiClient.put<ApplicationResponse>(
+        `${this.baseUrl}/applications/${applicationId}`,
+        updates
+      );
+      return data;
     } catch (error) {
-      console.error('ApplicationsService: Error checking application existence:', error);
-      return { exists: false };
+      console.error('ApplicationsService: Error actualizando aplicación:', error);
+      const axiosError = error as AxiosError<ApplicationResponse>;
+      return {
+        success: false,
+        message: axiosError.response?.data?.message || 'Error de conexión al actualizar aplicación',
+      };
     }
   }
 }
