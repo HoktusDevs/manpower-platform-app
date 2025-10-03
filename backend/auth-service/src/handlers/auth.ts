@@ -360,12 +360,21 @@ export const getProfile = async (event: APIGatewayProxyEventWithAuth): Promise<A
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Decode JWT token to get email
-    const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    const email = decoded.email;
 
-    const user = await cognitoService.getUser(email);
+    // Decode JWT token to get email or username
+    const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+
+    // Try to get email from token, fallback to cognito:username or sub
+    const username = decoded.email || decoded['cognito:username'] || decoded.sub;
+
+    if (!username) {
+      return createResponse(400, {
+        success: false,
+        message: 'No valid username found in token',
+      });
+    }
+
+    const user = await cognitoService.getUser(username);
 
     const response: AuthResponse = {
       success: true,

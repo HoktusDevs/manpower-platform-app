@@ -27,7 +27,7 @@ class ApplicationsService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'https://b1lbhzwg97.execute-api.us-east-1.amazonaws.com/dev';
+    this.baseUrl = 'https://8lmunkvdd5.execute-api.us-east-1.amazonaws.com/dev';
   }
 
   /**
