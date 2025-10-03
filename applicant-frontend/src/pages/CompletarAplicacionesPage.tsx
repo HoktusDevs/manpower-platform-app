@@ -65,7 +65,7 @@ export const CompletarAplicacionesPage = () => {
   };
 
 
-  const handleDocumentUpload = (jobId: string, documentName: string, file: File, documentId?: string) => {
+  const handleDocumentUpload = (jobId: string, documentName: string, file: File, _documentId?: string) => {
     setDocumentFiles(prev => ({
       ...prev,
       [jobId]: {
@@ -146,7 +146,6 @@ export const CompletarAplicacionesPage = () => {
         return;
       }
 
-      const userId = user.sub;
       console.log('📤 Enviando aplicaciones para jobs:', selectedJobs.map(job => job.jobId));
 
       // Validar que todos los documentos requeridos estén subidos

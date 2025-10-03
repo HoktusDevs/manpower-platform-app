@@ -24,15 +24,15 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   uploadedFile,
   isRequired = true,
   isUploaded = false,
-  userId,
-  jobId,
-  applicationId,
-  onUploadComplete,
+  userId: _userId,
+  jobId: _jobId,
+  applicationId: _applicationId,
+  onUploadComplete: _onUploadComplete,
   onUploadError
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, _setIsUploading] = useState(false);
+  const [uploadProgress, _setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [ocrStatus, setOcrStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');

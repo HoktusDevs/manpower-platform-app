@@ -1,26 +1,11 @@
 import { apiClient } from '../lib/axios';
 import { AxiosError } from 'axios';
+import type { Application } from '../types';
 
 export interface CreateApplicationRequest {
   jobIds: string[];
   description?: string;
   documents?: string[];
-}
-
-export interface Application {
-  applicationId: string;
-  userId: string;
-  jobId: string;
-  status: 'PENDING' | 'IN_REVIEW' | 'ACCEPTED' | 'REJECTED';
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  documents?: string[];
-  applicantFolderId?: string;
-  // Campos enriquecidos del job
-  jobTitle?: string;
-  companyName?: string;
-  location?: string;
 }
 
 export interface ApplicationResponse {

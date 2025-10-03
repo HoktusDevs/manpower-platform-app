@@ -1,9 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  applicationsService,
-  type CreateApplicationRequest,
-  type Application
-} from '../services/applicationsService';
+import { applicationsService, type CreateApplicationRequest } from '../services/applicationsService';
+import type { Application } from '../types';
 
 /**
  * Hook para obtener todas las aplicaciones del usuario
